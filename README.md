@@ -182,6 +182,23 @@ As chamadas de playlists usam a quota do projeto Google separadamente do limite 
 
 Referências oficiais: [playlists da conta com mine=true](https://developers.google.com/youtube/v3/docs/playlists/list), [paginação dos itens](https://developers.google.com/youtube/v3/docs/playlistItems/list) e [OAuth para aplicativos Web](https://developers.google.com/identity/protocols/oauth2/web-server).
 
+#### Google bloqueou o login: aplicativo não concluiu a verificação
+
+Se o Google mostrar **“Acesso bloqueado: o app … não concluiu o processo de verificação”**, confira o projeto correspondente ao `YOUTUBE_CLIENT_ID`. O nome apresentado (por exemplo, “geolocalizador”) vem da configuração de consentimento desse aplicativo OAuth; não é o título da página do QRokê.
+
+Para um app de desenvolvimento com publicação **Em teste**:
+
+1. Abra [Google Auth Platform → Público-alvo](https://console.cloud.google.com/auth/audience) no projeto que criou o Client ID.
+2. Em **Usuários de teste → Adicionar usuários**, inclua o e-mail exato da conta escolhida no login do YouTube e salve. Ser proprietário do projeto não substitui a inclusão nessa lista.
+3. Confira em **Acesso a dados** o escopo `https://www.googleapis.com/auth/youtube.readonly`.
+4. Feche a janela bloqueada e use novamente **Minha conta → Conectar YouTube** no QRokê. Se o controle de anfitrião tiver expirado, libere o PIN.
+
+Não é necessário publicar o app para usar esse fluxo de desenvolvimento com usuários de teste. Se o Client ID pertence a outro aplicativo/projeto, configure um cliente no projeto destinado ao QRokê, com o callback correto, atualize o `.env` da worktree e reinicie o servidor. Não altere a publicação de outro app já utilizado em produção apenas para resolver este teste.
+
+Se a conta já está na lista e continua bloqueada, confira o código/detalhes exibidos pelo Google e se a conta escolhida é a mesma adicionada. Restrições de uma organização Google Workspace ou Proteção Avançada também podem impedir o acesso. A aplicação não consegue remover esse bloqueio pela API.
+
+Referências: [público-alvo, publicação e usuários de teste](https://support.google.com/cloud/answer/15549945?hl=pt-BR) e [quando a verificação não é necessária](https://support.google.com/cloud/answer/13464323?hl=pt-BR).
+
 ### QR com verificação e atualização do endereço
 
 Enquanto uma tela com QR estiver aberta, ela verifica o endereço a cada **30 segundos**, ao recuperar a conexão e ao voltar para a aba. `/qr` também oferece **Verificar acesso**. O servidor reutiliza o resultado por até 15 segundos e confere uma identificação própria em `/api/network/probe`; uma página qualquer respondendo HTTP 200 não é suficiente.
@@ -225,7 +242,7 @@ A faixa e a posição sobrevivem a restart. Após recarregar a página, pode ser
 
 ### YouTube, Premium e modos
 
-A busca usa `ytmusic-api`; o playback usa o **IFrame oficial em `youtube.com`**. Não há download, extração de áudio, OAuth ou sessão Google/Premium no servidor. A API key da Data API é usada apenas no backend para o catálogo.
+A busca usa `ytmusic-api`; o playback usa o **IFrame oficial em `youtube.com`**. Não há download, extração de áudio ou sessão Premium no servidor. A API key da Data API é usada no backend para o catálogo e playlists públicas. O OAuth opcional mantém autorização de leitura no servidor exclusivamente para acessar as playlists da conta; ele não transfere a sessão do player nem o benefício Premium.
 
 - **Vídeo:** player grande, fila ao lado.
 - **Música:** player visível com mínimo de 200 × 200 px.
