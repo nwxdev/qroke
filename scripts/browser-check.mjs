@@ -37,6 +37,9 @@ try {
   await guest.screenshot({ path: 'test-results/mobile.png', fullPage: true })
   console.log('Mobile 360px: nome, busca, cinco pedidos e ausência de overflow OK')
 
+  await expect(
+    guest.getByText('Aguardando o anfitrião ativar o som.', { exact: false }),
+  ).toBeVisible()
   const hostContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const host = await hostContext.newPage()
   watch(host)
@@ -46,7 +49,6 @@ try {
   await expect(host.getByText('Admin liberado', { exact: true })).toBeVisible()
   await host.getByRole('button', { name: 'Tocar neste dispositivo', exact: true }).click()
   await expect(host.locator('audio')).toBeVisible()
-  await host.getByRole('button', { name: 'Ativar som', exact: true }).click()
   await expect.poll(() => host.locator('audio').evaluate((a) => !a.paused)).toBe(true)
   const first = (await (await host.request.get(server.base + '/api/state')).json()).current.queueId
   await expect
@@ -167,6 +169,7 @@ try {
   watch(qr)
   await qr.goto(server.base + '/qr')
   await expect(qr.locator('.qr-plate svg')).toBeVisible()
+  await expect(qr.locator('.qr-card a')).toHaveAttribute('href', 'http://192.0.2.10:3198/')
   expect(await qr.locator('.qr-plate').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
     'rgb(255, 255, 255)',
   )

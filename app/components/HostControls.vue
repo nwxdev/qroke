@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{ tv?: boolean }>()
-const { state, device, control, pending, api, act } = useParty()
+const { state, device, control, pending, api, act, playHere } = useParty()
 </script>
 <template>
   <div class="host-controls">
@@ -41,11 +41,7 @@ const { state, device, control, pending, api, act } = useParty()
       </button>
     </div>
     <div class="control-row">
-      <button
-        :disabled="pending || !device"
-        @click="control({ action: 'assign', deviceId: device?.id })"
-      >
-        Tocar neste dispositivo</button
+      <button :disabled="pending || !device" @click="playHere">Tocar neste dispositivo</button
       ><button :disabled="pending" @click="control({ action: 'reset-order' })">
         Voltar ao rodízio</button
       ><button :disabled="pending" @click="act(() => api('/api/auth', { action: 'logout' }))">

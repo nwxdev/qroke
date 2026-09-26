@@ -39,7 +39,7 @@ export async function startFixture(port = 3197) {
         NUXT_DATABASE: join(dir, 'party.sqlite'),
         NUXT_MUSIC_DIR: music,
         NUXT_YOUTUBE_API_KEY: '',
-        NUXT_PUBLIC_PARTY_URL: base,
+        NUXT_PUBLIC_PARTY_URL: 'http://192.0.2.10:' + port,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     })

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
 import type { QueueItem } from '../../shared/types'
-const { state, admin, device, pending, control, reorder, isPlayer, api } = useParty()
+const { state, admin, device, pending, control, reorder, isPlayer, api, playHere } = useParty()
 const dragged = ref<QueueItem[]>([])
 const dragging = ref(false)
 watch(
@@ -44,6 +44,11 @@ function activity() {
               <h2>Controles</h2>
               <span class="tag active">Admin liberado</span>
             </div>
+            <p v-if="!state?.playerId" class="notice">
+              Para começar, clique em <strong>Tocar neste dispositivo</strong> no computador ou TV
+              que vai emitir o som. Depois disso, os pedidos começam automaticamente quando a fila
+              está vazia.
+            </p>
             <HostControls />
             <p v-if="state?.catalogWarning" class="notice">{{ state.catalogWarning }}</p>
           </div>
@@ -55,7 +60,11 @@ function activity() {
                 >{{ item.label }} <small v-if="item.id === device?.id">(este aparelho)</small></span
               ><button
                 :disabled="pending || state?.playerId === item.id"
-                @click="control({ action: 'assign', deviceId: item.id })"
+                @click="
+                  item.id === device?.id
+                    ? playHere()
+                    : control({ action: 'assign', deviceId: item.id })
+                "
               >
                 {{ state?.playerId === item.id ? '● PLAYER' : 'Usar como PLAYER' }}
               </button>

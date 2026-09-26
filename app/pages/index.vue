@@ -177,10 +177,28 @@ const alreadyQueued = (track: Track) =>
         <div class="now-playing panel">
           <span class="eyebrow"
             ><span class="equalizer">▂▆▃</span>
-            {{ state?.current ? 'TOCANDO AGORA' : 'PRONTOS PARA COMEÇAR' }}</span
+            {{
+              !state?.playerId
+                ? 'AGUARDANDO O ANFITRIÃO'
+                : state?.current
+                  ? 'TOCANDO AGORA'
+                  : 'PRONTOS PARA COMEÇAR'
+            }}</span
           >
-          <h3>{{ state?.current?.title || 'O primeiro play é com você' }}</h3>
-          <p>{{ state?.current?.artist || 'Escolha uma música para abrir a noite.' }}</p>
+          <h3>
+            {{
+              state?.current?.title ||
+              (state?.playerId ? 'O primeiro play é com você' : 'Falta ativar o som')
+            }}
+          </h3>
+          <p>
+            {{
+              state?.current?.artist ||
+              (state?.playerId
+                ? 'Escolha uma música para abrir a noite.'
+                : 'O anfitrião precisa escolher onde a festa vai tocar.')
+            }}
+          </p>
           <small v-if="state?.current">Pedido de {{ state.current.guestName }}</small>
         </div>
         <MediaPlayer v-if="isPlayer" />

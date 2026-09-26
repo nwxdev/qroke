@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /// <reference types="youtube" />
-const { state, isPlayer, api, lastContact } = useParty()
+const { state, isPlayer, api, lastContact, device, soundDevice, armSound } = useParty()
 const route = useRoute()
 const frame = ref<HTMLDivElement | null>(null),
   viewport = ref<HTMLElement | null>(null),
   audio = ref<HTMLAudioElement | null>(null)
-const armed = ref(false),
+const armed = computed(() => !!device.value && soundDevice.value === device.value.id),
   warning = ref(''),
   visible = ref(true),
   outputs = ref<MediaDeviceInfo[]>([]),
@@ -123,7 +123,7 @@ function localReady(element: HTMLAudioElement) {
   void sync()
 }
 async function activate() {
-  armed.value = true
+  armSound()
   warning.value = ''
   await sync()
 }
@@ -204,6 +204,9 @@ onBeforeUnmount(() => {
         {{ armed ? 'Ativar som novamente' : '▶ Ativar som' }}
       </button>
     </div>
+    <p v-if="armed && !current" class="hint">
+      Som ativado. O próximo pedido começa automaticamente.
+    </p>
     <p v-if="!safe" class="notice">Aguardando conexão ou transferência do PLAYER…</p>
     <p v-if="warning" role="status" class="notice">{{ warning }}</p>
     <div

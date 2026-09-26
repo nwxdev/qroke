@@ -12,6 +12,7 @@ export function useParty() {
   const state = useState<PublicState | null>('party', () => null)
   const guest = useState<Guest | null>('guest', () => null),
     admin = useState('admin', () => false)
+  const soundDevice = useState<string | null>('sound-device', () => null)
   const device = useState<{ id: string; token: string } | null>('device', () => null)
   const connected = useState('connected', () => false),
     lastContact = useState('contact', () => 0)
@@ -69,6 +70,19 @@ export function useParty() {
     }
   }
   const control = (body: Record<string, unknown>) => act(() => api('/api/control', body))
+  function armSound() {
+    if (device.value) soundDevice.value = device.value.id
+  }
+  async function playHere() {
+    if (!device.value || pending.value) return
+    armSound()
+    await control({ action: 'assign', deviceId: device.value.id })
+    await nextTick()
+    if (isPlayer.value)
+      document
+        .querySelector('.media-player')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
   async function add(track: Track) {
     if (!guest.value || pending.value) return
     const temp: QueueItem = {
@@ -113,6 +127,9 @@ export function useParty() {
     pending,
     queue,
     isPlayer,
+    soundDevice,
+    armSound,
+    playHere,
     refresh,
     session,
     api,

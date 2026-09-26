@@ -39,48 +39,104 @@ npm start
 
 ### Configuração
 
-| Variável                | Padrão / significado                                                                                                                                                           |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `QROKE_HOST_PIN`        | Obrigatório para administrar. De 4 a 8 dígitos; não existe PIN embutido no app. O `1234` do exemplo deve ser trocado.                                                          |
-| `QROKE_PORT`            | `3000`. Porta HTTP usada por dev e `npm start`.                                                                                                                                |
-| `QROKE_PUBLIC_URL`      | URL acessível na LAN, como `http://192.168.31.95:3100`. Sem valor, o QR usa a origem da aba. Se abrir a aba por localhost, configure essa variável antes de compartilhar o QR. |
-| `YOUTUBE_API_KEY`       | Opcional. Validação oficial de incorporação e busca de emergência. Exclusiva do servidor.                                                                                      |
-| `QROKE_MUSIC_DIR`       | Pasta de músicas, incluindo subpastas. Vazia desabilita a biblioteca local.                                                                                                    |
-| `QROKE_QUOTA_DAILY_CAP` | `90` **requisições de busca oficial por dia**, não unidades. Cache hits não consomem essa reserva.                                                                             |
-| `QROKE_DATABASE`        | `.data/qroke.sqlite`, relativo ao diretório em que o processo inicia.                                                                                                          |
+| Variável                | Padrão / significado                                                                                                                                                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QROKE_HOST_PIN`        | Obrigatório para administrar. De 4 a 8 dígitos; não existe PIN embutido no app. O `1234` do exemplo deve ser trocado.                                                                                                 |
+| `QROKE_PORT`            | `3000`. Porta HTTP usada por dev e `npm start`.                                                                                                                                                                       |
+| `QROKE_PUBLIC_URL`      | URL acessível na LAN, como `http://192.168.31.95:3100`. Sem valor, usa a origem da aba somente se ela for compartilhável. Localhost, loopback e endereços de escuta não geram QR; configure a URL da rede e reinicie. |
+| `YOUTUBE_API_KEY`       | Opcional. Validação oficial de incorporação e busca de emergência. Exclusiva do servidor.                                                                                                                             |
+| `QROKE_MUSIC_DIR`       | Pasta de músicas, incluindo subpastas. Vazia desabilita a biblioteca local.                                                                                                                                           |
+| `QROKE_QUOTA_DAILY_CAP` | `90` **requisições de busca oficial por dia**, não unidades. Cache hits não consomem essa reserva.                                                                                                                    |
+| `QROKE_DATABASE`        | `.data/qroke.sqlite`, relativo ao diretório em que o processo inicia.                                                                                                                                                 |
 
 `.env`, banco, arquivos gerados e capturas de teste estão no `.gitignore`. Só `.env.example` é versionado. Use um único processo Node e um único banco para cada festa.
 
-### Rede Windows / WSL
+### Como definir o PIN do anfitrião
 
-A inspeção em 25/09/2026 encontrou **Windows Wi-Fi `192.168.31.95`** e **WSL `172.25.210.47`**. Esses endereços podem mudar. O IP `172.27.113.230` registrado no plano já não correspondia ao ambiente.
+Edite **o `.env` da worktree que está rodando**, não o checkout original:
 
-O teste de resposta HTTP fixa em `0.0.0.0:3100` no WSL foi acessado com sucesso pelo Windows em `http://172.25.210.47:3100`. Isso **não comprova** acesso de outro aparelho pelo Wi-Fi. O aceite por celular continua pendente.
+- Linux: `/home/rpolan/projects/nwx/qroke-v1/.env`.
+- Windows: `\\wsl.localhost\Ubuntu\home\rpolan\projects\nwx\qroke-v1\.env`.
 
-1. Inicie o app e confirme a porta apresentada.
-2. Confira o IP atual do Wi-Fi com `Get-NetIPAddress -AddressFamily IPv4` e o WSL com `wsl.exe hostname -I`.
-3. No celular conectado ao mesmo Wi-Fi, abra a URL configurada em `QROKE_PUBLIC_URL`.
-4. Se não alcançar: confira isolamento de clientes no roteador e o modo de rede do WSL. Em modo espelhado, pode ser necessária uma regra de entrada no firewall Hyper-V. Em NAT, o IP privado do WSL não é automaticamente acessível pela LAN; use encaminhamento apropriado ou rode o servidor nativamente no Windows.
-5. Só compartilhe o QR depois desse teste.
+Altere apenas `QROKE_HOST_PIN` para um PIN escolhido por você, com **4 a 8 dígitos**. Preserve `YOUTUBE_API_KEY` e as demais linhas. Exemplo ilustrativo, não use como PIN definitivo:
 
-Exemplo para **WSL em modo espelhado**, em PowerShell elevado, ajustando a porta efetivamente usada:
-
-```powershell
-New-NetFirewallHyperVRule -Name QRoke -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol TCP -LocalPorts 3100 -Action Allow
+```dotenv
+QROKE_HOST_PIN=583729
+QROKE_PORT=3100
+QROKE_PUBLIC_URL=http://192.168.31.95:3100
 ```
 
-Nenhuma regra de firewall ou configuração de rede foi alterada nesta implementação. A tentativa inicial de usar um servidor de arquivos genérico foi recusada pela revisão automática por expor a worktree; o teste foi substituído por um handler que devolvia apenas texto fixo. Consulte a [documentação de rede do WSL](https://learn.microsoft.com/en-us/windows/wsl/networking).
+Encerre o processo antigo com Ctrl+C no terminal que iniciou o servidor e execute `npm start` novamente dentro da worktree. Depois abra `/host` e digite o PIN. Reiniciar não apaga a fila. O PIN não é enviado aos convidados e não é uma credencial do Google. Não existe PIN padrão embutido nem configuração do PIN pelo navegador.
+
+### Rede Windows / WSL
+
+Diagnóstico em **26/09/2026**:
+
+- Windows Wi-Fi: **`192.168.31.95`**, perfil **Privado**.
+- WSL Ubuntu: **`172.25.210.47`**, `wslinfo --networking-mode` retornou **`nat`**.
+- Aplicação no WSL: `0.0.0.0:3100`; Windows alcança o app em `localhost:3100`.
+- Antes da correção, o Windows escutava 3100 somente em `127.0.0.1`. Havia encaminhamento de outro serviço na porta 3000, mas nenhum para 3100. Isso explica localhost funcionar no PC e falhar no celular.
+- O adaptador virtual **Topaz Loopback** também apresenta um endereço com aparência pública. Ele não comprova acesso de entrada pela internet e não foi escolhido para a festa.
+
+Na mesma rede Wi-Fi, use **`http://192.168.31.95:3100/`**. Não é necessário contratar IP público, abrir porta no roteador ou usar o IP privado do WSL no celular. A URL foi salva em `QROKE_PUBLIC_URL` no `.env` privado desta worktree. O QR usa essa URL mesmo quando o PC abre o app por localhost. Se não houver URL compartilhável, mostra uma orientação em vez de gerar um QR de localhost.
+
+#### Encaminhar a porta no modo NAT
+
+Com `npm start` ativo, abra **PowerShell como administrador** e execute o script versionado:
+
+```powershell
+& '\\wsl.localhost\Ubuntu\home\rpolan\projects\nwx\qroke-v1\scripts\wsl-lan.ps1' -ListenAddress 192.168.31.95 -Port 3100
+```
+
+O script consulta o IPv4 atual do Ubuntu, confirma que o servidor responde, cria um `portproxy` do **IP privado do Wi-Fi:3100** para **WSL:3100**, e uma regra de firewall apenas para **TCP 3100, perfil Privado, interface selecionada e origem LocalSubnet**. Recusa endereços públicos, conflitos com serviços/mapeamentos existentes sem identificação QRokê e interfaces de rede pública. Não altera outras portas nem desativa o firewall. Repita após reiniciar o WSL se seu IP mudar.
+
+Para desfazer apenas essa configuração:
+
+```powershell
+& '\\wsl.localhost\Ubuntu\home\rpolan\projects\nwx\qroke-v1\scripts\wsl-lan.ps1' -ListenAddress 192.168.31.95 -Port 3100 -Remove
+```
+
+Se o IP do Wi-Fi mudar, remova o encaminhamento antigo, execute com o IP novo, atualize `QROKE_PUBLIC_URL` e reinicie o app. Uma reserva DHCP no roteador evita a troca frequente do endereço.
+
+Configuração aplicada nesta máquina: encaminhamento e firewall criados com elevação do Windows; **HTTP 200 confirmado em `http://192.168.31.95:3100/api/state`**. Os filtros foram conferidos: IP local 192.168.31.95, origem LocalSubnet, perfil Privado e porta TCP 3100. **O teste físico no celular ainda depende do responsável.**
+
+Valide no PC e depois no celular:
+
+1. Abra `http://192.168.31.95:3100/api/state`; deve retornar JSON.
+2. No celular, conectado ao mesmo Wi-Fi, abra `http://192.168.31.95:3100/` e depois escaneie o QR.
+3. Se o PC funciona e o celular não: confira isolamento de clientes/rede de convidados no roteador, VPN e perfil Privado. O teste no próprio PC não comprova o caminho físico do celular.
+
+O modo espelhado do WSL é outra possibilidade, com configuração e firewall Hyper-V próprios. Não foi alterado, pois exigiria reiniciar o WSL e afetaria outros serviços. Rodar o app nativamente no Windows também elimina o encaminhamento para o WSL, mas exige instalar as dependências nativas nesse sistema. Referência: [rede do WSL — Microsoft](https://learn.microsoft.com/en-us/windows/wsl/networking).
+
+#### Possibilidades para acesso fora do Wi-Fi
+
+| Opção                                   | Endereço / alcance                                             | Adequação                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| LAN do Windows                          | `http://192.168.31.95:3100/`, mesma rede                       | Caminho escolhido para a festa; QR simples, sem conta ou aplicativo no celular.                                                                                                                                                                                                                                                                                                |
+| VPN privada + Tailscale Serve           | HTTPS acessível aos dispositivos autorizados da rede Tailscale | Opção para acesso pessoal remoto; exige configurar dispositivos e permissões. [Documentação](https://tailscale.com/docs/features/tailscale-serve).                                                                                                                                                                                                                             |
+| Túnel HTTPS Cloudflare                  | Domínio HTTPS que encaminha ao servidor                        | Permite acesso externo sem usar o IP de entrada do roteador; precisa definir autenticação e política de acesso antes de publicar a festa. Quick Tunnel é temporário, sem SLA, com limite de 200 requisições simultâneas e sem SSE. [Documentação](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/). |
+| IP público + encaminhamento no roteador | Depende do provedor, NAT/CGNAT, DNS e TLS                      | Maior manutenção; não foi configurado nem foi confirmada a disponibilidade de IP público de entrada.                                                                                                                                                                                                                                                                           |
+
+A v1 foi projetada para LAN: visitantes podem entrar e pesquisar sem autenticação de conta; o PIN protege os controles administrativos. Expor a festa externamente exige definir proteção para convidados, catálogo/quota e proxy confiável, além de validar WebSocket e cookies por HTTPS. Um túnel público foi **avaliado, não ativado**. O IP público de **saída**, usado nas restrições da API do Google, tem finalidade diferente do endereço que os convidados usam para acessar a festa.
 
 ## Usar na festa
 
 1. Abra `/host`, informe o PIN e mantenha essa aba disponível.
 2. Abra `/tv` na TV ou no PC conectado por HDMI. Abra o app também no aparelho que deve produzir som.
-3. No host, escolha o aparelho na lista **Onde o som toca**, ou use **Tocar neste dispositivo**.
-4. Nesse aparelho, pressione **Ativar som**. A autorização de autoplay depende do navegador.
+3. No aparelho que vai emitir som, entre como anfitrião e clique em **Tocar neste dispositivo**. A ação seleciona o PLAYER e ativa o som em um clique, mesmo com a fila vazia. Na TV, use **Ativar som nesta TV**, informe o PIN e escolha **Tocar neste dispositivo**.
+4. Para escolher outro aparelho à distância, use a lista **Onde o som toca** e pressione **Ativar som** nesse outro navegador. Se o navegador bloquear autoplay, o aviso pede o clique local.
 5. Mostre `/qr` e peça aos convidados para entrarem pelo mesmo Wi-Fi.
 6. Cada pessoa informa o nome, busca e pressiona **+**. Pode adicionar várias músicas. Um pedido já pendente da mesma pessoa não é duplicado por toque repetido.
 7. O convidado remove seus próprios pedidos pendentes; o admin remove qualquer pedido, pula a atual e reordena.
 8. Para terminar a administração, use **Sair do admin**. Sem interação, a sessão também expira em cinco minutos.
+
+### Pedido novo com a fila vazia
+
+O diagnóstico da festa encontrou duas músicas pendentes, `current: null` e `playerId: null`: nenhum aparelho tinha sido escolhido para tocar. Agora as telas de convidado, anfitrião e TV informam quando falta ativar um PLAYER. O botão **Tocar neste dispositivo** também ativa o som, evitando uma segunda etapa oculta.
+
+Depois da ativação, a primeira música sai da fila para reprodução imediatamente; quando a fila termina, o PLAYER permanece pronto e o próximo pedido inicia sozinho. A ativação permanece ao navegar entre rotas na mesma aba. Recarregar a página ou abrir outra aba pode exigir um novo clique por causa das regras de autoplay. Não é necessário ligar **Rádio** para tocar pedidos: Rádio apenas escolhe músicas quando não há pedidos humanos.
+
+Os testes verificam seleção em um clique e consumo da fila. Uma sessão isolada adicional verifica um pedido remoto chegando à fila inicialmente vazia e outro depois da navegação do host para `/qr`: os dois começam, avançam o relógio e terminam sem novo clique em Ativar som. Isolar esse cenário evita o acúmulo da limitação de áudio do Chromium headless descrita abaixo.
 
 ### Um PLAYER por vez
 
@@ -94,7 +150,7 @@ A faixa e a posição sobrevivem a restart. Após recarregar a página, pode ser
 
 ### YouTube, Premium e modos
 
-A busca usa `ytmusic-api`; o playback usa o **IFrame oficial em `youtube.com`**. Não há download, extração de áudio, OAuth ou credencial Google no servidor.
+A busca usa `ytmusic-api`; o playback usa o **IFrame oficial em `youtube.com`**. Não há download, extração de áudio, OAuth ou sessão Google/Premium no servidor. A API key da Data API é usada apenas no backend para o catálogo.
 
 - **Vídeo:** player grande, fila ao lado.
 - **Música:** player visível com mínimo de 200 × 200 px.
@@ -237,27 +293,29 @@ npm run test:youtube
 
 A expiração administrativa preserva a instância do PLAYER; o servidor continua aceitando eventos de reprodução pela credencial do dispositivo. O teste simula a expiração sem esperar cinco minutos.
 
-**Limitação observada no teste estendido:** com WAVs de 8 segundos, o relógio de áudio do Chromium headless no WSL desacelerou após algumas transições, mesmo com o arquivo totalmente carregado e sem erro de reprodução. O comportamento também foi reproduzido em uma sequência de áudio HTML puro, fora do app. A suíte padrão usa WAVs de 2 segundos e passou; reprodução prolongada em navegador normal/saída física continua sendo um aceite obrigatório. Para reproduzir o diagnóstico: `QROKE_TEST_TRACK_SECONDS=8 npm run test:browser`.
+**Limitação observada no teste estendido:** com WAVs de 8 segundos, o relógio de áudio do Chromium headless no WSL desacelerou após algumas transições, mesmo com o arquivo totalmente carregado e sem erro de reprodução. O comportamento também foi reproduzido em uma sequência de áudio HTML puro, fora do app. Também houve lentidão ao anexar um sétimo WAV ao mesmo contexto durante o teste desta correção. A suíte usa WAVs de 2 segundos e testa os pedidos após fila vazia em outro contexto/processo; reprodução prolongada em navegador normal/saída física continua sendo um aceite obrigatório. Para reproduzir o diagnóstico: `QROKE_TEST_TRACK_SECONDS=8 npm run test:browser`.
 
 O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Chromium headless correspondente à versão instalada do Playwright. Evite forçar uma versão antiga do cache. Em outra máquina, execute `npx playwright install chromium --only-shell` antes. Os testes usam dados próprios e removem apenas seus diretórios temporários ao encerrar; não alteram sua festa.
 
 ### Resultado desta execução
 
 - Busca real: **20 músicas**, **20 vídeos de karaokê**, **49 recomendações** de `getUpNexts`.
-- **21 testes unitários aprovados**.
+- **24 testes unitários aprovados**, incluindo URL LAN e rejeição de QR com localhost/loopback.
 - **1 teste de API oficial real aprovado** com a chave atualizada (20 resultados no primário validado e 20 na reserva).
 - Checagem TypeScript e build de produção aprovados.
 - **11 verificações de integração aprovadas** (suíte e dez cenários).
 - Navegador aprovado: mobile 360 px, áudio local até o fim da fila, arrasto durante polling, abas duplicadas, 16 botões alcançáveis por setas no PIN e 19 no admin, temas, QR branco, reconexão e polling. IFrame simulado: karaokê, últimos 5 s, dimensões mínimas, modos, ausência de sobreposição e avanço em erro 150. Nenhum erro JavaScript ou de hidratação.
 - `npm install` e `npm audit --omit=dev` informaram zero vulnerabilidades conhecidas.
 - Servidor de produção iniciado em `http://localhost:3100`: HTTP 200 confirmado pelo Windows, busca com 20 resultados oficiais validados e autenticação do PIN aprovadas.
+- Regressão aprovada: PLAYER ativado com fila vazia, dois pedidos remotos iniciados e concluídos sem novo clique, incluindo navegação de `/host` para `/qr` (fixture isolada na porta 3196).
+- LAN configurada: `192.168.31.95:3100` → `172.25.210.47:3100`, firewall privado restrito ao Wi-Fi/LocalSubnet; HTTP 200 e QR com URL LAN conferidos. Celular físico pendente.
 - Verificação privada: nenhuma ocorrência da chave no código/documentação nem no bundle público.
 
 ### Aceite por etapa da issue #1
 
 | Etapa | Entrega no código                               | Validação / pendência                                                                   |
 | ----- | ----------------------------------------------- | --------------------------------------------------------------------------------------- |
-| 0     | Configuração LAN e instruções WSL/Windows       | Windows → WSL passou; celular pelo Wi-Fi pendente                                       |
+| 0     | Configuração LAN e instruções WSL/Windows       | IP do Wi-Fi → WSL: HTTP 200; celular físico pendente                                    |
 | 1     | Nuxt, Quasar, TypeScript; adaptador de rádio    | Build e catálogo real passaram; Premium pendente                                        |
 | 2     | SQLite e rodízio com ordem manual               | Unitários e integração                                                                  |
 | 3     | Busca, cache, validação e reserva               | Primário, validação oficial e reserva reais aprovados; falhas também cobertas por mocks |
@@ -288,6 +346,7 @@ O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Ch
 - [ ] Transferir PLAYER entre PC e TV; confirmar o intervalo de transferência e ausência de som duplicado.
 - [ ] Parear caixa Bluetooth e reproduzir MP3; testar seleção de saída em localhost ou escolher pelo sistema.
 - [ ] Derrubar e restaurar a rede; reiniciar o servidor e confirmar fila/posição.
+- [ ] Com rádio desligado, esvaziar a fila, adicionar outra música pelo celular e confirmar o início sem novo clique no PLAYER.
 - [ ] Esvaziar a fila com rádio ligado, observar continuação e adicionar uma escolha humana.
 - [ ] Fazer uma sessão real em aparelho de largura ≤ 360 px.
 - [ ] Só após esses testes, aprovar a abertura de PR.

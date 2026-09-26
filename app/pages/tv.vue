@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { state, admin, queue, isPlayer, api, control } = useParty()
+const { state, admin, queue, isPlayer, api, control, device, pending, playHere } = useParty()
 const root = ref<HTMLElement | null>(null),
   unlock = ref(false),
   showQr = ref(true),
@@ -83,6 +83,17 @@ watch(admin, (value) => {
               ? 'Reprodução no dispositivo PLAYER selecionado.'
               : 'Selecione o PLAYER nos controles do anfitrião.'
           }}</small>
+          <button
+            v-if="!state?.playerId && admin"
+            class="primary-button"
+            :disabled="pending || !device"
+            @click="playHere"
+          >
+            Tocar neste dispositivo
+          </button>
+          <button v-else-if="!state?.playerId" class="primary-button" @click="unlock = true">
+            Ativar som nesta TV
+          </button>
         </div>
       </section>
       <aside v-if="!expanded" class="tv-aside">
