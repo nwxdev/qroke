@@ -397,7 +397,7 @@ O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Ch
 - **40 testes unitários** e **13 verificações de integração** aprovados, incluindo state/PKCE, renovação de token, isolamento de contas, expiração do admin, paginação, duplicatas e descoberta do IP.
 - Build de produção e TypeScript aprovados.
 - **API real:** 200 faixas válidas nos 200 itens de uma playlist pública do canal Google for Developers; nenhuma música foi adicionada à festa durante esse teste.
-- OAuth simulado no navegador passou com navegação entre origens, cookie temporário Lax, popup, retorno sem recriar o player, importação e desconexão. As credenciais reais foram copiadas para o .env privado, mas a autorização/seleção da conta real ainda depende do consentimento do responsável.
+- OAuth simulado no navegador passou com navegação entre origens, cookie temporário Lax, popup, retorno sem recriar o player, importação e desconexão. As credenciais reais foram copiadas para o .env privado. Em 26/09/2026, o responsável confirmou que o login Google funcionou após a orientação sobre usuários de teste. A importação de uma playlist pessoal real ainda aguarda confirmação.
 - Testes de QR confirmam que a URL e o SVG mudam ao recuperar a rede, e que uma falha de acesso mostra aviso. No ambiente real, o monitor confirmou `http://192.168.31.95:3100/`. Mudança física de IP, roteador reiniciado e leitura em celular real continuam pendentes.
 - Verificação privada: API key, Client ID e Client Secret não aparecem nos 98 arquivos de código/documentação nem nos 26 arquivos públicos examinados. Tokens OAuth são mantidos apenas no servidor.
 - **Seis scripts de navegador aprovados em execuções verificadas:** fluxo geral/áudio, YouTube simulado, fila vazia/recuperação, layout/scroll, tema/PIN e playlists/QR. O último teste inclui Enter, importação, duplicatas, popup OAuth, desconexão e larguras 320/360/1366 px; nenhuma exceção JavaScript nos cenários monitorados.
@@ -462,7 +462,8 @@ O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Ch
 - [ ] Esvaziar a fila com rádio ligado, observar continuação e adicionar uma escolha humana.
 - [ ] Fazer uma sessão real em aparelho de largura ≤ 360 px.
 - [ ] Importar playlist pública por link; conferir duplicatas, vídeos indisponíveis e continuação dos lotes.
-- [ ] Conectar a conta Google, escolher uma playlist própria e testar importação. Conferir que outro navegador admin não herda a conexão.
+- [x] Conectar a conta Google — login confirmado pelo responsável em 26/09/2026.
+- [ ] Escolher uma playlist própria e testar importação. Conferir que outro navegador admin não herda a conexão.
 - [ ] Alterar a URL pública da worktree para um endereço válido, conferir QR atualizado sem restart e testar novamente com o celular. Confirmar recuperação após reiniciar roteador/WSL e reaplicar encaminhamento se necessário.
 - [ ] Só após esses testes, aprovar a abertura de PR.
 
