@@ -1,0 +1,47 @@
+{
+  "name": "qroke",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "nuxt dev --host 0.0.0.0",
+    "build": "nuxt build",
+    "start": "node --env-file-if-exists=.env scripts/start.mjs",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:integration": "node --test tests/integration.mjs",
+    "test:browser": "node scripts/browser-check.mjs && node scripts/browser-player-check.mjs",
+    "spike:catalog": "node scripts/catalog-spike.mjs",
+    "test:youtube": "node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --config vitest.live.config.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@quasar/extras": "^1.17.0",
+    "better-sqlite3": "13.0.3",
+    "nuxt": "4.5.2",
+    "nuxt-quasar-ui": "3.1.1",
+    "qrcode": "^1.5.4",
+    "quasar": "^2.18.0",
+    "vue": "^3.5.0",
+    "vue-draggable-plus": "^0.6.0",
+    "vue-router": "^5.0.0",
+    "ytmusic-api": "5.3.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^24.0.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/youtube": "^0.1.2",
+    "prettier": "3.9.9",
+    "typescript": "^5.9.0",
+    "vitest": "5.0.2",
+    "vue-tsc": "^3.0.0"
+  }
+}

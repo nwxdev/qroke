@@ -1,0 +1,9 @@
+process.env.NITRO_HOST ||= '0.0.0.0'
+process.env.NITRO_PORT ||= process.env.QROKE_PORT || '3000'
+process.env.NUXT_HOST_PIN ||= process.env.QROKE_HOST_PIN || ''
+process.env.NUXT_YOUTUBE_API_KEY ||= process.env.YOUTUBE_API_KEY || ''
+process.env.NUXT_MUSIC_DIR ||= process.env.QROKE_MUSIC_DIR || ''
+process.env.NUXT_DATABASE ||= process.env.QROKE_DATABASE || '.data/qroke.sqlite'
+process.env.NUXT_QUOTA_DAILY_CAP ||= process.env.QROKE_QUOTA_DAILY_CAP || '90'
+process.env.NUXT_PUBLIC_PARTY_URL ||= process.env.QROKE_PUBLIC_URL || ''
+await import('../.output/server/index.mjs')
