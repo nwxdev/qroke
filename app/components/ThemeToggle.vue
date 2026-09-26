@@ -7,6 +7,6 @@ const { light, toggle } = useTheme()
     :aria-label="light ? 'Usar tema escuro' : 'Usar tema claro'"
     @click="toggle"
   >
-    {{ light ? '◐' : '☼' }}
+    <AppIcon :name="light ? 'moon' : 'sun'" />
   </button>
 </template>

@@ -220,3 +220,30 @@ test('Nitro real: convidados, fila, PLAYER, permissões e persistência', async 
     assert.equal((await host.request('/api/control', { action: 'skip' })).status, 401)
   })
 })
+
+test('dois logins simultâneos não dividem o controle e logout libera o próximo', async (t) => {
+  const server = await startFixture(3193)
+  t.after(() => server.close())
+  const clients = [client(server.base), client(server.base)]
+  const results = await Promise.all(
+    clients.map((c) => c.request('/api/auth', { action: 'login', pin: '4321' })),
+  )
+  assert.deepEqual(results.map((r) => r.status).sort(), [200, 409])
+  const owner = clients[results.findIndex((r) => r.status === 200)]
+  const waiting = clients[results.findIndex((r) => r.status === 409)]
+  const before = (await owner.request('/api/session')).data
+  assert.equal(before.admin, true)
+  assert.equal(before.adminLeaseSeconds, 120)
+  assert.equal((await waiting.request('/api/session')).data.admin, false)
+  assert.equal(
+    (await waiting.request('/api/control', { action: 'mode', mode: 'music' })).status,
+    401,
+  )
+  await owner.request('/api/auth', { action: 'touch' })
+  assert.equal((await owner.request('/api/session')).data.adminExpiresAt, before.adminExpiresAt)
+  await server.restart()
+  assert.equal((await owner.request('/api/session')).data.adminExpiresAt, before.adminExpiresAt)
+  await owner.request('/api/auth', { action: 'logout' })
+  assert.equal((await waiting.request('/api/auth', { action: 'login', pin: '4321' })).status, 200)
+  assert.equal((await owner.request('/api/control', { action: 'skip' })).status, 401)
+})

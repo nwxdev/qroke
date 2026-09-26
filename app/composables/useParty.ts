@@ -12,6 +12,9 @@ export function useParty() {
   const state = useState<PublicState | null>('party', () => null)
   const guest = useState<Guest | null>('guest', () => null),
     admin = useState('admin', () => false)
+  const adminExpiresAt = useState('admin-expires-at', () => 0),
+    adminLeaseSeconds = useState('admin-lease-seconds', () => 120),
+    adminDialogOpen = useState('admin-dialog-open', () => false)
   const soundDevice = useState<string | null>('sound-device', () => null)
   const device = useState<{ id: string; token: string } | null>('device', () => null)
   const connected = useState('connected', () => false),
@@ -32,11 +35,18 @@ export function useParty() {
     }
   }
   async function session() {
-    const result = await $fetch<{ guest: Guest | null; admin: boolean }>('/api/session', {
+    const result = await $fetch<{
+      guest: Guest | null
+      admin: boolean
+      adminExpiresAt: number
+      adminLeaseSeconds: number
+    }>('/api/session', {
       timeout: 4000,
     })
     guest.value = result.guest
     admin.value = result.admin
+    adminExpiresAt.value = result.adminExpiresAt
+    adminLeaseSeconds.value = result.adminLeaseSeconds
     if (result.guest)
       try {
         localStorage.setItem('qroke:guest', JSON.stringify(result.guest))
@@ -79,9 +89,10 @@ export function useParty() {
     await control({ action: 'assign', deviceId: device.value.id })
     await nextTick()
     if (isPlayer.value)
-      document
-        .querySelector('.media-player')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      document.querySelector('.media-player')?.scrollIntoView({
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        block: 'center',
+      })
   }
   async function add(track: Track) {
     if (!guest.value || pending.value) return
@@ -120,6 +131,9 @@ export function useParty() {
     state,
     guest,
     admin,
+    adminExpiresAt,
+    adminLeaseSeconds,
+    adminDialogOpen,
     device,
     connected,
     lastContact,

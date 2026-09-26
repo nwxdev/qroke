@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
 import type { QueueItem } from '../../shared/types'
-const { state, admin, device, pending, control, reorder, isPlayer, api, playHere } = useParty()
+const { state, admin, device, pending, control, reorder, isPlayer, playHere } = useParty()
 const dragged = ref<QueueItem[]>([])
 const dragging = ref(false)
 watch(
@@ -16,17 +16,19 @@ async function endDrag() {
   await reorder(dragged.value)
   dragged.value = [...(state.value?.queue || [])]
 }
-let touched = 0
-function activity() {
-  if (admin.value && Date.now() - touched > 30000) {
-    touched = Date.now()
-    void api('/api/auth', { action: 'touch' }).catch(() => {})
-  }
-}
+const unlock = ref(false)
+onMounted(() => {
+  unlock.value = !admin.value
+})
+watch(admin, (value) => {
+  if (value) unlock.value = false
+})
 </script>
 <template>
-  <div class="page-shell" @pointerdown="activity" @keydown="activity">
+  <div class="page-shell">
     <BrandHeader
+      ><button v-if="!admin" class="header-control" @click="unlock = true">
+        <AppIcon name="lock" />Liberar controles</button
       ><NuxtLink to="/tv" class="subtle-link">Abrir TV ↗</NuxtLink
       ><NuxtLink to="/qr" class="subtle-link">QR ↗</NuxtLink></BrandHeader
     ><PartyNotice />
@@ -38,11 +40,14 @@ function activity() {
       </div>
       <div class="host-layout">
         <section>
-          <AdminUnlock v-if="!admin" />
+          <div v-if="!admin" class="panel">
+            <h2>O controle é seu por alguns minutos.</h2>
+            <p>Use o botão Liberar controles no topo para entrar com o PIN.</p>
+          </div>
           <div v-if="admin" class="panel">
             <div class="section-heading">
               <h2>Controles</h2>
-              <span class="tag active">Admin liberado</span>
+              <AdminStatus />
             </div>
             <p v-if="!state?.playerId" class="notice">
               Para começar, clique em <strong>Tocar neste dispositivo</strong> no computador ou TV
@@ -103,5 +108,6 @@ function activity() {
         </section>
       </div>
     </main>
+    <AdminDialog v-model="unlock" />
   </div>
 </template>

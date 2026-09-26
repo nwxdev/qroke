@@ -6,4 +6,5 @@ process.env.NUXT_MUSIC_DIR ||= process.env.QROKE_MUSIC_DIR || ''
 process.env.NUXT_DATABASE ||= process.env.QROKE_DATABASE || '.data/qroke.sqlite'
 process.env.NUXT_QUOTA_DAILY_CAP ||= process.env.QROKE_QUOTA_DAILY_CAP || '90'
 process.env.NUXT_PUBLIC_PARTY_URL ||= process.env.QROKE_PUBLIC_URL || ''
+process.env.NUXT_ADMIN_LEASE_SECONDS ||= process.env.QROKE_ADMIN_LEASE_SECONDS || '120'
 await import('../.output/server/index.mjs')

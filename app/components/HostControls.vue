@@ -10,10 +10,12 @@ const { state, device, control, pending, api, act, playHere } = useParty()
         :disabled="pending || !state?.current"
         @click="control({ action: 'pause', paused: !state?.paused })"
       >
-        {{ state?.paused ? '▶ Continuar' : 'Ⅱ Pausar' }}
+        <AppIcon :name="state?.paused ? 'play' : 'pause'" /><span>{{
+          state?.paused ? 'Continuar' : 'Pausar'
+        }}</span>
       </button>
       <button :disabled="pending || !state?.current" @click="control({ action: 'skip' })">
-        Pular ⏭
+        <AppIcon name="next" /><span>Pular</span>
       </button>
       <button :disabled="pending || !state?.current" @click="control({ action: 'skip' })">
         Remover atual

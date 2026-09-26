@@ -62,6 +62,7 @@ Altere apenas `QROKE_HOST_PIN` para um PIN escolhido por você, com **4 a 8 díg
 
 ```dotenv
 QROKE_HOST_PIN=583729
+QROKE_ADMIN_LEASE_SECONDS=120
 QROKE_PORT=3100
 QROKE_PUBLIC_URL=http://192.168.31.95:3100
 ```
@@ -119,6 +120,33 @@ O modo espelhado do WSL é outra possibilidade, com configuração e firewall Hy
 
 A v1 foi projetada para LAN: visitantes podem entrar e pesquisar sem autenticação de conta; o PIN protege os controles administrativos. Expor a festa externamente exige definir proteção para convidados, catálogo/quota e proxy confiável, além de validar WebSocket e cookies por HTTPS. Um túnel público foi **avaliado, não ativado**. O IP público de **saída**, usado nas restrições da API do Google, tem finalidade diferente do endereço que os convidados usam para acessar a festa.
 
+### Interface, player e acesso do anfitrião
+
+- **Convite `/qr`:** QR à esquerda e fila à direita, atualizada pela conexão da festa. A faixa atual tem destaque. Em telas de até 760 px os blocos ficam empilhados; a lista tem rolagem própria e a página não transborda horizontalmente.
+- **Busca `/`:** a fila vem antes da busca em um carrossel. Telas grandes exibem quatro cartões; tablets, dois; celulares, um cartão e parte do próximo para indicar o arrasto. Setas, toque, trackpad e teclado permitem percorrer a lista. A fila administrativa em `/host` mantém seus controles de reordenação.
+- **Enter:** o campo de busca aceita Enter e anuncia a ação de pesquisa ao teclado do celular. O envio é bloqueado durante uma consulta em andamento para evitar duplicação.
+- **Feedback:** o botão de adicionar muda para confirmação com uma animação curta; entradas, saídas e reordenações da fila têm transições. A legenda do player transiciona ao mudar a música. As animações usam Vue/CSS, sem dependência adicional, e respeitam `prefers-reduced-motion`.
+- **Scroll:** o YouTube passa a um player flutuante quando menos de 60% do espaço original está visível. O mesmo iframe e a mesma instância continuam tocando. A área mantém seu espaço para não deslocar a página; **Voltar** retorna ao local original. O player permanece com pelo menos 200 × 200 px, com controles do app fora do vídeo. Uma aba oculta ainda pausa o vídeo.
+- **Karaokê `/tv`:** o QR permanece em um canto numa coluna reservada, inclusive na expansão do vídeo, nos cinco segundos finais e com os controles abertos. O comando para ocultar QR não é mostrado durante karaokê. O player flutuante ocupa o lado oposto ao QR, sem cobrir o código.
+- **Temas:** texto sobre botões usa a cor de contraste do tema; a imagem de fundo da TV fica suave no tema claro. Os textos dentro da superfície escura do player mantêm sua própria paleta legível. Ícones dos controles herdam a cor do texto.
+- **PIN em popup:** Liberar controles abre um diálogo acima da interface, com botão de fechar, Escape/Back e foco contido. O teclado numérico da TV continua aceitando D-pad. Enquanto o PIN estiver aberto, o vídeo fica temporariamente oculto/pausado para o diálogo não cobrir o YouTube; fechar retoma o estado anterior. Áudio local continua independente da administração.
+
+### Um anfitrião por vez
+
+`QROKE_ADMIN_LEASE_SECONDS=120` define **2 minutos de controle exclusivo**, contados do login. Aceita de 30 a 3600 segundos; configuração inválida usa 120. Altere no `.env` da worktree e reinicie o servidor. A configuração afeta as próximas sessões; o prazo da sessão vigente permanece no banco.
+
+A interface mostra um contador. Durante a reserva, outro navegador recebe aviso e aguarda: a API responde 409 a um PIN válido que dispute o controle. Não há transferência forçada nem fila automática de solicitações. Ao expirar ou clicar **Sair do admin**, qualquer anfitrião pode entrar novamente com o PIN. Atividade, consultas de estado, `touch` e novo login do mesmo proprietário **não prolongam** o prazo.
+
+A exclusividade é garantida no SQLite por transação imediata e índice único, não apenas pelo botão desabilitado. Duas requisições simultâneas resultam em um vencedor; o outro não recebe credencial administrativa. Sessões antigas/expiradas perdem acesso à API, mas o PLAYER continua autorizado pela credencial independente do aparelho. A expiração não abre o PIN automaticamente e não interrompe a música; use Liberar controles quando quiser administrar novamente.
+
+Abas do mesmo navegador/origem compartilham o cookie e são a mesma sessão administrativa. `localhost` e o IP da LAN são origens diferentes: prefira uma URL consistente ou saia da sessão anterior antes de trocar.
+
+O schema SQLite passa para **2**. A migração adiciona o prazo e a unicidade e revoga as sessões administrativas do modelo antigo, preservando convidados, fila, histórico, dispositivos e quota. Após atualizar, informe o PIN novamente. O prazo de uma sessão nova sobrevive ao reinício do servidor.
+
+### Recuperação no fim de áudio local
+
+Além do evento nativo `ended`, o PLAYER verifica se o áudio está no último centésimo de segundo, sem seek, com reprodução elegível, por pelo menos dois segundos. Se o navegador omitir o evento, envia o término com o identificador da faixa. O servidor continua ignorando eventos atrasados/duplicados. Essa recuperação não se aplica ao YouTube e não avança áudio pausado pelo anfitrião.
+
 ## Usar na festa
 
 1. Abra `/host`, informe o PIN e mantenha essa aba disponível.
@@ -128,7 +156,7 @@ A v1 foi projetada para LAN: visitantes podem entrar e pesquisar sem autenticaç
 5. Mostre `/qr` e peça aos convidados para entrarem pelo mesmo Wi-Fi.
 6. Cada pessoa informa o nome, busca e pressiona **+**. Pode adicionar várias músicas. Um pedido já pendente da mesma pessoa não é duplicado por toque repetido.
 7. O convidado remove seus próprios pedidos pendentes; o admin remove qualquer pedido, pula a atual e reordena.
-8. Para terminar a administração, use **Sair do admin**. Sem interação, a sessão também expira em cinco minutos.
+8. Para terminar a administração, use **Sair do admin**. O controle também expira ao terminar o prazo fixo configurado (2 minutos por padrão).
 
 ### Pedido novo com a fila vazia
 
@@ -144,7 +172,7 @@ Qualquer uma das quatro telas pode receber o papel. Em `/qr`, o player só apare
 
 Cada aba recebe identificação e credencial privada em `sessionStorage`. O host escolhe o identificador público; eventos de reprodução exigem a credencial privada correspondente. Abrir outra aba cria outro candidato a PLAYER. Um handshake via BroadcastChannel detecta cópias de sessionStorage em abas duplicadas e emite outra credencial. Em navegadores sem BroadcastChannel, cada recarga registra um novo dispositivo e requer selecioná-lo novamente no host.
 
-A transferência entre aparelhos introduz uma janela de **9 segundos** antes de o novo tocar. O anterior para ao receber o novo estado ou ao ficar **8 segundos** sem contato com o servidor. Eventos atrasados de faixas antigas são ignorados. No YouTube, uma aba oculta ou com menos de metade do player visível pausa a reprodução; mantenha o aparelho PLAYER em primeiro plano. Áudio local pode continuar enquanto você navega pelos controles ou alterna abas.
+A transferência entre aparelhos introduz uma janela de **9 segundos** antes de o novo tocar. O anterior para ao receber o novo estado ou ao ficar **8 segundos** sem contato com o servidor. Eventos atrasados de faixas antigas são ignorados. No YouTube, rolar a página mantém a reprodução em um player flutuante visível; uma aba oculta ainda pausa o vídeo. Mantenha o aparelho PLAYER em primeiro plano. Áudio local pode continuar enquanto você navega pelos controles ou alterna abas.
 
 A faixa e a posição sobrevivem a restart. Após recarregar a página, pode ser necessário pressionar **Ativar som** novamente. Se o aparelho desaparecer, escolha outro no host; o app não transfere automaticamente o som para um convidado.
 
@@ -209,7 +237,7 @@ O ponto de partida era o commit `069010b`, contendo apenas `docs/plano.md`. A ú
 
 `shared/types.ts` contém o contrato compartilhado. `server/core` abriga regras, catálogo, biblioteca e banco testáveis sem Nuxt. `server/api` valida entrada e autorização. `app/composables` mantém estado, conexão, tema e navegação espacial. As quatro rotas estão em `app/pages`.
 
-SQLite armazena o estado da festa como um snapshot JSON transacional em `party`, e usa tabelas separadas para convidados, sessões admin, dispositivos, tentativas de PIN e quota. A versão inicial do schema é 1. Essa escolha atende uma festa em um processo; **não é uma arquitetura de múltiplas instâncias**. O histórico pertence à festa e permanece no banco; não há painel de estatísticas, rotação automática ou botão para apagar a festa nesta v1.
+SQLite armazena o estado da festa como um snapshot JSON transacional em `party`, e usa tabelas separadas para convidados, sessões admin, dispositivos, tentativas de PIN e quota. O schema é 2, com migração da sessão administrativa para prazo absoluto e exclusividade. Essa escolha atende uma festa em um processo; **não é uma arquitetura de múltiplas instâncias**. O histórico pertence à festa e permanece no banco; não há painel de estatísticas, rotação automática ou botão para apagar a festa nesta v1.
 
 ### Rodízio e ordem manual
 
@@ -268,7 +296,7 @@ O nome é normalizado, sem caracteres de controle, entre 2 e 20 caracteres Unico
 
 O navegador guarda nome e identificador público em `localStorage`; a prova de identidade é **outra credencial aleatória**, em cookie HttpOnly e SameSite Strict. A API não aceita um `guestId` enviado pelo cliente como autenticação. Se o cookie for perdido, é necessário entrar novamente; copiar apenas o identificador público não permite assumir outra pessoa.
 
-PIN nunca é validado no cliente. Sessões admin são revogáveis e expiram por inatividade. A API checa origem das mutações, exige JSON, valida esquemas e limita o tamanho declarado do corpo. A identificação do PLAYER também separa ID público de token privado.
+PIN nunca é validado no cliente. Sessões admin são exclusivas, revogáveis e expiram por prazo fixo. A API checa origem das mutações, exige JSON, valida esquemas e limita o tamanho declarado do corpo. A identificação do PLAYER também separa ID público de token privado.
 
 HTTP em LAN e PIN compartilhado são o escopo deste projeto. Não publique o servidor diretamente na internet.
 
@@ -291,7 +319,7 @@ npm run test:youtube
 - **Spike real:** consulta o YouTube Music sem credenciais. Requer internet; não valida Premium.
 - **YouTube oficial, opt-in:** valida resultados reais e força uma falha do primário para testar uma chamada de reserva. Após a correção da credencial, o teste oficial passou: 20 faixas validadas via videos.list, 20 faixas na reserva e cache confirmado, com uma chamada search.list. A tentativa anterior foi recusada com API_KEY_INVALID antes de chegar à reserva.
 
-A expiração administrativa preserva a instância do PLAYER; o servidor continua aceitando eventos de reprodução pela credencial do dispositivo. O teste simula a expiração sem esperar cinco minutos.
+A expiração administrativa preserva a instância do PLAYER; o servidor continua aceitando eventos de reprodução pela credencial do dispositivo. O teste simula a expiração sem esperar o prazo real de dois minutos.
 
 **Limitação observada no teste estendido:** com WAVs de 8 segundos, o relógio de áudio do Chromium headless no WSL desacelerou após algumas transições, mesmo com o arquivo totalmente carregado e sem erro de reprodução. O comportamento também foi reproduzido em uma sequência de áudio HTML puro, fora do app. Também houve lentidão ao anexar um sétimo WAV ao mesmo contexto durante o teste desta correção. A suíte usa WAVs de 2 segundos e testa os pedidos após fila vazia em outro contexto/processo; reprodução prolongada em navegador normal/saída física continua sendo um aceite obrigatório. Para reproduzir o diagnóstico: `QROKE_TEST_TRACK_SECONDS=8 npm run test:browser`.
 
@@ -300,16 +328,22 @@ O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Ch
 ### Resultado desta execução
 
 - Busca real: **20 músicas**, **20 vídeos de karaokê**, **49 recomendações** de `getUpNexts`.
-- **24 testes unitários aprovados**, incluindo URL LAN e rejeição de QR com localhost/loopback.
+- **26 testes unitários aprovados**, incluindo URL LAN e rejeição de QR com localhost/loopback.
 - **1 teste de API oficial real aprovado** com a chave atualizada (20 resultados no primário validado e 20 na reserva).
 - Checagem TypeScript e build de produção aprovados.
-- **11 verificações de integração aprovadas** (suíte e dez cenários).
-- Navegador aprovado: mobile 360 px, áudio local até o fim da fila, arrasto durante polling, abas duplicadas, 16 botões alcançáveis por setas no PIN e 19 no admin, temas, QR branco, reconexão e polling. IFrame simulado: karaokê, últimos 5 s, dimensões mínimas, modos, ausência de sobreposição e avanço em erro 150. Nenhum erro JavaScript ou de hidratação.
+- **12 verificações de integração aprovadas**, incluindo disputa simultânea pelo controle administrativo e liberação após logout.
+- Navegador aprovado: mobile 360 px, áudio local até o fim da fila, arrasto durante polling, abas duplicadas, 13 botões alcançáveis por setas no popup de PIN e 19 no admin, temas, QR branco, reconexão e polling. IFrame simulado: karaokê, últimos 5 s, dimensões mínimas, modos, ausência de sobreposição e avanço em erro 150. Nenhum erro JavaScript ou de hidratação.
 - `npm install` e `npm audit --omit=dev` informaram zero vulnerabilidades conhecidas.
 - Servidor de produção iniciado em `http://localhost:3100`: HTTP 200 confirmado pelo Windows, busca com 20 resultados oficiais validados e autenticação do PIN aprovadas.
 - Regressão aprovada: PLAYER ativado com fila vazia, dois pedidos remotos iniciados e concluídos sem novo clique, incluindo navegação de `/host` para `/qr` (fixture isolada na porta 3196).
 - LAN configurada: `192.168.31.95:3100` → `172.25.210.47:3100`, firewall privado restrito ao Wi-Fi/LocalSubnet; HTTP 200 e QR com URL LAN conferidos. Celular físico pendente.
 - Verificação privada: nenhuma ocorrência da chave no código/documentação nem no bundle público.
+
+- Validação da interface atualizada: QR em duas colunas e empilhado a 320/360/768 px; carrossel com quatro cartões no desktop acima da busca; Enter e feedback de inclusão; QR de karaokê em 320/360 px sem cobrir o vídeo.
+- Reprodução validada com iframe simulado: scroll preserva o mesmo nó e instância; expiração administrativa não abre popup nem interrompe o vídeo. Áudio local também conclui quando o teste suprime o evento nativo de término.
+- Popup validado: fechar, Escape, foco contido por Tab, D-pad, sessão ocupada e aquisição após logout de outro navegador. Contraste de pelo menos 4,5:1 nos botões e textos de TV/player verificados; movimento reduzido respeitado.
+- Cinco scripts de navegador aprovados: fluxo geral, YouTube simulado, fila vazia/recuperação de áudio, layout/scroll e tema/popup. Nenhum erro JavaScript nos cenários monitorados.
+- Smoke final na LAN: `/`, `/host`, `/qr` e `/tv` responderam HTTP 200; `/api/session` confirmou prazo administrativo de 120 segundos.
 
 ### Aceite por etapa da issue #1
 
@@ -342,7 +376,7 @@ O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Ch
 - [ ] Misturar karaokê e música; conferir os cinco segundos finais e ausência de sobreposição ao vídeo.
 - [ ] Mover por arrasto, toque e setas; adicionar outra faixa e confirmar que a ordem manual permanece.
 - [ ] Percorrer PIN, fila e controles só com D-pad na Smart TV e teclado no PC/HDMI.
-- [ ] Deixar admin inativo por cinco minutos e confirmar o bloqueio, mesmo com fila e player ativos.
+- [ ] Disputar o controle em dois navegadores, verificar o contador e confirmar liberação após 2 minutos ou logout, mesmo com música tocando.
 - [ ] Transferir PLAYER entre PC e TV; confirmar o intervalo de transferência e ausência de som duplicado.
 - [ ] Parear caixa Bluetooth e reproduzir MP3; testar seleção de saída em localhost ou escolher pelo sistema.
 - [ ] Derrubar e restaurar a rede; reiniciar o servidor e confirmar fila/posição.

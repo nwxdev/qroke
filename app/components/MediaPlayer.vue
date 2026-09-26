@@ -1,23 +1,42 @@
 <script setup lang="ts">
 /// <reference types="youtube" />
-const { state, isPlayer, api, lastContact, device, soundDevice, armSound } = useParty()
+const { state, isPlayer, api, lastContact, device, soundDevice, armSound, adminDialogOpen } =
+  useParty()
 const route = useRoute()
 const frame = ref<HTMLDivElement | null>(null),
-  viewport = ref<HTMLElement | null>(null),
+  slot = ref<HTMLElement | null>(null),
   audio = ref<HTMLAudioElement | null>(null)
 const armed = computed(() => !!device.value && soundDevice.value === device.value.id),
   warning = ref(''),
-  visible = ref(true),
+  pageVisible = ref(true),
+  inView = ref(true),
+  slotHeight = ref(200),
   outputs = ref<MediaDeviceInfo[]>([]),
   sink = ref(''),
   clock = ref(Date.now())
 let loadedId: string | undefined
+let localFinish: { id: string; at: number } | undefined
 let yt: YT.Player | undefined,
   observer: IntersectionObserver | undefined,
   timer: ReturnType<typeof setInterval>,
   generation = 0,
   reporting = false
 const current = computed(() => state.value?.current)
+const docked = computed(() => armed.value && current.value?.source === 'youtube' && !inView.value)
+// Observar o espaço original evita alternar entre fixo/normal em um ciclo.
+watch(
+  docked,
+  (value) => {
+    if (value && slot.value) slotHeight.value = slot.value.getBoundingClientRect().height
+  },
+  { flush: 'sync' },
+)
+function returnToPlayer() {
+  slot.value?.scrollIntoView({
+    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+    block: 'center',
+  })
+}
 const safe = computed(
   () =>
     isPlayer.value &&
@@ -27,7 +46,7 @@ const safe = computed(
 const eligible = computed(
   () =>
     armed.value &&
-    (current.value?.source === 'local' || visible.value) &&
+    (current.value?.source === 'local' || (pageVisible.value && !adminDialogOpen.value)) &&
     safe.value &&
     !state.value?.paused,
 )
@@ -64,6 +83,7 @@ async function mountTrack() {
   yt?.destroy()
   yt = undefined
   loadedId = undefined
+  localFinish = undefined
   warning.value = ''
   if (!track || !isPlayer.value) return
   await nextTick()
@@ -128,7 +148,7 @@ async function activate() {
   await sync()
 }
 function pageVisibility() {
-  visible.value = !document.hidden
+  pageVisible.value = !document.hidden
   if (document.hidden) {
     yt?.pauseVideo?.()
   } else void sync()
@@ -159,17 +179,17 @@ watch(
   () => void mountTrack(),
   { flush: 'post' },
 )
-watch(eligible, () => void sync())
+watch(eligible, () => void sync(), { flush: 'post' })
 onMounted(() => {
   void mountTrack()
   observer = new IntersectionObserver(
     (entries) => {
-      visible.value = !document.hidden && (entries[0]?.intersectionRatio || 0) > 0.5
-      void sync()
+      inView.value = (entries[0]?.intersectionRatio || 0) > 0.6
     },
-    { threshold: [0, 0.5, 1] },
+    { threshold: [0, 0.6, 1] },
   )
-  if (viewport.value) observer.observe(viewport.value)
+  pageVisible.value = !document.hidden
+  if (slot.value) observer.observe(slot.value)
   document.addEventListener('visibilitychange', pageVisibility)
   timer = setInterval(async () => {
     clock.value = Date.now()
@@ -182,6 +202,27 @@ onMounted(() => {
     const position = yt?.getCurrentTime?.() ?? audio.value?.currentTime ?? 0,
       duration = yt?.getDuration?.() ?? audio.value?.duration ?? 0
     if (!Number.isFinite(duration) || !Number.isFinite(position)) return
+    // Alguns navegadores chegam ao fim do áudio sem emitir ended.
+    // Só recupera o último centésimo de segundo após pelo menos dois segundos estáveis.
+    const atLocalEnd =
+      current.value.source === 'local' &&
+      eligible.value &&
+      audio.value &&
+      !audio.value.seeking &&
+      (audio.value.ended || !audio.value.paused) &&
+      duration > 0 &&
+      position >= duration - 0.01
+    if (!atLocalEnd) localFinish = undefined
+    else if (!localFinish || localFinish.id !== current.value.queueId)
+      localFinish = { id: current.value.queueId, at: Date.now() }
+    else if (Date.now() - localFinish.at >= 2000) {
+      const id = localFinish.id
+      localFinish = undefined
+      reporting = true
+      await report('ended', id)
+      reporting = false
+      return
+    }
     reporting = true
     await report('progress', current.value.queueId, position, duration)
     reporting = false
@@ -209,37 +250,49 @@ onBeforeUnmount(() => {
     </p>
     <p v-if="!safe" class="notice">Aguardando conexão ou transferência do PLAYER…</p>
     <p v-if="warning" role="status" class="notice">{{ warning }}</p>
-    <div
-      ref="viewport"
-      class="media-viewport"
-      :class="{ 'local-media': current?.source === 'local' }"
-    >
-      <div v-if="current?.source === 'youtube'" ref="frame" class="youtube-frame" />
-      <div v-else-if="current?.source === 'local'" class="local-player">
-        <span class="vinyl">♫</span>
-        <h2>{{ current.title }}</h2>
-        <p>{{ current.artist }}</p>
-        <audio
-          ref="audio"
-          :data-queue-id="current.queueId"
-          :src="'/api/library/' + current.id"
-          :controls="route.path !== '/tv'"
-          preload="metadata"
-          @loadedmetadata="localReady($event.target as HTMLAudioElement)"
-          @ended="report('ended', ($event.target as HTMLAudioElement).dataset.queueId)"
-          @error="report('error', ($event.target as HTMLAudioElement).dataset.queueId)"
-        />
-      </div>
-      <div v-else class="empty-player">
-        <span>♫</span>
-        <h2>Esperando a próxima música</h2>
-        <p>A fila começa assim que alguém fizer um pedido.</p>
+    <div ref="slot" class="media-slot" :style="docked ? { height: slotHeight + 'px' } : undefined">
+      <div
+        class="media-shell"
+        :class="{
+          'player-floating': docked,
+          'player-covered': adminDialogOpen && current?.source === 'youtube',
+        }"
+      >
+        <div class="media-viewport" :class="{ 'local-media': current?.source === 'local' }">
+          <div v-if="current?.source === 'youtube'" ref="frame" class="youtube-frame" />
+          <div v-else-if="current?.source === 'local'" class="local-player">
+            <span class="vinyl">♫</span>
+            <h2>{{ current.title }}</h2>
+            <p>{{ current.artist }}</p>
+            <audio
+              ref="audio"
+              :data-queue-id="current.queueId"
+              :src="'/api/library/' + current.id"
+              :controls="route.path !== '/tv'"
+              preload="metadata"
+              @loadedmetadata="localReady($event.target as HTMLAudioElement)"
+              @ended="report('ended', ($event.target as HTMLAudioElement).dataset.queueId)"
+              @error="report('error', ($event.target as HTMLAudioElement).dataset.queueId)"
+            />
+          </div>
+          <div v-else class="empty-player">
+            <span>♫</span>
+            <h2>Esperando a próxima música</h2>
+            <p>A fila começa assim que alguém fizer um pedido.</p>
+          </div>
+        </div>
+        <div v-if="docked" class="floating-controls">
+          <span>{{ current?.title }}</span>
+          <button @click="returnToPlayer" aria-label="Voltar ao player na página">↗ Voltar</button>
+        </div>
       </div>
     </div>
-    <div v-if="current" class="player-caption">
-      <strong>{{ current.title }}</strong
-      ><span>{{ current.artist }} · {{ current.guestName }}</span>
-    </div>
+    <Transition name="track" mode="out-in">
+      <div v-if="current" :key="current.queueId" class="player-caption">
+        <strong>{{ current.title }}</strong
+        ><span>{{ current.artist }} · {{ current.guestName }}</span>
+      </div>
+    </Transition>
     <div v-if="current?.source === 'local'" class="audio-output">
       <button @click="listOutputs">Escolher saída de áudio</button
       ><select

@@ -32,8 +32,19 @@ export class PartyDatabase {
       CREATE TABLE IF NOT EXISTS devices (id TEXT PRIMARY KEY, token TEXT UNIQUE NOT NULL, label TEXT NOT NULL, last_seen INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS pin_attempts (ip TEXT PRIMARY KEY, count INTEGER NOT NULL, until_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS quota (day TEXT PRIMARY KEY, searches INTEGER NOT NULL);
-      PRAGMA user_version=1;
+
     `)
+    const columns = this.db.pragma('table_info(admins)') as { name: string }[]
+    if (!columns.some((column) => column.name === 'expires_at')) {
+      this.db.transaction(() => {
+        this.db.exec('ALTER TABLE admins ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0')
+        // Sessões antigas não tinham prazo absoluto nem exclusividade.
+        this.db.exec('DELETE FROM admins')
+      })()
+    }
+    this.db.exec(
+      'CREATE UNIQUE INDEX IF NOT EXISTS one_admin ON admins((1)); PRAGMA user_version=2;',
+    )
     this.db.prepare('INSERT OR IGNORE INTO party VALUES (1,?)').run(JSON.stringify(initialState()))
   }
   state(): PartyState {
@@ -85,16 +96,41 @@ export class PartyDatabase {
       return guest
     })()
   }
-  admin(token: string | undefined, touch = false, now = Date.now()) {
+  admin(token: string | undefined, _touch = false, now = Date.now()) {
     if (!token) return false
-    const row = this.db.prepare('SELECT last_active FROM admins WHERE token=?').get(token) as
-      { last_active: number } | undefined
-    if (!row || now - row.last_active >= 300000) {
+    const row = this.db.prepare('SELECT expires_at FROM admins WHERE token=?').get(token) as
+      { expires_at: number } | undefined
+    if (!row || now >= row.expires_at) {
       this.db.prepare('DELETE FROM admins WHERE token=?').run(token)
       return false
     }
-    if (touch) this.db.prepare('UPDATE admins SET last_active=? WHERE token=?').run(now, token)
     return true
+  }
+  adminExpiresAt(now = Date.now()) {
+    const row = this.db.prepare('SELECT expires_at FROM admins WHERE expires_at>?').get(now) as
+      { expires_at: number } | undefined
+    return row?.expires_at || 0
+  }
+  claimAdmin(existing: string | undefined, seconds: number, now = Date.now()) {
+    return this.db
+      .transaction(() => {
+        this.db.prepare('DELETE FROM admins WHERE expires_at<=?').run(now)
+        const row = this.db.prepare('SELECT token,expires_at FROM admins').get() as
+          { token: string; expires_at: number } | undefined
+        if (row)
+          return {
+            granted: row.token === existing,
+            token: row.token === existing ? row.token : '',
+            expiresAt: row.expires_at,
+          }
+        const token = randomBytes(32).toString('hex'),
+          expiresAt = now + seconds * 1000
+        this.db
+          .prepare('INSERT INTO admins(token,last_active,expires_at) VALUES (?,?,?)')
+          .run(token, now, expiresAt)
+        return { granted: true, token, expiresAt }
+      })
+      .immediate()
   }
   attempt(ip: string, now = Date.now()) {
     return this.db.transaction(() => {

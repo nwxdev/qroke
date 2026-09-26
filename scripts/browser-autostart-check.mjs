@@ -25,6 +25,14 @@ try {
   const { tracks } = await search.json()
   for (let i = 0; i < 2; i++) {
     if (i === 1) {
+      // Simula navegador que omite o evento; a recuperação deve concluir a faixa.
+      await page.evaluate(() =>
+        document.addEventListener('ended', (event) => event.stopImmediatePropagation(), {
+          capture: true,
+          once: true,
+        }),
+      )
+
       await page.getByRole('link', { name: 'QR ↗', exact: true }).click()
       await expect(
         page.getByText('Som ativado. O próximo pedido começa automaticamente.'),

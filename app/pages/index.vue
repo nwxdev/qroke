@@ -8,7 +8,20 @@ const name = ref(''),
   results = ref<Track[]>([]),
   searching = ref(false),
   searched = ref(false),
-  searchError = ref('')
+  searchError = ref(''),
+  addedId = ref('')
+let feedbackTimer: ReturnType<typeof setTimeout>
+async function requestAdd(track: Track) {
+  await add(track)
+  if (alreadyQueued(track)) {
+    addedId.value = track.source + track.id
+    clearTimeout(feedbackTimer)
+    feedbackTimer = setTimeout(() => {
+      addedId.value = ''
+    }, 1200)
+  }
+}
+onBeforeUnmount(() => clearTimeout(feedbackTimer))
 const searchInput = ref<{ focus: () => void } | null>(null)
 let request = 0
 const nameError = computed(() => {
@@ -22,7 +35,7 @@ async function join() {
   searchInput.value?.focus()
 }
 async function search() {
-  if (query.value.trim().length < 2) return
+  if (searching.value || query.value.trim().length < 2) return
   const seq = ++request
   searching.value = true
   searchError.value = ''
@@ -56,6 +69,7 @@ const alreadyQueued = (track: Track) =>
   <div class="page-shell">
     <BrandHeader><NuxtLink to="/host" class="subtle-link">Anfitrião ↗</NuxtLink></BrandHeader
     ><PartyNotice />
+    <QueueCarousel />
     <main class="guest-layout">
       <section class="discovery">
         <div class="hero">
@@ -98,19 +112,25 @@ const alreadyQueued = (track: Track) =>
               outlined
               placeholder="Música, artista ou aquele refrão…"
               aria-label="Buscar música"
+              enterkeyhint="search"
+              @keydown.enter.prevent="search"
               maxlength="120"
               autofocus
               :disable="searching"
-              ><template #prepend><span aria-hidden="true">⌕</span></template></QInput
+              ><template #prepend><AppIcon name="search" /></template></QInput
             ><QBtn
               type="submit"
               color="primary"
               no-caps
               label="Buscar"
+              icon="search"
               :loading="searching"
               :disable="query.trim().length < 2"
             />
           </form>
+          <span class="sr-only" role="status">{{
+            addedId ? 'Música adicionada à fila.' : ''
+          }}</span>
           <div class="search-options">
             <div class="segmented">
               <button :aria-pressed="source === 'youtube'" @click="source = 'youtube'">
@@ -152,11 +172,12 @@ const alreadyQueued = (track: Track) =>
               </div>
               <button
                 class="add-button"
+                :class="{ 'just-added': addedId === track.source + track.id }"
                 :disabled="pending || alreadyQueued(track)"
                 :aria-label="'Adicionar ' + track.title + ' à fila'"
-                @click="add(track)"
+                @click="requestAdd(track)"
               >
-                {{ alreadyQueued(track) ? '✓' : '+' }}
+                <AppIcon :name="alreadyQueued(track) ? 'check' : 'plus'" />
               </button>
             </li>
           </ul>
@@ -202,11 +223,6 @@ const alreadyQueued = (track: Track) =>
           <small v-if="state?.current">Pedido de {{ state.current.guestName }}</small>
         </div>
         <MediaPlayer v-if="isPlayer" />
-        <div class="queue-heading">
-          <h3>A seguir</h3>
-          <span>Rodízio justo ↻</span>
-        </div>
-        <QueueList />
         <div class="sidebar-footer">
           Uma festa, muitas vozes.<br /><NuxtLink to="/tv">Abrir tela da TV ↗</NuxtLink>
         </div>

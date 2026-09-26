@@ -27,11 +27,12 @@ try {
   await expect(guest.getByRole('heading', { name: 'Oi, Ana' })).toBeVisible()
   await guest.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
   await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).fill('Faixa')
-  await guest.getByRole('button', { name: 'Buscar', exact: true }).click()
+  await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).press('Enter')
   await expect(guest.getByLabel('Adicionar Faixa 1 à fila')).toBeVisible()
   for (let i = 1; i <= 5; i++) {
     await guest.getByLabel('Adicionar Faixa ' + i + ' à fila').click()
     await expect(guest.getByLabel('Adicionar Faixa ' + i + ' à fila')).toBeDisabled()
+    await expect(guest.getByLabel('Adicionar Faixa ' + i + ' à fila')).toHaveClass(/just-added/)
   }
   expect(await guest.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await guest.screenshot({ path: 'test-results/mobile.png', fullPage: true })
@@ -45,7 +46,10 @@ try {
   watch(host)
   await host.goto(server.base + '/host')
   await host.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
-  await host.getByRole('button', { name: 'Liberar controles', exact: true }).click()
+  await host
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Liberar controles', exact: true })
+    .click()
   await expect(host.getByText('Admin liberado', { exact: true })).toBeVisible()
   await host.getByRole('button', { name: 'Tocar neste dispositivo', exact: true }).click()
   await expect(host.locator('audio')).toBeVisible()
@@ -64,8 +68,10 @@ try {
     window.originalAudio = document.querySelector('audio')
   })
   const expiryDb = new Database(join(server.dir, 'party.sqlite'))
-  expiryDb.prepare('UPDATE admins SET last_active=0').run()
+  expiryDb.prepare('UPDATE admins SET expires_at=0').run()
   expiryDb.close()
+  await expect(host.getByRole('button', { name: 'Liberar controles', exact: true })).toBeVisible()
+  await host.getByRole('button', { name: 'Liberar controles', exact: true }).click()
   await expect(host.getByLabel('PIN do anfitrião', { exact: true })).toBeVisible()
   expect(
     await host.evaluate(
@@ -75,7 +81,10 @@ try {
     ),
   ).toBe(true)
   await host.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
-  await host.getByRole('button', { name: 'Liberar controles', exact: true }).click()
+  await host
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Liberar controles', exact: true })
+    .click()
   await expect(host.getByText('Admin liberado', { exact: true })).toBeVisible()
   console.log('Expiração admin preserva a instância do PLAYER OK')
   const beforeDrag = (await (await host.request.get(server.base + '/api/state')).json()).queue
@@ -119,6 +128,7 @@ try {
   await popup.close()
   console.log('Aba duplicada recebe outra credencial de PLAYER OK')
 
+  await hostContext.request.post(server.base + '/api/auth', { data: { action: 'logout' } })
   const tvContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const tv = await tvContext.newPage()
   watch(tv)
@@ -128,7 +138,10 @@ try {
   for (const digit of ['4', '3', '2', '1']) await tv.keyboard.press(digit)
   // Usa o grafo de setas do D-pad para alcançar o botão OK.
   async function reachableButtons() {
-    const buttons = tv.locator('button:visible:not([disabled])')
+    const scope = (await tv.getByRole('dialog').isVisible())
+      ? tv.getByRole('dialog')
+      : tv.locator('main')
+    const buttons = scope.locator('button:visible:not([disabled])')
     const count = await buttons.count(),
       visited = new Set([0]),
       todo = [0]
@@ -165,6 +178,17 @@ try {
   expect(original).toBe('dark')
   console.log('Temas persistidos por rota e Back do controle OK')
 
+  await tvContext.request.post(server.base + '/api/auth', { data: { action: 'logout' } })
+  await host.getByRole('button', { name: 'Liberar controles', exact: true }).click()
+  await host.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
+  await expect(
+    host.getByRole('dialog').getByRole('button', { name: 'Liberar controles', exact: true }),
+  ).toBeEnabled()
+  await host
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Liberar controles', exact: true })
+    .click()
+  await expect(host.getByText('Admin liberado', { exact: true })).toBeVisible()
   const qr = await guestContext.newPage()
   watch(qr)
   await qr.goto(server.base + '/qr')

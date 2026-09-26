@@ -7,6 +7,9 @@
   --text: #f3f1e9;
   --muted: #a0a5a8;
   --accent: #d3f583;
+  --on-accent: #15200b;
+  --backdrop-brightness: 0.16;
+  --backdrop-opacity: 1;
   --coral: #ff886f;
   --shadow: 0 18px 55px #0002;
   --q-primary: #d3f583;
@@ -20,8 +23,11 @@
   --surface-2: #e9ebe3;
   --line: #d3d7cb;
   --text: #18201a;
-  --muted: #57645b;
+  --muted: #4e5b52;
   --accent: #537526;
+  --on-accent: #ffffff;
+  --backdrop-brightness: 1;
+  --backdrop-opacity: 0.1;
   --coral: #ba482b;
   --q-primary: #537526;
   --q-dark: #fff;
@@ -253,7 +259,7 @@ em {
   font-family: inherit;
 }
 .q-btn.bg-primary {
-  color: #15200b !important;
+  color: var(--on-accent) !important;
 }
 .q-field--outlined .q-field__control:before {
   border-color: var(--line);
@@ -582,7 +588,7 @@ em {
 }
 .primary-button {
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   border-color: var(--accent);
   font-weight: 700;
 }
@@ -654,7 +660,7 @@ em {
   text-align: center;
   padding: 45px 0;
 }
-.qr-page .eyebrow {
+.qr-invite > .eyebrow {
   justify-content: center;
 }
 .qr-page h1 {
@@ -735,7 +741,12 @@ em {
   flex-direction: column;
   text-align: center;
   padding: 25px;
-  color: #f3f1e9;
+  --text: #f3f1e9;
+  --muted: #b3b8bb;
+  --accent: #d3f583;
+  --coral: #ff886f;
+  color: var(--text);
+  color-scheme: dark;
 }
 .local-player audio {
   max-width: 100%;
@@ -798,7 +809,8 @@ em {
   inset: 0;
   background-size: cover;
   background-position: center;
-  filter: blur(65px) brightness(0.16);
+  filter: blur(65px) brightness(var(--backdrop-brightness));
+  opacity: var(--backdrop-opacity);
   z-index: -1;
   pointer-events: none;
 }
@@ -1176,4 +1188,463 @@ summary {
 }
 .tv-screen.controls-open .tv-aside .queue-list {
   max-height: 36vh;
+}
+
+/* Fila de pedidos antes da busca; quatro cartões em telas amplas. */
+.queue-carousel {
+  margin-top: 32px;
+  min-width: 0;
+}
+.queue-carousel .section-heading {
+  margin-bottom: 14px;
+}
+.queue-carousel h2 {
+  margin-top: 8px;
+}
+.carousel-controls {
+  display: flex;
+  gap: 8px;
+}
+.queue-rail {
+  --cards: 4;
+  display: flex;
+  gap: 14px;
+  list-style: none;
+  padding: 2px 2px 12px;
+  margin: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.queue-rail:focus-visible,
+.qr-queue-scroll:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.queue-card {
+  flex: 0 0 calc((100% - (var(--cards) - 1) * 14px) / var(--cards));
+  min-width: 0;
+  scroll-snap-align: start;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 16px;
+}
+.queue-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-bottom: 10px;
+}
+.queue-card-top .queue-number {
+  font-size: 16px;
+  color: var(--coral);
+}
+.queue-card-top .remove-button {
+  margin-left: auto;
+}
+.queue-card-track {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.queue-card-track img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.queue-card .track-info strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.queue-card .track-info small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.queue-card-guest {
+  font-size: 11px;
+  margin-top: 16px;
+  overflow-wrap: anywhere;
+}
+.queue-card-empty {
+  width: 100%;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  color: var(--muted);
+}
+.queue-carousel + .guest-layout {
+  padding-top: 36px;
+}
+
+/* Convite e fila dividem a tela; o QR continua com fundo branco. */
+.qr-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+.qr-invite,
+.qr-queue {
+  min-width: 0;
+}
+.qr-page h1 {
+  font-size: clamp(32px, 4vw, 52px);
+}
+.qr-queue {
+  text-align: left;
+}
+.qr-current {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+.qr-current h3 {
+  margin: 10px 0 4px;
+  font-size: 21px;
+  overflow-wrap: anywhere;
+}
+.qr-current p {
+  font-size: 13px;
+}
+.qr-queue-scroll {
+  max-height: min(62vh, 620px);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 2px;
+  scrollbar-width: thin;
+}
+.qr-card.large .qr-plate {
+  width: min(340px, 100%);
+}
+.qr-card.large a {
+  font-size: clamp(16px, 1.6vw, 22px);
+}
+
+/* O iframe permanece no mesmo nó quando sai da área original da página. */
+.media-slot,
+.media-shell {
+  min-width: 0;
+}
+.player-floating {
+  position: fixed;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: min(384px, calc(100vw - 32px));
+  padding: 10px;
+  z-index: 50;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 12px 48px #0008;
+}
+.player-floating .media-viewport,
+.tv-screen .player-floating .media-viewport {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  max-height: none;
+  min-height: 200px;
+  aspect-ratio: 16 / 9;
+  transition: none;
+}
+.floating-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+}
+.floating-controls span {
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+.floating-controls button {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+/* Uma coluna reservada mantém o QR do karaokê fora do vídeo, inclusive nos controles. */
+.tv-screen.karaoke-active {
+  --karaoke-qr-width: clamp(84px, 14vw, 180px);
+}
+.tv-screen.karaoke-active .tv-stage {
+  grid-template-columns: minmax(200px, 1fr) var(--karaoke-qr-width);
+  gap: 12px;
+}
+.tv-screen.karaoke-active .tv-aside .karaoke-qr {
+  display: block;
+  position: fixed;
+  right: 5vw;
+  bottom: 5vh;
+  width: var(--karaoke-qr-width);
+  z-index: 20;
+}
+.tv-screen.karaoke-active .karaoke-qr .qr-plate {
+  width: 100%;
+  margin: 0 0 8px;
+}
+.tv-screen.karaoke-active .karaoke-qr p {
+  display: none;
+}
+.tv-screen.karaoke-active .karaoke-qr a {
+  font-size: 11px;
+}
+.tv-screen.karaoke-active .player-floating {
+  left: 5vw;
+  right: auto;
+  padding: 0;
+  border: 0;
+  width: min(384px, calc(90vw - var(--karaoke-qr-width) - 12px));
+}
+@media (max-width: 950px) {
+  .queue-rail {
+    --cards: 2;
+  }
+  .qr-layout {
+    gap: 24px;
+  }
+}
+@media (max-width: 760px) {
+  .qr-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .qr-queue-scroll {
+    max-height: 460px;
+  }
+}
+@media (max-width: 680px) {
+  .queue-rail {
+    --cards: 1.15;
+  }
+  .queue-carousel {
+    margin-top: 24px;
+  }
+  .queue-carousel .eyebrow {
+    font-size: 9px;
+  }
+  .qr-page main {
+    padding-top: 28px;
+  }
+  .qr-page .brand-header .subtle-link {
+    display: flex;
+  }
+  .qr-page .header-links {
+    gap: 8px;
+  }
+  .qr-page .brand-header .subtle-link {
+    font-size: 11px;
+  }
+}
+@media (max-width: 380px) {
+  .tv-screen.karaoke-active {
+    padding-inline: 12px;
+  }
+  .tv-screen.karaoke-active .tv-aside .karaoke-qr {
+    right: 12px;
+  }
+  .tv-screen.karaoke-active .player-floating {
+    left: 12px;
+    width: calc(100vw - 24px - var(--karaoke-qr-width) - 12px);
+  }
+}
+
+.app-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.icon-button {
+  display: grid;
+  place-items: center;
+}
+.header-control {
+  font-size: 12px;
+}
+.brand-header .header-links {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.tv-menu-button {
+  border-color: var(--accent);
+}
+.tv-menu-button[aria-expanded='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.admin-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+}
+.admin-status .app-icon {
+  width: 16px;
+  height: 16px;
+}
+.admin-status time {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.admin-dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--text);
+  overflow: auto;
+  box-shadow: 0 24px 100px #0006;
+}
+.admin-dialog::backdrop {
+  background: #0008;
+  backdrop-filter: blur(5px);
+}
+.admin-dialog[open] {
+  animation: dialog-in 180ms ease-out;
+}
+.admin-dialog-content {
+  position: relative;
+}
+.admin-dialog .unlock {
+  border: 0;
+  margin: 0;
+  max-width: none;
+  padding: 30px;
+}
+.admin-dialog .unlock .eyebrow {
+  padding-right: 36px;
+}
+.dialog-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 1;
+  background: transparent;
+}
+.dialog-close .app-icon {
+  transform: rotate(45deg);
+}
+.admin-dialog .notice {
+  display: block;
+}
+.player-covered {
+  visibility: hidden;
+}
+.media-shell {
+  transition:
+    border-radius 240ms ease,
+    box-shadow 240ms ease;
+}
+.queue-enter-active,
+.queue-leave-active {
+  transition:
+    opacity 220ms ease,
+    transform 260ms ease;
+}
+.queue-enter-from {
+  opacity: 0;
+  transform: translateX(18px) scale(0.97);
+}
+.queue-leave-to {
+  opacity: 0;
+  transform: translateX(-18px) scale(0.97);
+}
+.track-enter-active,
+.track-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+.track-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.track-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.add-button .app-icon {
+  width: 22px;
+  height: 22px;
+}
+.add-button.just-added:disabled {
+  opacity: 1;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  animation: added-pop 420ms ease;
+}
+@keyframes added-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 680px) {
+  .brand-header {
+    padding-block: 14px;
+  }
+  .brand-header .header-links {
+    gap: 6px;
+  }
+  .header-control {
+    font-size: 11px;
+  }
+  .tv-header button {
+    font-size: 12px;
+  }
+  .admin-dialog .unlock {
+    padding: 24px;
+  }
+}
+
+.tv-screen.karaoke-active .tv-control-shelf,
+.tv-screen.karaoke-active .next-strip {
+  max-width: calc(100% - var(--karaoke-qr-width) - 12px);
+}
+
+@media (max-width: 680px) {
+  .brand-header {
+    flex-wrap: wrap;
+  }
+  .host-layout .section-heading {
+    flex-wrap: wrap;
+  }
 }

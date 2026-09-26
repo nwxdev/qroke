@@ -1,4 +1,4 @@
-import { timingSafeEqual, randomBytes } from 'node:crypto'
+import { timingSafeEqual } from 'node:crypto'
 import { createError, getCookie, getHeader, getRequestIP, setCookie, type H3Event } from 'h3'
 export const cookieOptions = { httpOnly: true, sameSite: 'strict' as const, path: '/' }
 export function requireAdmin(event: H3Event, touch = true) {
@@ -43,10 +43,17 @@ export function login(event: H3Event, pin: string) {
     b = Buffer.from(expected)
   if (a.length !== b.length || !timingSafeEqual(a, b))
     throw createError({ statusCode: 401, statusMessage: 'PIN incorreto.' })
-  const token = randomBytes(32).toString('hex')
-  party()
-    .db.prepare('DELETE FROM admins WHERE last_active<?')
-    .run(Date.now() - 300000)
-  party().db.prepare('INSERT INTO admins VALUES (?,?)').run(token, Date.now())
-  setCookie(event, 'qroke_admin', token, cookieOptions)
+  const lease = party().claimAdmin(getCookie(event, 'qroke_admin'), adminLeaseSeconds())
+  if (!lease.granted)
+    throw createError({
+      statusCode: 409,
+      statusMessage:
+        'Outro anfitrião está no controle. Aguarde o tempo restante ou peça para ele sair.',
+      data: { expiresAt: lease.expiresAt },
+    })
+  setCookie(event, 'qroke_admin', lease.token, cookieOptions)
+}
+export function adminLeaseSeconds() {
+  const value = Number(useRuntimeConfig().adminLeaseSeconds)
+  return Number.isInteger(value) && value >= 30 && value <= 3600 ? value : 120
 }

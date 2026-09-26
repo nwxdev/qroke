@@ -7,6 +7,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
     hostPin: process.env.QROKE_HOST_PIN || '',
+    adminLeaseSeconds: Number(process.env.QROKE_ADMIN_LEASE_SECONDS || 120),
     musicDir: process.env.QROKE_MUSIC_DIR || '',
     database: process.env.QROKE_DATABASE || '.data/qroke.sqlite',
     quotaDailyCap: Number(process.env.QROKE_QUOTA_DAILY_CAP || 90),

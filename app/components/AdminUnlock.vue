@@ -1,8 +1,11 @@
 <script setup lang="ts">
 const props = defineProps<{ tv?: boolean }>()
-const { api, act, pending } = useParty()
+const { api, act, pending, admin, adminLeaseSeconds, failure } = useParty()
+const { remaining, remainingLabel } = useAdminLease()
+const occupied = computed(() => !admin.value && remaining.value > 0)
 const pin = ref('')
 async function submit() {
+  if (occupied.value) return
   await act(() => api('/api/auth', { action: 'login', pin: pin.value }))
   pin.value = ''
 }
@@ -25,6 +28,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
     <span class="eyebrow">CONTROLE DA FESTA</span>
     <h2>Você comanda o som.</h2>
     <p>Digite o PIN do anfitrião para liberar os controles.</p>
+    <p v-if="occupied" class="notice" role="status">
+      Outro anfitrião está no controle por {{ remainingLabel }}. Aguarde ou peça para ele sair.
+    </p>
+    <p v-if="failure" class="notice error" role="alert">{{ failure }}</p>
     <form @submit.prevent="submit">
       <label class="sr-only" for="host-pin">PIN do anfitrião</label
       ><input
@@ -37,7 +44,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
         maxlength="8"
         :readonly="tv"
         required
-        :disabled="pending"
+        :disabled="pending || occupied"
         placeholder="••••"
         class="pin-input"
       />
@@ -46,12 +53,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
           v-for="digitKey in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0']"
           :key="digitKey"
           type="button"
-          :disabled="pending"
+          :disabled="pending || occupied"
           :aria-label="digitKey === '⌫' ? 'Apagar dígito' : digitKey"
           @click="digit(digitKey)"
         >
           {{ digitKey }}</button
-        ><button type="submit" :disabled="pending || pin.length < 4">OK</button>
+        ><button type="submit" :disabled="pending || occupied || pin.length < 4">OK</button>
       </div>
       <QBtn
         v-else
@@ -59,10 +66,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
         color="primary"
         no-caps
         :loading="pending"
-        :disable="pin.length < 4"
+        :disable="occupied || pin.length < 4"
         label="Liberar controles"
+        icon="lock_open"
       />
     </form>
-    <small>A sessão expira após 5 minutos sem interação.</small>
+    <small
+      >O controle fica reservado por {{ adminLeaseSeconds }} segundos. Depois, qualquer anfitrião
+      pode solicitar novamente.</small
+    >
   </section>
 </template>

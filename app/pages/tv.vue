@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { state, admin, queue, isPlayer, api, control, device, pending, playHere } = useParty()
+const { state, admin, queue, isPlayer, control, device, pending, playHere } = useParty()
 const root = ref<HTMLElement | null>(null),
   unlock = ref(false),
   showQr = ref(true),
@@ -9,13 +9,6 @@ const closing = computed(
   () => !!state.value?.duration && state.value.duration - state.value.position <= 5,
 )
 const expanded = computed(() => karaoke.value && !closing.value && !controls.value && !unlock.value)
-let touch = 0
-function activity() {
-  if (admin.value && Date.now() - touch > 30000) {
-    touch = Date.now()
-    void api('/api/auth', { action: 'touch' }).catch(() => {})
-  }
-}
 function back() {
   if (unlock.value) unlock.value = false
   else controls.value = false
@@ -41,11 +34,10 @@ watch(admin, (value) => {
     class="tv-screen"
     :class="{
       'karaoke-expanded': expanded,
+      'karaoke-active': karaoke,
       'controls-open': controls || unlock,
       'music-mode': state?.mode === 'music' && !karaoke,
     }"
-    @keydown="activity"
-    @pointerdown="activity"
   >
     <div
       v-if="state?.current?.thumbnail"
@@ -62,8 +54,11 @@ watch(admin, (value) => {
           :aria-expanded="controls"
           @click="admin ? (controls = !controls) : (unlock = !unlock)"
         >
-          {{ admin ? 'Controles' : 'Liberar controles' }}</button
-        ><button @click="showQr = !showQr">{{ showQr ? 'Ocultar QR' : 'Mostrar QR' }}</button
+          <AppIcon :name="admin ? 'unlock' : 'lock'" /><span>{{
+            admin ? 'Controles' : 'Liberar controles'
+          }}</span></button
+        ><button v-if="!karaoke" @click="showQr = !showQr">
+          <AppIcon name="qr" /><span>{{ showQr ? 'Ocultar QR' : 'Mostrar QR' }}</span></button
         ><ThemeToggle />
       </div>
     </header>
@@ -96,17 +91,17 @@ watch(admin, (value) => {
           </button>
         </div>
       </section>
-      <aside v-if="!expanded" class="tv-aside">
-        <div class="section-heading">
-          <h2>A seguir</h2>
-          <span>{{ queue.length }} faixas</span>
-        </div>
-        <QueueList :manage="admin && controls" compact /><QrCode v-if="showQr" />
+      <aside v-if="karaoke || !expanded" class="tv-aside">
+        <template v-if="!karaoke">
+          <div class="section-heading">
+            <h2>A seguir</h2>
+            <span>{{ queue.length }} faixas</span>
+          </div>
+          <QueueList :manage="admin && controls" compact /><QrCode v-if="showQr" /> </template
+        ><QrCode v-else class="karaoke-qr" />
       </aside>
     </div>
-    <section v-if="unlock && !admin" class="tv-unlock">
-      <AdminUnlock tv /><button @click="back">Voltar</button>
-    </section>
+    <AdminDialog v-model="unlock" tv />
     <section v-if="admin && controls" class="tv-control-shelf"><HostControls tv /></section>
     <div v-if="!expanded && queue.length" class="next-strip">
       <span class="eyebrow">PRÓXIMAS 3</span

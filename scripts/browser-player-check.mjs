@@ -84,6 +84,29 @@ try {
   await expect.poll(() => page.evaluate(() => window.qrokePlaying)).toBe(true)
   await expect(page.locator('.tv-screen')).toHaveClass(/karaoke-expanded/)
   await expect(page.locator('.next-strip')).not.toBeVisible()
+  await expect(page.locator('.karaoke-qr .qr-plate svg')).toBeVisible()
+  await page.getByRole('button', { name: 'Controles', exact: true }).click()
+  await expect(page.locator('.karaoke-qr .qr-plate svg')).toBeVisible()
+  await page.getByRole('button', { name: 'Controles', exact: true }).click()
+  for (const width of [360, 320]) {
+    await page.setViewportSize({ width, height: 800 })
+    await expect(page.locator('.karaoke-qr .qr-plate svg')).toBeVisible()
+    expect(
+      await page.evaluate(() => {
+        const a = document.querySelector('iframe').getBoundingClientRect()
+        const b = document.querySelector('.karaoke-qr').getBoundingClientRect()
+        return (
+          b.left >= 0 &&
+          b.right <= innerWidth &&
+          b.bottom <= innerHeight &&
+          !(a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) &&
+          document.documentElement.scrollWidth <= innerWidth
+        )
+      }),
+    ).toBe(true)
+    await page.screenshot({ path: 'test-results/karaoke-qr-' + width + '.png', fullPage: true })
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page.evaluate(() => {
     window.qrokePosition = 26
   })
