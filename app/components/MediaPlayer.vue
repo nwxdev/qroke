@@ -180,6 +180,15 @@ watch(
   { flush: 'post' },
 )
 watch(eligible, () => void sync(), { flush: 'post' })
+function releaseAudio(element: HTMLAudioElement | null) {
+  if (!element) return
+  element.pause()
+  element.removeAttribute('src')
+  element.load()
+}
+watch(audio, (element, previous) => {
+  if (previous && previous !== element) releaseAudio(previous)
+})
 onMounted(() => {
   void mountTrack()
   observer = new IntersectionObserver(
@@ -231,7 +240,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   generation++
   yt?.destroy()
-  audio.value?.pause()
+  releaseAudio(audio.value)
   observer?.disconnect()
   clearInterval(timer)
   document.removeEventListener('visibilitychange', pageVisibility)
@@ -266,6 +275,7 @@ onBeforeUnmount(() => {
             <p>{{ current.artist }}</p>
             <audio
               ref="audio"
+              :key="current.queueId"
               :data-queue-id="current.queueId"
               :src="'/api/library/' + current.id"
               :controls="route.path !== '/tv'"

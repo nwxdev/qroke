@@ -39,15 +39,19 @@ npm start
 
 ### Configuração
 
-| Variável                | Padrão / significado                                                                                                                                                                                                  |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `QROKE_HOST_PIN`        | Obrigatório para administrar. De 4 a 8 dígitos; não existe PIN embutido no app. O `1234` do exemplo deve ser trocado.                                                                                                 |
-| `QROKE_PORT`            | `3000`. Porta HTTP usada por dev e `npm start`.                                                                                                                                                                       |
-| `QROKE_PUBLIC_URL`      | URL acessível na LAN, como `http://192.168.31.95:3100`. Sem valor, usa a origem da aba somente se ela for compartilhável. Localhost, loopback e endereços de escuta não geram QR; configure a URL da rede e reinicie. |
-| `YOUTUBE_API_KEY`       | Opcional. Validação oficial de incorporação e busca de emergência. Exclusiva do servidor.                                                                                                                             |
-| `QROKE_MUSIC_DIR`       | Pasta de músicas, incluindo subpastas. Vazia desabilita a biblioteca local.                                                                                                                                           |
-| `QROKE_QUOTA_DAILY_CAP` | `90` **requisições de busca oficial por dia**, não unidades. Cache hits não consomem essa reserva.                                                                                                                    |
-| `QROKE_DATABASE`        | `.data/qroke.sqlite`, relativo ao diretório em que o processo inicia.                                                                                                                                                 |
+| Variável                | Padrão / significado                                                                                                                                                                                                                                           |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QROKE_HOST_PIN`        | Obrigatório para administrar. De 4 a 8 dígitos; não existe PIN embutido no app. O `1234` do exemplo deve ser trocado.                                                                                                                                          |
+| `QROKE_PORT`            | `3000`. Porta HTTP usada por dev e `npm start`.                                                                                                                                                                                                                |
+| `QROKE_PUBLIC_URL`      | URL acessível na LAN, como `http://192.168.31.95:3100`. Sem valor, usa a origem da aba somente se ela for compartilhável. Localhost, loopback e endereços de escuta não geram QR. A URL do .env é relida pelo monitor a cada checagem, sem reiniciar o player. |
+| `YOUTUBE_API_KEY`       | Opcional. Validação oficial, busca de emergência e playlists públicas por link. Exclusiva do servidor.                                                                                                                                                         |
+| `YOUTUBE_CLIENT_ID`     | Opcional. Client ID OAuth do tipo Aplicativo da Web, para playlists pessoais.                                                                                                                                                                                  |
+| `YOUTUBE_CLIENT_SECRET` | Segredo do cliente OAuth; exclusivo do servidor e nunca versionado.                                                                                                                                                                                            |
+| `YOUTUBE_REDIRECT_URI`  | Padrão: http://localhost:PORTA/api/youtube/callback. Deve coincidir exatamente com o URI autorizado no Google.                                                                                                                                                 |
+| `QROKE_INVITE_ENV_FILE` | `.env`. Arquivo relido pelo monitor do QR para obter QROKE_PUBLIC_URL; vazio mantém apenas a configuração do processo.                                                                                                                                         |
+| `QROKE_MUSIC_DIR`       | Pasta de músicas, incluindo subpastas. Vazia desabilita a biblioteca local.                                                                                                                                                                                    |
+| `QROKE_QUOTA_DAILY_CAP` | `90` **requisições de busca oficial por dia**, não unidades. Cache hits não consomem essa reserva.                                                                                                                                                             |
+| `QROKE_DATABASE`        | `.data/qroke.sqlite`, relativo ao diretório em que o processo inicia.                                                                                                                                                                                          |
 
 `.env`, banco, arquivos gerados e capturas de teste estão no `.gitignore`. Só `.env.example` é versionado. Use um único processo Node e um único banco para cada festa.
 
@@ -145,7 +149,50 @@ O schema SQLite passa para **2**. A migração adiciona o prazo e a unicidade e 
 
 ### Recuperação no fim de áudio local
 
+Cada faixa local usa seu próprio elemento de áudio. Ao trocar de faixa ou sair do PLAYER, o elemento anterior é pausado e sua fonte liberada; eventos residuais mantêm o identificador anterior. A expiração do admin e a rolagem continuam preservando a reprodução da faixa atual.
+
 Além do evento nativo `ended`, o PLAYER verifica se o áudio está no último centésimo de segundo, sem seek, com reprodução elegível, por pelo menos dois segundos. Se o navegador omitir o evento, envia o término com o identificador da faixa. O servidor continua ignorando eventos atrasados/duplicados. Essa recuperação não se aplica ao YouTube e não avança áudio pausado pelo anfitrião.
+
+### Playlists do YouTube no admin
+
+Em `/host`, libere os controles com o PIN e abra **Playlists do YouTube**:
+
+- **Colar link**: aceita URL de playlist do YouTube ou YouTube Music (parâmetro `list=`), ou seu ID. Usa `YOUTUBE_API_KEY` no servidor para ler listas públicas/não listadas, suas ou de outros canais.
+- **Minha conta**: autorize o Google em um popup para listar as playlists **criadas pela conta selecionada**, inclusive privadas. Estar logado no player não autoriza a API; playlists apenas salvas de outros canais podem ser importadas pelo link.
+- **Conferir → Adicionar músicas**: mostra as faixas e os itens ignorados antes de inserir. Se o PLAYER já estiver ativado e livre, começa a tocar. Não substitui a música atual. O rodízio dos convidados continua; as playlists usam a identidade “Playlist do anfitrião” e mantêm sua ordem entre si.
+- A prévia lê até **200 itens por lote**, seguindo páginas de 50. Para uma lista maior, adicione o lote e use **Próximo lote**. A listagem da conta também tem **Mais playlists**. A fila aceita até 2.000 itens por esse fluxo.
+- Vídeos privados, removidos, ainda não processados, estreias futuras e vídeos sem incorporação são ignorados. Uma playlist privada pode conter vídeos públicos reproduzíveis. Itens repetidos e faixas já na fila/tocando não são duplicados. Restrições regionais/etárias ainda podem ser impostas pelo player.
+- A opção **Estas faixas são de karaokê** ativa o layout correspondente; não remove a voz do vídeo. Mixes automáticos, Assistir mais tarde e outras listas especiais podem não ser disponibilizados pela API.
+
+Para conectar sua conta no ambiente local atual:
+
+1. No mesmo projeto Google Cloud, habilite **YouTube Data API v3**.
+2. Configure a tela de consentimento no Google Auth Platform. Se o app estiver em teste, adicione sua conta em **Público-alvo → Usuários de teste**. Inclua o escopo de leitura `https://www.googleapis.com/auth/youtube.readonly`.
+3. Crie **Credenciais → ID do cliente OAuth → Aplicativo da Web**. Registre exatamente `http://localhost:3100/api/youtube/callback` como URI de redirecionamento autorizado.
+4. Salve `YOUTUBE_CLIENT_ID` e `YOUTUBE_CLIENT_SECRET` no `.env` privado da worktree. Configure `YOUTUBE_REDIRECT_URI=http://localhost:3100/api/youtube/callback` e reinicie o servidor. A API key continua em uma variável separada.
+5. No computador que executa o QRokê, abra `http://localhost:3100/host`, libere o PIN e escolha **Minha conta → Conectar YouTube**. Permita o popup, escolha a conta/canal e autorize a leitura. O player permanece na página original.
+
+HTTP em localhost é permitido pelo Google para desenvolvimento; um IP LAN bruto como `http://192.168.31.95` não é um callback OAuth válido. Para conectar diretamente pelo celular será necessário hospedar o app em um domínio HTTPS e registrar o callback desse domínio. A conexão fica no navegador e na origem usados, portanto conectar em localhost não conecta automaticamente uma aba aberta pelo IP LAN.
+
+Tokens de acesso/renovação ficam **somente na memória do servidor**, por até 8 horas, vinculados a um cookie HttpOnly do navegador. Não são enviados ao JavaScript, banco ou Git. Reiniciar o servidor exige reconectar o Google; a fila já importada permanece no SQLite. **Desconectar** remove o acesso local e as prévias privadas, preservando as faixas já adicionadas. Para revogar a autorização no Google também, remova o acesso em [Conexões da Conta Google](https://myaccount.google.com/connections).
+
+A autorização usa state descartável, cookie temporário SameSite Lax e PKCE. O cookie administrativo continua SameSite Strict. O retorno do Google **não libera nem renova o admin**: se os 2 minutos acabarem durante o consentimento, entre com o PIN novamente. Cada leitura/importação exige a lease administrativa; dados privados são conferidos novamente após chamadas remotas. Outro navegador que assumir o admin não recebe a conexão Google anterior. Prévias valem por 5 minutos, pertencem à sessão que as criou e só podem ser adicionadas uma vez; ao trocar a sessão admin, confira a lista novamente.
+
+As chamadas de playlists usam a quota do projeto Google separadamente do limite local de buscas de emergência. Não precisam fazer uma pesquisa por música. Não há gravação, alteração ou exclusão de playlists na conta Google.
+
+Referências oficiais: [playlists da conta com mine=true](https://developers.google.com/youtube/v3/docs/playlists/list), [paginação dos itens](https://developers.google.com/youtube/v3/docs/playlistItems/list) e [OAuth para aplicativos Web](https://developers.google.com/identity/protocols/oauth2/web-server).
+
+### QR com verificação e atualização do endereço
+
+Enquanto uma tela com QR estiver aberta, ela verifica o endereço a cada **30 segundos**, ao recuperar a conexão e ao voltar para a aba. `/qr` também oferece **Verificar acesso**. O servidor reutiliza o resultado por até 15 segundos e confere uma identificação própria em `/api/network/probe`; uma página qualquer respondendo HTTP 200 não é suficiente.
+
+O monitor relê apenas `QROKE_PUBLIC_URL` do `.env` da worktree, sem reiniciar o player. Se o endereço mudar, a URL e a imagem do QR são regeneradas. Se o IP privado configurado parar de responder, o servidor procura os IPs privados atuais da máquina e só troca para um deles quando alcançar **esta mesma instância do QRokê**. No WSL, consulta as interfaces privadas do Windows via PowerShell; no Linux nativo, usa as interfaces locais. Um domínio/HTTPS configurado não é substituído por IP local.
+
+Se o IP mudar e a nova porta ainda não estiver encaminhada, a tela avisa. Ela não anuncia o novo endereço como funcional nem modifica firewall/roteador. O QR anterior fica visível com o aviso até a conectividade voltar; um celular aberto no endereço antigo precisa escanear o novo QR. Também não é possível detectar cada falha de leitura de câmera ou verificar o Wi-Fi de todos os celulares; o probe confirma acesso do servidor pela URL anunciada, não substitui o teste físico no celular.
+
+Reiniciar o roteador pode mudar o IP atribuído por DHCP. Reserve o IP do computador no roteador para reduzir esse risco. Reiniciar o WSL também pode mudar seu IP interno, exigindo reaplicar `scripts/wsl-lan.ps1` com o IP privado atual do Windows. Uma simples regeneração da imagem não corrige porta bloqueada, Wi-Fi desconectado ou isolamento entre clientes.
+
+`QROKE_INVITE_ENV_FILE` é opcional (padrão `.env`): define qual arquivo fornece a URL pública para releitura. Para executar o servidor compilado diretamente, use `NUXT_INVITE_ENV_FILE`; valor vazio desliga a releitura e mantém `NUXT_PUBLIC_PARTY_URL`. A descoberta de IP é somente leitura e só ocorre quando a URL privada falha; no WSL requer interoperabilidade com PowerShell.
 
 ## Usar na festa
 
@@ -274,9 +321,9 @@ A seleção exclui faixas tocadas na última hora, já pendentes e faixas pulada
 
 Desligar rádio remove automáticas pendentes, preserva a atual e as humanas. Se não houver candidata elegível, a festa espera um pedido, sem repetir uma faixa proibida pelo dedupe.
 
-### Credencial correta: API key, sem OAuth na v1
+### Credenciais: API key para o catálogo e OAuth para playlists pessoais
 
-Os campos “Origens JavaScript autorizadas” e “URIs de redirecionamento” pertencem a um cliente OAuth. Eles não configuram a chave usada pelo QRokê. No Console Google Cloud:
+Os campos “Origens JavaScript autorizadas” e “URIs de redirecionamento” pertencem a um cliente OAuth. Eles não configuram a API key usada pelo catálogo. Agora também são usados, separadamente, pela integração opcional de playlists pessoais descrita acima. No Console Google Cloud:
 
 1. Selecione o projeto e habilite **YouTube Data API v3** em APIs e serviços → Biblioteca.
 2. Em **Credenciais → Criar credenciais → Chave de API**, crie a chave.
@@ -309,15 +356,18 @@ npm run build
 npm run test:integration
 npm run test:browser
 npm run spike:catalog
-# Opt-in: usa a chave do .env e consome uma busca oficial de reserva.
+# Opt-in: usa a chave do .env; busca oficial de reserva e leitura de playlist pública.
 npm run test:youtube
 ```
 
+- **Playlists e QR:** `tests/youtube-playlists.test.ts`, `tests/network-invite.test.ts`, `tests/playlists-integration.mjs` e `scripts/browser-playlists-check.mjs`. O provedor Google falso é injetado somente no processo de teste via preload Node; não existe bypass de OAuth na aplicação de produção.
 - **Unitários:** rodízio durante inclusão e consumo, camada automática, ordem manual, nomes, normalização, dedupe, sinal negativo do skip, cache, fallback, quota, sessões, persistência, caminhos e intervalos de bytes.
 - **Integração:** processo de produção real em `127.0.0.1:3197`, banco e sete WAVs temporários. Cobre quatro rotas, dois convidados, cookies, autorização, WS, reordenação, eventos atrasados, restart, rádio e rate limit.
 - **Navegador:** servidor isolado em `127.0.0.1:3198`, Chromium headless, contextos independentes. Gera capturas em `test-results/`. Verifica mobile 360 px, fluxo de pedidos, áudio local, controles do host, navegação por setas, tema, QR e polling.
 - **Spike real:** consulta o YouTube Music sem credenciais. Requer internet; não valida Premium.
 - **YouTube oficial, opt-in:** valida resultados reais e força uma falha do primário para testar uma chamada de reserva. Após a correção da credencial, o teste oficial passou: 20 faixas validadas via videos.list, 20 faixas na reserva e cache confirmado, com uma chamada search.list. A tentativa anterior foi recusada com API_KEY_INVALID antes de chegar à reserva.
+
+O teste `tests/playlists.live.ts` aceita `YOUTUBE_TEST_PLAYLIST_ID` para escolher outra playlist pública. Para executar somente esse teste, sem repetir a pesquisa oficial: `node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --config vitest.live.config.ts tests/playlists.live.ts`.
 
 A expiração administrativa preserva a instância do PLAYER; o servidor continua aceitando eventos de reprodução pela credencial do dispositivo. O teste simula a expiração sem esperar o prazo real de dois minutos.
 
@@ -325,7 +375,18 @@ A expiração administrativa preserva a instância do PLAYER; o servidor continu
 
 O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Chromium headless correspondente à versão instalada do Playwright. Evite forçar uma versão antiga do cache. Em outra máquina, execute `npx playwright install chromium --only-shell` antes. Os testes usam dados próprios e removem apenas seus diretórios temporários ao encerrar; não alteram sua festa.
 
-### Resultado desta execução
+### Validação de playlists e monitor do QR
+
+- **40 testes unitários** e **13 verificações de integração** aprovados, incluindo state/PKCE, renovação de token, isolamento de contas, expiração do admin, paginação, duplicatas e descoberta do IP.
+- Build de produção e TypeScript aprovados.
+- **API real:** 200 faixas válidas nos 200 itens de uma playlist pública do canal Google for Developers; nenhuma música foi adicionada à festa durante esse teste.
+- OAuth simulado no navegador passou com navegação entre origens, cookie temporário Lax, popup, retorno sem recriar o player, importação e desconexão. As credenciais reais foram copiadas para o .env privado, mas a autorização/seleção da conta real ainda depende do consentimento do responsável.
+- Testes de QR confirmam que a URL e o SVG mudam ao recuperar a rede, e que uma falha de acesso mostra aviso. No ambiente real, o monitor confirmou `http://192.168.31.95:3100/`. Mudança física de IP, roteador reiniciado e leitura em celular real continuam pendentes.
+- Verificação privada: API key, Client ID e Client Secret não aparecem nos 98 arquivos de código/documentação nem nos 26 arquivos públicos examinados. Tokens OAuth são mantidos apenas no servidor.
+- **Seis scripts de navegador aprovados em execuções verificadas:** fluxo geral/áudio, YouTube simulado, fila vazia/recuperação, layout/scroll, tema/PIN e playlists/QR. O último teste inclui Enter, importação, duplicatas, popup OAuth, desconexão e larguras 320/360/1366 px; nenhuma exceção JavaScript nos cenários monitorados.
+- A regressão inicialmente excedeu 15 segundos nas últimas faixas WAV do Chromium/WSL. O áudio agora tem um elemento por faixa e libera o recurso anterior ao trocar/desmontar; os testes de término toleram até 30 segundos e continuam exigindo conclusão real de toda a fila. O fluxo geral e a recuperação passaram após esses ajustes. Isso não comprova reprodução longa em saída física; mantenha esse item no aceite. O diagnóstico mínimo com sete WAVs em HTML puro também concluiu.
+
+### Validação anterior à integração de playlists
 
 - Busca real: **20 músicas**, **20 vídeos de karaokê**, **49 recomendações** de `getUpNexts`.
 - **26 testes unitários aprovados**, incluindo URL LAN e rejeição de QR com localhost/loopback.
@@ -383,13 +444,16 @@ O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Ch
 - [ ] Com rádio desligado, esvaziar a fila, adicionar outra música pelo celular e confirmar o início sem novo clique no PLAYER.
 - [ ] Esvaziar a fila com rádio ligado, observar continuação e adicionar uma escolha humana.
 - [ ] Fazer uma sessão real em aparelho de largura ≤ 360 px.
+- [ ] Importar playlist pública por link; conferir duplicatas, vídeos indisponíveis e continuação dos lotes.
+- [ ] Conectar a conta Google, escolher uma playlist própria e testar importação. Conferir que outro navegador admin não herda a conexão.
+- [ ] Alterar a URL pública da worktree para um endereço válido, conferir QR atualizado sem restart e testar novamente com o celular. Confirmar recuperação após reiniciar roteador/WSL e reaplicar encaminhamento se necessário.
 - [ ] Só após esses testes, aprovar a abertura de PR.
 
 ## Limites e próximos passos
 
 O plano original permanece como referência, mas contém premissas que exigem confirmação física; a matriz acima registra o estado real da implementação. O artefato externo do Claude e a issue não foram editados.
 
-Ainda não incluídos: PWA/HTTPS gerenciado, OAuth, Spotify/Deezer, votação para pular, painel de estatísticas, descoberta mDNS de `qroke.local`, leitura de tags ID3, atualização de biblioteca sem restart e suporte certificado a navegadores antigos de Smart TV. TV real pode exigir ajustes de compatibilidade apesar dos testes no Chromium.
+Ainda não incluídos: PWA/HTTPS gerenciado, Spotify/Deezer, votação para pular, painel de estatísticas, descoberta mDNS de `qroke.local`, leitura de tags ID3, atualização de biblioteca sem restart e suporte certificado a navegadores antigos de Smart TV. TV real pode exigir ajustes de compatibilidade apesar dos testes no Chromium.
 
 O catálogo não oficial pode mudar; sua interface isolada permite substituir o provedor. A API oficial permanece uma reserva limitada, não uma promessa de capacidade para toda a festa. Premium, codec, Bluetooth, setSinkId e acesso LAN dependem do ambiente.
 

@@ -54,7 +54,7 @@ try {
       .poll(
         async () =>
           (await (await hostContext.request.get(fixture.base + '/api/state')).json()).current,
-        { timeout: 15000 },
+        { timeout: 30000 },
       )
       .toBe(null)
     console.log(

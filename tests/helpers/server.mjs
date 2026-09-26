@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
-export async function startFixture(port = 3197) {
+export async function startFixture(port = 3197, extraEnv = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'qroke-test-')),
     music = join(dir, 'music')
   await mkdir(music)
@@ -39,6 +39,11 @@ export async function startFixture(port = 3197) {
         NUXT_DATABASE: join(dir, 'party.sqlite'),
         NUXT_MUSIC_DIR: music,
         NUXT_YOUTUBE_API_KEY: '',
+        NUXT_YOUTUBE_CLIENT_ID: '',
+        NUXT_YOUTUBE_CLIENT_SECRET: '',
+        NUXT_YOUTUBE_REDIRECT_URI: '',
+        NUXT_INVITE_ENV_FILE: '',
+        ...extraEnv,
         NUXT_PUBLIC_PARTY_URL: 'http://192.0.2.10:' + port,
       },
       stdio: ['ignore', 'pipe', 'pipe'],

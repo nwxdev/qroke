@@ -81,6 +81,7 @@ watch(admin, (value) => {
               O PLAYER está desconectado. Escolha outro dispositivo.
             </p>
           </div>
+          <YoutubePlaylists v-if="admin" />
           <MediaPlayer v-if="isPlayer" />
           <p v-else class="hint">O som será reproduzido apenas no dispositivo escolhido.</p>
         </section>

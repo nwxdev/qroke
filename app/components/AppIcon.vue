@@ -13,8 +13,12 @@ defineProps<{
     | 'pause'
     | 'next'
     | 'tv'
+    | 'playlist'
+    | 'link'
 }>()
 const paths = {
+  playlist: 'M4 5h13 M4 10h13 M4 15h7 M16 14l6 4-6 4z',
+  link: 'M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2',
   lock: 'M6 11h12v10H6z M8 11V7a4 4 0 0 1 8 0v4 M12 15v2',
   unlock: 'M6 11h12v10H6z M8 11V7a4 4 0 0 1 7.5-2 M12 15v2',
   qr: 'M3 3h6v6H3z M15 3h6v6h-6z M3 15h6v6H3z M15 15h2v2h-2z M21 14v4h-3v3 M12 3v3 M3 12h3 M12 10v4 M11 19v2 M21 21h-1',

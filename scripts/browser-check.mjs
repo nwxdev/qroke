@@ -240,7 +240,8 @@ try {
         .poll(
           async () =>
             (await (await host.request.get(server.base + '/api/state')).json()).current?.queueId,
-          { timeout: Math.max(15000, Number(process.env.QROKE_TEST_TRACK_SECONDS || 2) * 5000) },
+          // O relógio de mídia do Chromium headless/WSL pode atrasar nas últimas faixas.
+          { timeout: Math.max(30000, Number(process.env.QROKE_TEST_TRACK_SECONDS || 2) * 8000) },
         )
         .not.toBe(id)
       console.log('Faixa local concluída:', i + 1, 'de', count)

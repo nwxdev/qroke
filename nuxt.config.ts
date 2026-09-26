@@ -6,8 +6,14 @@ export default defineNuxtConfig({
   nitro: { experimental: { websocket: true }, externals: { external: ['better-sqlite3'] } },
   runtimeConfig: {
     youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
+    youtubeClientId: process.env.YOUTUBE_CLIENT_ID || '',
+    youtubeClientSecret: process.env.YOUTUBE_CLIENT_SECRET || '',
+    youtubeRedirectUri:
+      process.env.YOUTUBE_REDIRECT_URI ||
+      `http://localhost:${process.env.QROKE_PORT || 3000}/api/youtube/callback`,
     hostPin: process.env.QROKE_HOST_PIN || '',
     adminLeaseSeconds: Number(process.env.QROKE_ADMIN_LEASE_SECONDS || 120),
+    inviteEnvFile: process.env.QROKE_INVITE_ENV_FILE ?? '.env',
     musicDir: process.env.QROKE_MUSIC_DIR || '',
     database: process.env.QROKE_DATABASE || '.data/qroke.sqlite',
     quotaDailyCap: Number(process.env.QROKE_QUOTA_DAILY_CAP || 90),
