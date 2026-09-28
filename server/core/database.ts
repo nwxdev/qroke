@@ -50,6 +50,9 @@ export class PartyDatabase {
         this.db.exec('DELETE FROM admins')
       })()
     }
+    const deviceColumns = this.db.pragma('table_info(devices)') as { name: string }[]
+    if (!deviceColumns.some((column) => column.name === 'info'))
+      this.db.exec("ALTER TABLE devices ADD COLUMN info TEXT NOT NULL DEFAULT '{}'")
     const guestColumns = this.db.pragma('table_info(guests)') as { name: string }[]
     if (!guestColumns.some((column) => column.name === 'last_seen'))
       this.db.exec('ALTER TABLE guests ADD COLUMN last_seen INTEGER NOT NULL DEFAULT 0')
@@ -62,7 +65,7 @@ export class PartyDatabase {
         'ALTER TABLE queue_votes ADD COLUMN value INTEGER NOT NULL DEFAULT 1 CHECK(value IN (-1,1))',
       )
     this.db.exec(
-      'CREATE UNIQUE INDEX IF NOT EXISTS one_admin ON admins((1)); PRAGMA user_version=5;',
+      'CREATE UNIQUE INDEX IF NOT EXISTS one_admin ON admins((1)); PRAGMA user_version=6;',
     )
     this.db.prepare('INSERT OR IGNORE INTO party VALUES (1,?)').run(JSON.stringify(initialState()))
   }

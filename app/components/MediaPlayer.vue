@@ -276,12 +276,12 @@ async function changeSink() {
     warning.value = errorText(error)
   }
 }
-watch(
-  () => current.value?.queueId,
-  () => void mountTrack(),
-  { flush: 'post' },
-)
+watch([() => current.value?.queueId, isPlayer], () => void mountTrack(), { flush: 'post' })
 watch(eligible, () => void sync(), { flush: 'post' })
+watch(slot, (element, previous) => {
+  if (previous) observer?.unobserve(previous)
+  if (element) observer?.observe(element)
+})
 function releaseAudio(element: HTMLAudioElement | null) {
   if (!element) return
   element.pause()
@@ -351,10 +351,11 @@ onBeforeUnmount(() => {
   clearInterval(timer)
   document.removeEventListener('visibilitychange', pageVisibility)
 })
+defineExpose({ activate })
 </script>
 <template>
-  <section class="media-player">
-    <div class="player-activation">
+  <section v-if="isPlayer" class="media-player">
+    <div v-if="route.path !== '/player'" class="player-activation">
       <span class="eyebrow">● ESTE É O PLAYER</span
       ><button class="primary-button" aria-label="Ativar som" @click="activate">
         {{ armed ? 'Ativar som novamente' : '▶ Ativar som' }}
@@ -421,7 +422,7 @@ onBeforeUnmount(() => {
         />
       </div>
     </Transition>
-    <div v-if="current?.source === 'local'" class="audio-output">
+    <div v-if="current?.source === 'local' && route.path !== '/player'" class="audio-output">
       <button @click="listOutputs">Escolher saída de áudio</button
       ><select
         v-if="outputs.length"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const route = useRoute()
 const { failure, connected, state } = useParty()
 </script>
 <template>
@@ -8,7 +9,7 @@ const { failure, connected, state } = useParty()
   </div>
   <div v-if="connected && state && !state.playerId" class="notice" role="status">
     Aguardando o anfitrião ativar o som. Os pedidos ficam guardados na fila.
-    <NuxtLink to="/host">Configurar onde tocar →</NuxtLink>
+    <NuxtLink v-if="route.path !== '/player'" to="/host">Configurar onde tocar →</NuxtLink>
   </div>
   <div
     v-else-if="connected && state?.playerId && !state.devices.some((d) => d.id === state?.playerId)"
@@ -16,7 +17,8 @@ const { failure, connected, state } = useParty()
     role="status"
   >
     O aparelho de som está desconectado. Abra a aba do PLAYER ou escolha outro nos
-    <NuxtLink to="/host">controles do anfitrião</NuxtLink>.
+    <NuxtLink v-if="route.path !== '/player'" to="/host">controles do anfitrião</NuxtLink>
+    <span v-else>controles do anfitrião</span>.
   </div>
   <div v-if="!connected" class="notice" role="status">
     Reconectando à festa… A fila volta assim que a rede estiver disponível.

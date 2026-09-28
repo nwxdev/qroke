@@ -167,14 +167,11 @@ try {
   db.prepare('UPDATE admins SET expires_at=0').run()
   await expect(host.getByText('Admin liberado', { exact: true })).not.toBeVisible()
   await expect(host.getByRole('dialog')).not.toBeVisible()
-  expect(
-    await host.evaluate(
-      () => window.qrokePlaying && window.originalFrame === document.querySelector('iframe'),
-    ),
-  ).toBe(true)
+  await expect(host).toHaveURL(fixture.base + '/busca')
+  await expect.poll(() => host.evaluate(() => window.qrokePlaying)).toBe(true)
   expect(errors).toEqual([])
   console.log(
-    'Scroll para cima mantém iframe, instância e reprodução; mini player visível em desktop/mobile sem sobreposição dos controles OK',
+    'Scroll mantém iframe/reprodução e mini player desktop/mobile; expiração redireciona o host para busca OK',
   )
 } finally {
   db.close()

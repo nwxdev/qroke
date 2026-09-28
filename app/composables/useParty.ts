@@ -1,3 +1,5 @@
+import { deviceLabel } from '../utils/device-identity'
+import { browserDeviceInfo } from '../utils/device-info'
 import type { PublicState, Guest, QueueItem, Track } from '../../shared/types'
 export function errorText(error: unknown) {
   const e = error as { data?: { statusMessage?: string; message?: string }; message?: string }
@@ -188,6 +190,16 @@ export function usePartyConnection() {
     busy = false
   let channel: BroadcastChannel | undefined,
     cloned = false
+  let deviceInfo: Awaited<ReturnType<typeof browserDeviceInfo>> | undefined
+  const details = () =>
+    deviceInfo
+      ? {
+          info: {
+            ...deviceInfo,
+            view: route.path === '/host' ? 'host' : route.path === '/player' ? 'player' : 'busca',
+          },
+        }
+      : {}
   const nonce = String(Date.now()) + Math.random()
   function connect() {
     if (disposed) return
@@ -217,16 +229,13 @@ export function usePartyConnection() {
     }
     party.device.value = saved
     try {
-      if (saved) await party.api('/api/device/heartbeat', {})
+      if (saved) await party.api('/api/device/heartbeat', details())
       else throw new Error('new')
     } catch {
-      const label =
-        (route.path === '/player' ? 'PLAYER' : route.path === '/host' ? 'Host' : 'Celular') +
-        ' · ' +
-        new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      const label = deviceInfo ? deviceLabel(deviceInfo) : 'Aparelho'
       party.device.value = await $fetch('/api/device', {
         method: 'POST',
-        body: { label },
+        body: { label, ...details() },
         timeout: 5000,
       })
       try {
@@ -245,6 +254,7 @@ export function usePartyConnection() {
     }
     await party.refresh()
     await party.session().catch(() => {})
+    deviceInfo = await browserDeviceInfo()
     await register().catch((e) => {
       party.failure.value = errorText(e)
     })
@@ -259,7 +269,7 @@ export function usePartyConnection() {
     }, 2000)
     beat = setInterval(() => {
       if (!party.device.value) return
-      void party.api('/api/device/heartbeat', {}).catch((error) => {
+      void party.api('/api/device/heartbeat', details()).catch((error) => {
         if (error?.statusCode === 401 || error?.status === 401) {
           party.device.value = null
           party.soundDevice.value = null

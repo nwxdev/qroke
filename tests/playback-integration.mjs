@@ -106,3 +106,66 @@ test('player: concorrência, recusas persistentes, volume e revogação de apare
   assert.equal(state().playerReadyAt, barrier)
   assert.equal((await report('progress', retried, {}, other.token)).status, 409)
 })
+
+test('aparelhos: metadados autenticados, privados e compatíveis com registros antigos', async (t) => {
+  const fixture = await startFixture(3182)
+  t.after(() => fixture.close())
+  const host = client(fixture.base),
+    guest = client(fixture.base)
+  await host.request('/api/auth', { action: 'login', pin: '4321' })
+  const info = {
+    kind: 'phone',
+    platform: 'Android',
+    platformVersion: '16',
+    browser: 'Chrome',
+    browserVersion: '146.0',
+    model: 'SM-S921B',
+    appMode: 'browser',
+    view: 'player',
+  }
+  const device = (await guest.request('/api/device', { label: 'Celular da sala', info })).data
+  const headers = { 'x-qroke-device-key': device.token }
+  assert.equal((await guest.request('/api/devices')).status, 401)
+  let data = (await host.request('/api/devices')).data.devices.find((d) => d.id === device.id)
+  assert.equal(data.info.model, 'SM-S921B')
+  assert.equal(data.info.appVersion, '0.1.0')
+  assert.ok(!('token' in data))
+  assert.ok(
+    !('info' in (await guest.request('/api/state')).data.devices.find((d) => d.id === device.id)),
+  )
+  assert.equal((await guest.request('/api/device/heartbeat', { info }, 'POST')).status, 401)
+  assert.equal(
+    (
+      await guest.request(
+        '/api/device/heartbeat',
+        { info: { ...info, model: 'x'.repeat(65) } },
+        'POST',
+        headers,
+      )
+    ).status,
+    400,
+  )
+  await host.request('/api/control', {
+    action: 'rename-device',
+    deviceId: device.id,
+    label: 'TV da sala',
+  })
+  assert.equal(
+    (
+      await guest.request(
+        '/api/device/heartbeat',
+        { info: { ...info, view: 'busca', appMode: 'standalone' } },
+        'POST',
+        headers,
+      )
+    ).status,
+    200,
+  )
+  assert.equal((await guest.request('/api/device/heartbeat', {}, 'POST', headers)).status, 200)
+  await fixture.restart()
+  data = (await host.request('/api/devices')).data.devices.find((d) => d.id === device.id)
+  assert.equal(data.label, 'TV da sala')
+  assert.equal(data.info.view, 'busca')
+  assert.equal(data.info.appMode, 'standalone')
+  assert.equal(data.info.model, 'SM-S921B')
+})

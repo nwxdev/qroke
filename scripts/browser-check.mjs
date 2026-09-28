@@ -75,23 +75,17 @@ try {
   const expiryDb = new Database(join(server.dir, 'party.sqlite'))
   expiryDb.prepare('UPDATE admins SET expires_at=0').run()
   expiryDb.close()
-  await expect(host.getByRole('button', { name: 'Liberar controles', exact: true })).toBeVisible()
-  await host.getByRole('button', { name: 'Liberar controles', exact: true }).click()
+  await expect(host).toHaveURL(server.base + '/busca')
+  await expect(host.getByRole('button', { name: 'Pular', exact: true })).toHaveCount(0)
+  await host.getByRole('link', { name: 'Anfitrião', exact: true }).click()
   await expect(host.getByLabel('PIN do anfitrião', { exact: true })).toBeVisible()
-  expect(
-    await host.evaluate(
-      () =>
-        window.originalAudio === document.querySelector('audio') &&
-        window.originalAudio.isConnected,
-    ),
-  ).toBe(true)
   await host.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
   await host
     .getByRole('dialog')
     .getByRole('button', { name: 'Liberar controles', exact: true })
     .click()
   await expect(host.getByText('Admin liberado', { exact: true })).toBeVisible()
-  console.log('Expiração admin preserva a instância do PLAYER OK')
+  console.log('Expiração admin redireciona para /busca; reentrada pelo Anfitrião exige PIN OK')
   const beforeDrag = (await (await host.request.get(server.base + '/api/state')).json()).queue
   await host.getByText('Reordenar arrastando', { exact: true }).click()
   const handles = host.locator('.drag-handle')
@@ -145,11 +139,16 @@ try {
   const tv = await tvContext.newPage()
   watch(tv)
   await tv.goto(server.base + '/tv')
-  await tv.getByRole('button', { name: 'Liberar controles', exact: true }).focus()
+  await tv.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true }).focus()
   await tv.keyboard.press('Enter')
-  for (const digit of ['4', '3', '2', '1']) await tv.keyboard.press(digit)
-  // Usa o grafo de setas do D-pad para alcançar o botão OK.
+  await expect(tv.getByRole('dialog')).toHaveCount(0)
+  // Todos os elementos da tela de exibição continuam navegáveis por setas.
   async function reachableButtons() {
+    await expect(
+      tv.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true }),
+    ).toBeEnabled()
+    await expect(tv.locator('.qr-plate svg')).toBeVisible()
+    await expect(tv.getByRole('button', { name: 'Verificar acesso', exact: true })).toBeEnabled()
     const scope = (await tv.getByRole('dialog').isVisible())
       ? tv.getByRole('dialog')
       : tv.locator('main')
@@ -189,16 +188,21 @@ try {
     expect(visited.size).toBe(count)
     return count
   }
-  console.log('TV: ' + (await reachableButtons()) + ' botões alcançáveis pelas setas (PIN)')
-  await tv.getByRole('button', { name: 'OK', exact: true }).focus()
-  await tv.keyboard.press('Enter')
-  await expect(tv.getByText('Admin liberado', { exact: true })).toBeVisible()
-  await tv.getByRole('button', { name: 'Controles', exact: true }).focus()
-  await tv.keyboard.press('Enter')
-  console.log('TV: ' + (await reachableButtons()) + ' botões alcançáveis pelas setas (admin)')
+  const playerButtons = await reachableButtons()
+  await tvContext.request.post(server.base + '/api/auth', {
+    data: { action: 'login', pin: '4321' },
+  })
+  await tv.reload()
+  await expect(tv.locator('.tv-control-shelf, dialog')).toHaveCount(0)
+  expect(await reachableButtons()).toBe(playerButtons)
+  console.log(
+    'Player: ' +
+      playerButtons +
+      ' elementos alcançáveis por setas; sessão admin não expõe controles OK',
+  )
   await tv.screenshot({ path: 'test-results/tv.png', fullPage: true })
   await tv.keyboard.press('Backspace')
-  await expect(tv.getByRole('button', { name: 'Pular', exact: false })).not.toBeVisible()
+  await expect(tv.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true })).toBeFocused()
   const original = await tv.evaluate(() => document.documentElement.dataset.theme)
   await tv.getByRole('button', { name: 'Usar tema claro' }).click()
   await tv.reload()
@@ -208,7 +212,8 @@ try {
   console.log('Temas persistidos por rota e Back do controle OK')
 
   await tvContext.request.post(server.base + '/api/auth', { data: { action: 'logout' } })
-  await host.getByRole('button', { name: 'Liberar controles', exact: true }).click()
+  await expect(host).toHaveURL(server.base + '/busca')
+  await host.getByRole('link', { name: 'Anfitrião', exact: true }).click()
   await host.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
   await expect(
     host.getByRole('dialog').getByRole('button', { name: 'Liberar controles', exact: true }),

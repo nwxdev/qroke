@@ -39,6 +39,22 @@ try {
   const host = await context.newPage(),
     player = await context.newPage()
   for (const page of [host, player]) page.on('pageerror', (e) => errors.push(e.message))
+  await player.addInitScript(() => {
+    Object.defineProperty(navigator, 'userAgentData', {
+      configurable: true,
+      value: {
+        platform: 'Android',
+        mobile: true,
+        getHighEntropyValues: async () => ({
+          platform: 'Android',
+          mobile: true,
+          model: 'SM-S921B',
+          platformVersion: '16.0.0',
+          fullVersionList: [{ brand: 'Google Chrome', version: '146.0.7777.10' }],
+        }),
+      },
+    })
+  })
   await host.goto(fixture.base + '/host')
   await player.goto(fixture.base + '/tv')
   await expect
@@ -78,7 +94,7 @@ try {
     }),
   )
   await expect(player.locator('iframe')).toBeVisible()
-  await player.getByLabel('Ativar som', { exact: true }).click()
+  await player.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true }).click()
   await expect.poll(() => player.evaluate(() => window.fake.playing)).toBe(true)
   const slider = host.getByRole('slider', { name: /Volume do PLAYER/ })
   await slider.fill('37')
@@ -110,6 +126,9 @@ try {
   expect(state().current.queueId).toBe(third.queueId)
   expect(state().queue.map((t) => t.queueId)).toEqual([fourth.queueId])
   await expect.poll(() => player.evaluate(() => window.fake.playing)).toBe(false)
+  await expect(
+    player.getByRole('button', { name: /Tentar novamente|Pular esta música/ }),
+  ).toHaveCount(0)
   await host.getByRole('button', { name: 'Tentar novamente', exact: true }).click()
   await expect.poll(() => state().current.queueId).not.toBe(third.queueId)
   await expect.poll(() => player.evaluate(() => window.fakes.length)).toBe(4)
@@ -121,6 +140,11 @@ try {
   const row = host
     .locator('.managed-device')
     .filter({ has: host.locator('.tag').filter({ hasText: /^PLAYER$/ }) })
+  await expect(row).toContainText('Modelo: SM-S921B')
+  await expect(row).toContainText('Android 16.0.0')
+  await expect(row).toContainText('Chrome 146.0.7777.10')
+  await expect(row).toContainText('Tela: Player')
+  await expect(row).toContainText('No navegador')
   await row.getByRole('button', { name: 'Renomear', exact: true }).click()
   await row.getByRole('textbox').fill('TV da sala')
   await row.getByRole('button', { name: 'Salvar aparelho', exact: true }).click()
@@ -155,11 +179,15 @@ try {
   await host.getByRole('button', { name: 'Remover aparelho TV da sala', exact: true }).click()
   await expect.poll(() => state().playerId).toBe(null)
   await expect(player.locator('iframe')).toHaveCount(0)
+  await expect(
+    player.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true }),
+  ).toBeVisible()
+  await expect(player.locator('dialog')).toHaveCount(0)
   expect(state().queue).toHaveLength(1)
   expect(state().current.id).toBe(third.id)
   expect(errors).toEqual([])
   console.log(
-    'PLAYER remoto: volume/mute, pular, eventos duplicados/atrasados, autoplay, cascata, retry, erro153, renomear/remover e temas mobile OK',
+    'PLAYER remoto: volume/mute, pular, eventos duplicados/atrasados, autoplay, cascata, retry, erro153, identificação Android, renomear/remover e temas mobile OK',
   )
 } finally {
   db.close()

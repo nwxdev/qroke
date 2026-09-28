@@ -2,13 +2,10 @@
 const { state, control, pending } = useParty()
 const seconds = ref(state.value?.karaokeDelaySeconds ?? 5),
   music = ref(state.value?.karaokeTransitionMusic ?? true)
-watch(
-  () => [state.value?.karaokeDelaySeconds, state.value?.karaokeTransitionMusic],
-  () => {
-    seconds.value = state.value?.karaokeDelaySeconds ?? 5
-    music.value = state.value?.karaokeTransitionMusic ?? true
-  },
-)
+watch([() => state.value?.karaokeDelaySeconds, () => state.value?.karaokeTransitionMusic], () => {
+  seconds.value = state.value?.karaokeDelaySeconds ?? 5
+  music.value = state.value?.karaokeTransitionMusic ?? true
+})
 const save = () =>
   control({ action: 'karaoke-settings', seconds: seconds.value, music: music.value })
 </script>

@@ -57,7 +57,7 @@ describe('SQLite e sessões', () => {
     expect(migrated.claimAdmin(undefined, 120).granted).toBe(true)
     migrated.db.close()
     const check = new Sqlite(path)
-    expect(check.pragma('user_version', { simple: true })).toBe(5)
+    expect(check.pragma('user_version', { simple: true })).toBe(6)
     check.close()
     rmSync(dir, { recursive: true })
   })
@@ -162,6 +162,28 @@ it('migra likes antigos para votos +1 sem perder convidados ou fila', () => {
   const migrated = new PartyDatabase(path)
   expect(migrated.guestReactions(guest.id)).toEqual({ track: 1 })
   expect(migrated.guest(guest.token)?.name).toBe('Ana')
+  migrated.db.close()
+  rmSync(dir, { recursive: true })
+})
+
+it('migra aparelhos do schema 5 sem perder nome, token ou estado', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'qroke-devices-')),
+    path = join(dir, 'db.sqlite')
+  const old = new PartyDatabase(path)
+  old.db
+    .prepare('INSERT INTO devices (id,token,label,last_seen) VALUES (?,?,?,?)')
+    .run('tv', 'secret', 'TV da sala', Date.now())
+  const state = old.state()
+  old.db.exec('ALTER TABLE devices DROP COLUMN info; PRAGMA user_version=5;')
+  old.db.close()
+  const migrated = new PartyDatabase(path)
+  expect(migrated.state()).toEqual(state)
+  expect(migrated.db.prepare('SELECT * FROM devices WHERE id=?').get('tv')).toMatchObject({
+    token: 'secret',
+    label: 'TV da sala',
+    info: '{}',
+  })
+  expect(migrated.db.pragma('user_version', { simple: true })).toBe(6)
   migrated.db.close()
   rmSync(dir, { recursive: true })
 })

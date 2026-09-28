@@ -30,12 +30,13 @@ npm start
 
 `npm start` carrega `.env` e traduz as variáveis para o runtime Nuxt. Se iniciar diretamente com `node .output/server/index.mjs`, use os nomes `NUXT_*` e `NITRO_PORT` correspondentes; o servidor compilado não carrega `.env` sozinho.
 
-| Rota         | Uso                                                                      |
-| ------------ | ------------------------------------------------------------------------ |
-| `/`          | Entrada do convidado, busca, karaokê, biblioteca e pedidos               |
-| `/host`      | PIN, fila, reprodução, volume, karaokê e aparelhos                       |
-| `/player`    | Tela unificada: convite e fila no modo Música; vídeo/karaokê em destaque |
-| `/tv`, `/qr` | Redirecionamentos de compatibilidade para `/player`                      |
+| Rota         | Uso                                                            |
+| ------------ | -------------------------------------------------------------- |
+| `/busca`     | Entrada por nome, pesquisa, playlists e pedidos/votos          |
+| `/host`      | Administração com PIN, fila, volume, karaokê e aparelhos       |
+| `/player`    | Reprodução de música/vídeo/karaokê, QR e ativação local de som |
+| `/`          | Redireciona para `/busca`                                      |
+| `/tv`, `/qr` | Redirecionam para `/player`                                    |
 
 ### Configuração
 
@@ -211,6 +212,37 @@ Reiniciar o roteador pode mudar o IP atribuído por DHCP. Reserve o IP do comput
 
 `QROKE_INVITE_ENV_FILE` é opcional (padrão `.env`): define qual arquivo fornece a URL pública para releitura. Para executar o servidor compilado diretamente, use `NUXT_INVITE_ENV_FILE`; valor vazio desliga a releitura e mantém `NUXT_PUBLIC_PARTY_URL`. A descoberta de IP é somente leitura e só ocorre quando a URL privada falha; no WSL requer interoperabilidade com PowerShell.
 
+## Navegação, ativação de som e aparelhos — atualização de 28/09/2026
+
+As três páginas principais são **`/busca`**, **`/host`** e **`/player`**. A raiz `/` redireciona para `/busca`, preservando parâmetros e âncora; convites antigos continuam válidos. `/tv` e `/qr` continuam redirecionando para `/player`.
+
+- **Busca:** entrada por nome, pesquisa de músicas, karaokê, playlists, participantes e pedidos/votos. O botão da fila vazia leva a `/busca#busca` e foca o campo apropriado.
+- **Anfitrião:** acesso pelo menu **Anfitrião** abre `/host` com o PIN quando não há sessão válida. Após autenticar, os controles administrativos ficam disponíveis nessa página. Expiração, revogação detectada ou **Sair do admin** redirecionam o host para `/busca`; voltar ao host exige autenticar novamente. O prazo continua configurado por `QROKE_ADMIN_LEASE_SECONDS` (padrão 120 s). A detecção na interface acompanha a atualização da sessão, normalmente em até 2 s; a API recusa imediatamente uma sessão expirada.
+- **Player:** mantém somente o menu **Anfitrião**, tema e **ATIVAR SOM NESTA TELA** no cabeçalho fixo. Não mostra Liberar controles, PIN, Sair do admin, configurações, comandos de pulo/retry ou edição/votos na fila, mesmo se o navegador tiver uma sessão administrativa. O link Anfitrião leva à página de administração. A fila mantém cartões de playlist, nomes e contagens de votos para exibição. Teclas de mídia dessa tela não enviam comandos administrativos; setas navegam e Escape/Back devolvem o foco à ativação de som.
+
+**Ativar som** concede a permissão local do navegador, sem assumir o papel de PLAYER nem liberar administração. Pode ser acionado antes de o anfitrião escolher esse aparelho. O botão permanece no mesmo lugar quando a fila está vazia, muda de faixa/modo ou a página rola. Uma mensagem abaixo distingue autorização local e aparelho escolhido. Se outro aparelho foi selecionado, esta tela aguarda; a escolha continua em `/host`. O player dedicado não sai de `/player` quando a sessão de admin expira.
+
+No modo Música com **YouTube**, o iframe continua compacto e visível; o modo organiza a apresentação, sem extrair ou ocultar o vídeo durante a reprodução. As [políticas do YouTube](https://developers.google.com/youtube/terms/developer-policies#i.-additional-prohibitions) vedam separar o áudio e reproduzir por player invisível, e a [documentação do player](https://developers.google.com/youtube/player_parameters) estabelece área mínima de 200 × 200 px. Áudio da biblioteca local não precisa de iframe. O QR continua disponível.
+
+### Identificar as telas conectadas
+
+Em **Anfitrião → Onde o som toca**, cada aba mostra:
+
+- Nome personalizável, online/offline, marcação PLAYER e indicação deste aparelho.
+- Tipo (celular, tablet, computador ou TV), sistema e versão disponível.
+- Modelo informado pelo navegador, nome/versão do navegador e versão do QRokê.
+- Abertura no navegador ou como aplicativo instalado, tela atual (Busca/Player/Anfitrião) e seis caracteres do ID para distinguir abas parecidas.
+
+Novos cadastros usam descrições como `SM-S921B · Chrome` ou `Computador Windows · Edge`. Nomes já salvos ou renomeados são preservados. Metadados são atualizados no registro/heartbeat e a tela atual acompanha a navegação, sem criar um novo aparelho. Abas continuam independentes; o ID não é um número de série físico.
+
+A identificação usa User-Agent e, quando disponível, [User-Agent Client Hints](https://developer.mozilla.org/en-US/docs/Web/API/NavigatorUAData/getHighEntropyValues). No HTTP por IP local, Safari, navegadores embutidos ou configurações de privacidade, modelo/versão podem não ser disponibilizados. O app não inventa um modelo a partir do marcador Android `K`, nem afirma Windows 10/11 apenas pelo User-Agent reduzido. Não acessa hostname, número de série ou o nome Bluetooth da caixa. Renomear é a forma confiável de distinguir aparelhos idênticos. A indicação de aplicativo instalado descreve o modo de abertura; esta mudança não instala nem implementa uma PWA.
+
+**Dados:** schema SQLite **6**, coluna `devices.info`; migração preserva IDs, tokens, nomes e estado da festa. `POST /api/device` e `POST /api/device/heartbeat` aceitam metadados opcionais validados, mantendo compatibilidade com clientes antigos. O heartbeat exige a credencial privada do próprio aparelho. Os detalhes técnicos só são retornados por `GET /api/devices`, com sessão admin; `/api/state` mantém apenas identificação pública/atividade. O User-Agent completo não é armazenado. Dados declarados pelo cliente servem para apresentação, nunca para autorização.
+
+**Correção encontrada nos testes:** a atualização periódica da festa podia repor o valor antigo enquanto o anfitrião editava o tempo de karaokê. O formulário agora observa mudanças efetivas das configurações; a edição resiste ao polling. O foco da busca também deixa de ser reposicionado a cada atualização da presença.
+
+**Infraestrutura:** foi localizado e lido o README de `/home/rpolan/projects/nwx/nwx_infra`, que descreve Docker Swarm, proxy Nginx e deploy SSH/GitHub Actions para homologação/produção. A consulta foi somente de leitura; não confirmou sessão SSH ativa nem alterou/publicou nada na VPS. Acesso externo do QRokê continua em planejamento.
+
 ## Player, votos, playlists e karaokê — atualização de 28/09/2026
 
 A rota principal de reprodução agora é **`/player`**. `/tv` e `/qr` redirecionam para ela. Atualize as abas já abertas com **Ctrl+F5** depois desta atualização; no aparelho que emite o som, pressione **Ativar som** se o navegador solicitar. O código continua na worktree `qroke-v1`, branch `codex/qroke-v1`, sem push ou PR.
@@ -219,8 +251,8 @@ A rota principal de reprodução agora é **`/player`**. `/tv` e `/qr` redirecio
 
 - **Música/áudio local ou festa vazia:** convite QR à esquerda e fila à direita no desktop; no celular, os blocos se empilham. O iframe YouTube permanece visível quando usado no modo Música.
 - **Vídeo:** reprodução em destaque e fila/convite ao lado. **Karaokê:** área ampliada e QR sempre disponível em um canto reservado, sem cobrir o vídeo. Os modos usam a mesma instância do player; a troca de modo não recarrega a faixa.
-- Cabeçalho com botão **Anfitrião** e ícone. **Sair do admin** fica no topo do anfitrião e do player. Controles separados em reprodução, volume, modo da tela, fila/continuação e karaokê; removido o comando duplicado de remover/pular a atual.
-- Fila vazia mostra **Buscar músicas**, com destino `/#busca` e foco no campo de busca ou nome. Elementos se adaptam a 320/360 px, tablet e desktop; controle remoto também navega pelos novos campos e expansores.
+- Cabeçalho com botão **Anfitrião** e ícone. **Sair do admin** fica no topo do anfitrião. O player contém apenas o link Anfitrião, sem comandos administrativos. Controles separados em reprodução, volume, modo da tela, fila/continuação e karaokê; removido o comando duplicado de remover/pular a atual.
+- Fila vazia mostra **Buscar músicas**, com destino `/busca#busca` e foco no campo de busca ou nome. Elementos se adaptam a 320/360 px, tablet e desktop; controle remoto também navega pelos novos campos e expansores.
 
 ### Pular, falhas e músicas indisponíveis
 
@@ -512,7 +544,7 @@ npm run test:youtube
 
 O teste `tests/playlists.live.ts` aceita `YOUTUBE_TEST_PLAYLIST_ID` para escolher outra playlist pública. Para executar somente esse teste, sem repetir a pesquisa oficial: `node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --config vitest.live.config.ts tests/playlists.live.ts`.
 
-A expiração administrativa preserva a instância do PLAYER; o servidor continua aceitando eventos de reprodução pela credencial do dispositivo. O teste simula a expiração sem esperar o prazo real de dois minutos.
+A expiração administrativa preserva a instância do PLAYER; o servidor continua aceitando eventos de reprodução pela credencial do dispositivo. O teste simula a expiração sem esperar o prazo real de dois minutos. Na navegação atual, o host redireciona para a busca; a tela dedicada do player continua aberta.
 
 **Saída de áudio nos testes:** no Chromium headless/WSL, a saída nativa travou o relógio de WAVs carregados (aproximadamente 1,4 s de 2 s), sem erro de mídia. O mesmo aconteceu em HTML puro, fora do QRokê: cinco arquivos concluídos e o sexto parado. Os sete WAVs concluíram com a saída virtual do Chromium. Por isso, `browser-check.mjs` e `browser-autostart-check.mjs` usam `--disable-audio-output`: o navegador ainda decodifica arquivos, controla seu relógio e emite eventos; somente a saída ao sistema é virtual. Não há avanço artificial, alteração de `currentTime` ou evento de término forjado para aprovar a fila. [Implementação e finalidade da opção no Chromium](https://chromium.googlesource.com/chromium/src/+/f29eb01290cd36a30177ecf8197f906c01088a0d).
 
@@ -520,7 +552,16 @@ Para diagnosticar a saída nativa no Linux/WSL: `QROKE_TEST_NATIVE_AUDIO=1 node 
 
 O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Chromium headless correspondente à versão instalada do Playwright. Evite forçar uma versão antiga do cache. Em outra máquina, execute `npx playwright install chromium --only-shell` antes. Os testes usam dados próprios e removem apenas seus diretórios temporários ao encerrar; não alteram sua festa.
 
-### Validação atual — player, playlists e karaokê, 28/09/2026
+### Validação atual — navegação e aparelhos, 28/09/2026
+
+- **63 testes unitários e 19 verificações de integração aprovados.** Novos casos cobrem Android com Client Hints, fallback sem modelo, Edge, Safari/iPhone, Samsung Internet/tablet, TV, migração do schema 5, metadados privados, credencial do heartbeat e preservação do nome após renomear/reiniciar.
+- **10/10 scripts de navegador aprovados na execução completa.** Verificados `/` → `/busca`, expiração/logout do host → busca, reentrada com PIN, ausência de administração no player mesmo com cookie admin, setas/Back, botão fixo antes/depois de selecionar o aparelho e ao rolar/mudar de modo, volume e pulo remoto, identificação Android, playlists, temas e QR de 320 a 1440 px. A configuração do karaokê permanece editada durante o polling e o player dedicado continua aberto após sair do admin.
+- **TypeScript, build de produção e formatação aprovados.** Inspeção visual da captura do player em 320 px; nenhum overflow nos cenários responsivos monitorados. A verificação privada não encontrou API key/Client ID/Client Secret em 141 arquivos de código/documentação nem em 27 arquivos públicos do build.
+- **Smoke Windows/LAN aprovado:** `/busca`, `/host` e `/player` retornam 200 por localhost e `192.168.31.95:3100`; `/` redireciona para busca e os aliases `/tv` e `/qr` para player. A versão atualizada está iniciada na porta 3100.
+- Identificação de Android/Client Hints foi simulada no teste de navegador; confirme o modelo mostrado no celular físico. Não houve nova chamada à API real do YouTube nem login Google real nesta rodada. Permanecem os limites de áudio virtual/headless e aceite físico descritos abaixo.
+- `nwx_infra` foi somente consultado localmente. Sem SSH, alteração de infraestrutura, push, deploy ou PR. QRokê permanece na mesma worktree e branch `codex/qroke-v1`.
+
+### Validação anterior — player, playlists e karaokê, 28/09/2026
 
 - **58 testes unitários aprovados:** rodízio, catálogo/cache/filtros, playlists, autorização, persistência, migrações, votos, avanço e recuperação de reprodução.
 - **18 verificações de integração aprovadas:** build real com dados isolados, chamadas concorrentes, proteção contra pulo repetido, eventos antigos, pausa em cascata de falhas, volume, revogação de aparelhos, votos negativos, relógio do karaokê e importação individual/completa sem duplicar.

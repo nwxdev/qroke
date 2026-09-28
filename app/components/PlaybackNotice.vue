@@ -1,5 +1,7 @@
 <script setup lang="ts">
 const { state, admin, control, pending } = useParty()
+const route = useRoute()
+const canManage = computed(() => admin.value && route.path === '/host')
 </script>
 <template>
   <div v-if="state?.playbackIssue" class="notice playback-notice" role="status">
@@ -13,7 +15,7 @@ const { state, admin, control, pending } = useParty()
     <p v-if="state.playbackIssue.halted">
       A reprodução foi pausada para preservar a fila.
       {{
-        admin
+        canManage
           ? 'Tente novamente ou pule somente esta música.'
           : 'Peça ao anfitrião para tentar novamente ou pular esta música.'
       }}
@@ -22,7 +24,7 @@ const { state, admin, control, pending } = useParty()
       Esta faixa foi ignorada. Se a próxima também falhar, a fila será preservada em pausa.
     </p>
     <div class="playback-actions">
-      <template v-if="admin && state.playbackIssue.halted">
+      <template v-if="canManage && state.playbackIssue.halted">
         <button :disabled="pending" @click="control({ action: 'retry' })">Tentar novamente</button>
         <button :disabled="pending" @click="control({ action: 'skip' })">Pular esta música</button>
       </template>

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { QueueItem } from '../../shared/types'
-const props = defineProps<{ manage?: boolean; compact?: boolean; items?: QueueItem[] }>()
+const props = defineProps<{
+  manage?: boolean
+  readOnly?: boolean
+  compact?: boolean
+  items?: QueueItem[]
+}>()
 const { queue, guest, pending, remove, reorder } = useParty()
 const displayed = computed(() => props.items ?? queue.value)
 const position = (item: QueueItem) =>
@@ -51,10 +56,14 @@ function duration(item: QueueItem) {
         >
         <PlaylistBadge :playlist="item.playlist" />
         <KaraokeSingers v-if="item.karaoke" :people="item.singers" :fallback="item.guestName" />
-        <QueueVote v-if="!compact" :item="item" :index="position(item)" />
+        <QueueVote v-if="!compact && !readOnly" :item="item" :index="position(item)" />
+        <small v-if="readOnly && !compact" aria-label="Votos da música">
+          <AppIcon name="like" /> {{ item.likes || 0 }} · <AppIcon name="dislike" />
+          {{ item.dislikes || 0 }}
+        </small>
       </div>
       <small class="duration">{{ duration(item) }}</small>
-      <div v-if="manage" class="row-actions">
+      <div v-if="manage && !readOnly" class="row-actions">
         <button
           :disabled="pending || !canMove(position(item), -1)"
           :aria-label="'Mover ' + item.title + ' para cima'"
@@ -71,7 +80,7 @@ function duration(item: QueueItem) {
         </button>
       </div>
       <button
-        v-if="manage || guest?.id === item.guestId"
+        v-if="!readOnly && (manage || guest?.id === item.guestId)"
         :disabled="pending || item.queueId === 'pending'"
         class="remove-button"
         :aria-label="'Remover ' + item.title"

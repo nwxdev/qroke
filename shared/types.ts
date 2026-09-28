@@ -41,7 +41,19 @@ export interface HistoryItem extends QueueItem {
   playedAt: number
   outcome: 'ended' | 'skipped' | 'error'
 }
+export interface DeviceInfo {
+  kind: 'phone' | 'tablet' | 'computer' | 'tv' | 'unknown'
+  platform: string
+  platformVersion: string
+  browser: string
+  browserVersion: string
+  model: string
+  appMode: 'browser' | 'standalone'
+  view: 'host' | 'player' | 'busca'
+  appVersion: string
+}
 export interface Device {
+  info?: DeviceInfo
   id: string
   label: string
   lastSeen: number

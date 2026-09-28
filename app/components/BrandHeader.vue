@@ -3,7 +3,7 @@ const { connected } = useParty()
 </script>
 <template>
   <header class="brand-header">
-    <NuxtLink to="/" class="brand" aria-label="QRokê, início"
+    <NuxtLink to="/busca" class="brand" aria-label="QRokê, início"
       ><span class="brand-mark">q</span> QRokê<span class="brand-dot">●</span></NuxtLink
     >
     <div class="header-links">

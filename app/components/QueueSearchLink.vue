@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
 function focusSearch() {
-  if (route.path !== '/') return
+  if (route.path !== '/busca') return
   requestAnimationFrame(() => {
     const target = document.getElementById('busca')
     target?.scrollIntoView({
@@ -13,7 +13,7 @@ function focusSearch() {
 }
 </script>
 <template>
-  <NuxtLink to="/#busca" class="primary-button queue-search-target" @click="focusSearch"
+  <NuxtLink to="/busca#busca" class="primary-button queue-search-target" @click="focusSearch"
     ><AppIcon name="search" /> Buscar músicas</NuxtLink
   >
 </template>

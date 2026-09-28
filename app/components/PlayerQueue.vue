@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { QueueItem } from '../../shared/types'
-defineProps<{ manage?: boolean; compact?: boolean }>()
+defineProps<{ compact?: boolean }>()
 const { queue, state } = useParty()
 const entries = computed(() => {
   const result: {
@@ -54,14 +54,9 @@ const entries = computed(() => {
         <p v-if="entry.current" class="playlist-current">
           <span class="tag">Tocando agora</span> {{ entry.current.title }}
         </p>
-        <QueueList
-          v-if="entry.tracks.length"
-          :items="entry.tracks"
-          :manage="manage"
-          :compact="compact"
-        />
+        <QueueList v-if="entry.tracks.length" :items="entry.tracks" read-only :compact="compact" />
       </details>
-      <QueueList v-else :items="entry.tracks" :manage="manage" :compact="compact" />
+      <QueueList v-else :items="entry.tracks" read-only :compact="compact" />
     </template>
     <QueueList v-if="!queue.length" :items="[]" />
   </div>

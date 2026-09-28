@@ -1,8 +1,15 @@
 <script setup lang="ts">
-const { state, admin, queue, isPlayer, control, device, pending, playHere } = useParty()
-const root = ref<HTMLElement | null>(null),
-  unlock = ref(false),
-  controls = ref(false)
+const { state, queue, isPlayer, device, soundDevice, connected } = useParty()
+const root = ref<HTMLElement | null>(null)
+const mediaPlayer = ref<{ activate: () => Promise<void> } | null>(null)
+const armed = computed(() => !!device.value && soundDevice.value === device.value.id)
+const soundStatus = computed(() => {
+  if (!connected.value) return 'Aguardando conexão com a festa.'
+  if (!armed.value) return 'Permita o áudio neste navegador.'
+  return isPlayer.value
+    ? 'Som ativado nesta tela.'
+    : 'Som autorizado. Aguardando o anfitrião escolher este aparelho.'
+})
 const { waiting: karaokeWaiting } = useKaraokeCountdown()
 const karaoke = computed(() => !!state.value?.current?.karaoke)
 const musicMode = computed(
@@ -15,25 +22,12 @@ const musicMode = computed(
 const closing = computed(
   () => !!state.value?.duration && state.value.duration - state.value.position <= 5,
 )
-const expanded = computed(() => karaoke.value && !closing.value && !controls.value && !unlock.value)
+const expanded = computed(() => karaoke.value && !closing.value)
 function back() {
-  if (unlock.value) unlock.value = false
-  else controls.value = false
-  nextTick(() => root.value?.querySelector<HTMLButtonElement>('.tv-menu-button')?.focus())
+  root.value?.querySelector<HTMLButtonElement>('.screen-sound-button')?.focus()
 }
-function media(action: 'pause' | 'skip') {
-  if (!admin.value) {
-    unlock.value = true
-    return
-  }
-  void control(
-    action === 'pause' ? { action: 'pause', paused: !state.value?.paused } : { action: 'skip' },
-  )
-}
-useSpatialNav(root, back, media)
-watch(admin, (value) => {
-  if (value) unlock.value = false
-})
+// Teclas de mídia não administram a festa pela tela de exibição.
+useSpatialNav(root, back, () => {})
 </script>
 <template>
   <main
@@ -42,7 +36,6 @@ watch(admin, (value) => {
     :class="{
       'karaoke-expanded': expanded,
       'karaoke-active': karaoke,
-      'controls-open': controls || unlock,
       'music-mode': musicMode,
     }"
   >
@@ -51,30 +44,32 @@ watch(admin, (value) => {
       class="tv-backdrop"
       :style="{ backgroundImage: 'url(' + state.current.thumbnail + ')' }"
     />
-    <header class="tv-header">
+    <header class="tv-header player-header">
       <span class="brand"><span class="brand-mark">q</span> QRokê</span>
-      <div class="header-links">
-        <span class="tag" v-if="karaoke">KARAOKÊ</span
-        ><span v-if="admin" class="tag active">Admin liberado</span
-        ><button
-          class="tv-menu-button"
-          :aria-expanded="controls"
-          @click="admin ? (controls = !controls) : (unlock = !unlock)"
+      <div class="screen-sound">
+        <button
+          class="primary-button screen-sound-button"
+          :disabled="!device"
+          aria-describedby="screen-sound-status"
+          @click="mediaPlayer?.activate()"
         >
-          <AppIcon :name="admin ? 'unlock' : 'lock'" /><span>{{
-            admin ? 'Controles' : 'Liberar controles'
-          }}</span></button
-        ><AdminExit /><NuxtLink to="/host" class="header-control"
-          ><AppIcon name="person" /> Anfitrião</NuxtLink
-        ><ThemeToggle />
+          <AppIcon name="volume" /> ATIVAR SOM NESTA TELA
+        </button>
+        <small id="screen-sound-status" role="status">{{ soundStatus }}</small>
+      </div>
+      <div class="screen-theme">
+        <NuxtLink to="/host" class="player-host-link" aria-label="Anfitrião">
+          <AppIcon name="person" /><span>Anfitrião</span>
+        </NuxtLink>
+        <ThemeToggle />
       </div>
     </header>
     <PartyNotice />
     <div class="tv-stage">
       <section class="tv-main">
         <KaraokeCountdown />
-        <MediaPlayer v-if="isPlayer" />
-        <div v-else-if="!karaokeWaiting" class="tv-placeholder">
+        <MediaPlayer ref="mediaPlayer" />
+        <div v-if="!isPlayer && !karaokeWaiting" class="tv-placeholder">
           <span class="vinyl">♫</span
           ><span class="eyebrow">{{
             state?.current ? 'TOCANDO NA FESTA' : 'A NOITE COMEÇA AQUI'
@@ -86,17 +81,6 @@ watch(admin, (value) => {
               ? 'Reprodução no dispositivo PLAYER selecionado.'
               : 'Selecione o PLAYER nos controles do anfitrião.'
           }}</small>
-          <button
-            v-if="!state?.playerId && admin"
-            class="primary-button"
-            :disabled="pending || !device"
-            @click="playHere"
-          >
-            Tocar neste dispositivo
-          </button>
-          <button v-else-if="!state?.playerId" class="primary-button" @click="unlock = true">
-            Ativar som nesta TV
-          </button>
         </div>
       </section>
       <aside class="tv-aside">
@@ -115,7 +99,7 @@ watch(admin, (value) => {
             <p>{{ state.current.artist }} · {{ state.current.guestName }}</p>
             <PlaylistBadge :playlist="state.current.playlist" />
           </div>
-          <PlayerQueue :manage="admin && controls" :compact="!musicMode" />
+          <PlayerQueue :compact="!musicMode" />
         </section>
         <section class="player-invite qr-invite">
           <template v-if="musicMode"
@@ -126,8 +110,6 @@ watch(admin, (value) => {
         </section>
       </aside>
     </div>
-    <AdminDialog v-model="unlock" tv />
-    <section v-if="admin && controls" class="tv-control-shelf"><HostControls tv /></section>
     <div v-if="!musicMode && !expanded && queue.length" class="next-strip">
       <span class="eyebrow">PRÓXIMAS 3</span
       ><TransitionGroup name="next" tag="div" class="next-cards"
@@ -217,19 +199,67 @@ watch(admin, (value) => {
 .music-mode .qr-current {
   overflow-wrap: anywhere;
 }
-.tv-header .header-links {
-  flex-wrap: wrap;
+.tv-screen {
+  padding-top: 130px;
 }
-.header-control {
-  display: inline-flex;
+.player-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 5vw;
+  margin: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.screen-sound {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.screen-sound-button {
+  min-height: 48px;
+  white-space: nowrap;
+}
+.tv-screen .screen-sound-button:focus {
+  transform: none;
+}
+.screen-sound small {
+  text-align: center;
+  font-size: 12px;
+  line-height: 16px;
+  max-width: 310px;
+  min-height: 32px;
+}
+.screen-theme {
+  justify-self: end;
+  display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 10px 14px;
+}
+.player-host-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--surface);
   color: var(--text);
+  font-size: 13px;
+}
+@media (max-width: 380px) {
+  .player-host-link {
+    padding: 10px;
+  }
+  .player-host-link span {
+    display: none;
+  }
 }
 @media (max-width: 760px) {
   .tv-screen.music-mode .tv-stage {
@@ -240,17 +270,25 @@ watch(admin, (value) => {
   .music-mode .player-queue :deep(.queue-list) {
     max-height: 460px;
   }
-  .tv-header {
-    flex-wrap: wrap;
+  .tv-screen {
+    padding-top: 192px;
   }
-  .tv-header .header-links {
-    justify-content: flex-start;
-    width: 100%;
+  .player-header {
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
   }
-  .header-control {
+  .screen-sound {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .screen-sound-button {
     font-size: 12px;
-    padding: 8px 10px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .screen-theme {
+    grid-column: 2;
+    grid-row: 1;
   }
 }
 </style>

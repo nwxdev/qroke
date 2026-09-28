@@ -20,8 +20,12 @@ const unlock = ref(false)
 onMounted(() => {
   unlock.value = !admin.value
 })
-watch(admin, (value) => {
+watch(admin, (value, previous) => {
   if (value) unlock.value = false
+  else if (previous) {
+    unlock.value = false
+    void navigateTo('/busca', { replace: true })
+  }
 })
 </script>
 <template>
@@ -29,7 +33,9 @@ watch(admin, (value) => {
     <BrandHeader
       ><button v-if="!admin" class="header-control" @click="unlock = true">
         <AppIcon name="lock" />Liberar controles</button
-      ><AdminExit /><NuxtLink to="/player" class="header-control"
+      ><AdminExit /><NuxtLink to="/busca" class="header-control">
+        <AppIcon name="search" /> Buscar músicas</NuxtLink
+      ><NuxtLink to="/player" class="header-control"
         ><AppIcon name="tv" /> Abrir player</NuxtLink
       ></BrandHeader
     ><PartyNotice />

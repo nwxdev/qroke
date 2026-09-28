@@ -71,6 +71,37 @@ onBeforeUnmount(() => {
         ><span v-if="state?.playerId === item.id" class="tag">PLAYER</span
         ><small v-if="item.id === device?.id">este aparelho</small>
       </div>
+      <div class="device-details">
+        <span v-if="item.info?.platform">
+          {{
+            {
+              phone: 'Celular',
+              tablet: 'Tablet',
+              computer: 'Computador',
+              tv: 'TV',
+              unknown: 'Aparelho',
+            }[item.info.kind]
+          }}
+          · {{ item.info.platform }} {{ item.info.platformVersion }}
+          <template v-if="item.info.model"> · Modelo: {{ item.info.model }}</template>
+        </span>
+        <span v-if="item.info?.browser"
+          >{{ item.info.browser }} {{ item.info.browserVersion }}</span
+        >
+        <span v-if="item.info?.appVersion">
+          QRokê {{ item.info.appVersion }} ·
+          {{ item.info.appMode === 'standalone' ? 'Aplicativo instalado' : 'No navegador' }}
+        </span>
+        <span
+          >Tela:
+          {{
+            item.info?.view
+              ? { host: 'Anfitrião', player: 'Player', busca: 'Busca' }[item.info.view]
+              : 'Não informada'
+          }}
+          · ID {{ item.id.slice(0, 6) }}</span
+        >
+      </div>
       <form v-if="editing === item.id" @submit.prevent="rename(item)">
         <input
           v-model="names[item.id]"
@@ -109,6 +140,10 @@ onBeforeUnmount(() => {
     >
       O PLAYER está desconectado. Escolha outro dispositivo.
     </p>
+    <p class="hint">
+      Modelo e versões dependem do que o navegador informa. Renomeie para identificar o aparelho na
+      festa; cada aba tem seu próprio ID.
+    </p>
     <small
       >Remover revoga o acesso deste aparelho e interrompe seu som se ele for o PLAYER. Reabrir a
       página faz um novo registro. Trocas aguardam até 9 segundos para evitar som duplicado.</small
@@ -142,6 +177,14 @@ onBeforeUnmount(() => {
   margin-bottom: 10px;
 }
 .managed-device-title strong {
+  overflow-wrap: anywhere;
+}
+.device-details {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 .device-actions button {
