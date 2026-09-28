@@ -5,6 +5,7 @@ export default defineNuxtConfig({
   devServer: { host: '0.0.0.0', port: Number(process.env.QROKE_PORT || 3000) },
   nitro: { experimental: { websocket: true }, externals: { external: ['better-sqlite3'] } },
   runtimeConfig: {
+    youtubeRegion: process.env.QROKE_YOUTUBE_REGION || 'BR',
     youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
     youtubeClientId: process.env.YOUTUBE_CLIENT_ID || '',
     youtubeClientSecret: process.env.YOUTUBE_CLIENT_SECRET || '',

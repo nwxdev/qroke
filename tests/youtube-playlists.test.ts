@@ -294,3 +294,22 @@ it('vincula a autorização ao ator e não desconecta a conta de outro na recone
   expect(party.queue[0]?.guestId).toBe('ana')
   expect(party.queue[0]?.playlist).toEqual({ id: 'PLabcdefghijk', title: 'Minha playlist' })
 })
+
+it('filtra região e recusas na prévia e verifica novamente ao importar', async () => {
+  const { http } = mock(),
+    blocked = new Set<string>()
+  const wrapper = (async (...args: Parameters<typeof fetch>) => {
+    const response = await http(...args)
+    if (!String(args[0]).includes('/videos?')) return response
+    const data = await response.json()
+    data.items.find((item: { id: string }) => item.id === ids[5]).contentDetails.regionRestriction =
+      { blocked: ['BR'] }
+    return Response.json(data)
+  }) as typeof fetch
+  const service = new YoutubePlaylists(config, wrapper, undefined, (id) => blocked.has(id))
+  const preview = await service.preview('guest', 'PLabcdefghijk')
+  expect(preview.tracks.map((track) => track.id)).toEqual([ids[0]])
+  blocked.add(ids[0]!)
+  expect(service.consume(preview.ticket, 'guest').tracks).toEqual([])
+  expect((await service.preview('guest', 'PLabcdefghijk')).tracks).toEqual([])
+})

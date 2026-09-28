@@ -1,4 +1,5 @@
 import YTMusic from 'ytmusic-api'
+import { youtubeAvailable, youtubeRegion, type YoutubeAvailability } from './youtube-availability'
 import type { Track } from '../../shared/types'
 import { normalizeQuery, karaokeQueries } from './rules'
 type RawTrack = {
@@ -37,11 +38,11 @@ export async function deadline<T>(promise: Promise<T>, ms = 12000): Promise<T> {
     clearTimeout(timer!)
   }
 }
-export function musicProvider(): CatalogProvider {
+export function musicProvider(region = 'BR'): CatalogProvider {
   const api = new YTMusic()
   let init: Promise<unknown> | undefined
   const ready = () =>
-    (init ||= deadline(api.initialize({ GL: 'BR', HL: 'pt' })).catch((e) => {
+    (init ||= deadline(api.initialize({ GL: youtubeRegion(region), HL: 'pt' })).catch((e) => {
       init = undefined
       throw e
     }))
@@ -66,7 +67,7 @@ export function musicProvider(): CatalogProvider {
     },
   }
 }
-type Video = {
+type Video = YoutubeAvailability & {
   id: string
   status: { embeddable: boolean; privacyStatus: string }
   snippet: { title: string; channelTitle: string; thumbnails?: { medium?: { url: string } } }
@@ -86,7 +87,11 @@ export class Catalog {
     public reserve: () => boolean,
     public warn: (message: string | null) => void,
     public http: typeof fetch = fetch,
+    public options: { region?: string; unavailable?: (id: string) => boolean } = {},
   ) {}
+  available(tracks: Track[]) {
+    return tracks.filter((track) => !this.options.unavailable?.(track.id))
+  }
   async official(path: string, params: Record<string, string>) {
     const url = new URL('https://www.googleapis.com/youtube/v3/' + path)
     url.search = new URLSearchParams({ ...params, key: this.key }).toString()
@@ -116,6 +121,7 @@ export class Catalog {
     return response.json()
   }
   async validate(tracks: Track[]) {
+    tracks = this.available(tracks)
     if (!this.key || !tracks.length) return tracks
     const data = (await this.official('videos', {
       part: 'status,snippet,contentDetails',
@@ -126,7 +132,7 @@ export class Catalog {
     })) as { items: Video[] }
     return tracks.flatMap((track) => {
       const video = data.items.find(
-        (v) => v.id === track.id && v.status.embeddable && v.status.privacyStatus === 'public',
+        (v) => v.id === track.id && youtubeAvailable(v, this.options.region),
       )
       return video
         ? [
@@ -141,6 +147,7 @@ export class Catalog {
     })
   }
   remember(tracks: Track[]) {
+    tracks = this.available(tracks)
     for (const track of tracks)
       this.tracks.set(track.id + ':' + track.karaoke, { track, expires: Date.now() + 3600000 })
     while (this.tracks.size > 10000) this.tracks.delete(this.tracks.keys().next().value!)
@@ -148,7 +155,9 @@ export class Catalog {
   }
   selected(id: string, karaoke: boolean) {
     const cached = this.tracks.get(id + ':' + karaoke)
-    return cached && cached.expires > Date.now() ? cached.track : undefined
+    return cached && cached.expires > Date.now() && !this.options.unavailable?.(id)
+      ? cached.track
+      : undefined
   }
   async search(query: string, karaoke = false) {
     const q = normalizeQuery(query),
@@ -156,10 +165,10 @@ export class Catalog {
     const cached = this.cache.get(cacheKey)
     if (cached && cached.expires > Date.now()) {
       this.warn(cached.warning)
-      return cached.tracks
+      return this.available(cached.tracks)
     }
     const pending = this.inflight.get(cacheKey)
-    if (pending) return pending
+    if (pending) return this.available(await pending)
     if (this.inflight.size >= 4) throw new Error('Catálogo ocupado. Tente novamente em instantes.')
     const request = this.load(q, karaoke)
       .then(({ tracks, warning }) => {
@@ -169,7 +178,20 @@ export class Catalog {
       })
       .finally(() => this.inflight.delete(cacheKey))
     this.inflight.set(cacheKey, request)
-    return request
+    return this.available(await request)
+  }
+  async versions(q: string) {
+    const results = await Promise.allSettled([
+      this.provider.searchSongs(q),
+      this.provider.searchVideos(q),
+    ])
+    if (results.every((result) => result.status === 'rejected'))
+      throw new Error('Catálogo indisponível.')
+    const lists = results.map((result) => (result.status === 'fulfilled' ? result.value : []))
+    // Intercala gravações e videoclipes para oferecer outras versões sem substituir a escolha.
+    return Array.from({ length: Math.max(...lists.map((list) => list.length)) }, (_, index) =>
+      lists.flatMap((list) => (list[index] ? [list[index]!] : [])),
+    ).flat()
   }
   async load(q: string, karaoke: boolean) {
     let tracks: Track[],
@@ -179,9 +201,9 @@ export class Catalog {
         ? (
             await Promise.all(karaokeQueries(q).map((query) => this.provider.searchVideos(query)))
           ).flat()
-        : await this.provider.searchSongs(q)
+        : await this.versions(q)
       tracks = [...new Map(raw.map((t) => [t.videoId, mapTrack(t, karaoke)])).values()]
-        .filter((t) => /^[\w-]{11}$/.test(t.id))
+        .filter((t) => /^[\w-]{11}$/.test(t.id) && !this.options.unavailable?.(t.id))
         .slice(0, 24)
     } catch {
       warning = 'Catálogo principal indisponível; busca oficial de emergência em uso.'
@@ -196,6 +218,7 @@ export class Catalog {
         part: 'snippet',
         type: 'video',
         videoEmbeddable: 'true',
+        regionCode: youtubeRegion(this.options.region),
         maxResults: '20',
         q: karaoke ? karaokeQueries(q)[0]! : q,
       })) as {
@@ -221,7 +244,7 @@ export class Catalog {
       throw error
     }
     this.warn(warning)
-    return { tracks: this.remember(tracks), warning }
+    return { tracks: this.remember(this.available(tracks)), warning }
   }
   async related(id: string) {
     return this.remember(

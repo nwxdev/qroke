@@ -3,12 +3,18 @@ import { YoutubePlaylists, PlaylistError } from '../core/youtube-playlists'
 let service: YoutubePlaylists | undefined
 export function youtube() {
   const c = useRuntimeConfig()
-  return (service ||= new YoutubePlaylists({
-    key: c.youtubeApiKey,
-    clientId: c.youtubeClientId,
-    clientSecret: c.youtubeClientSecret,
-    redirect: c.youtubeRedirectUri,
-  }))
+  return (service ||= new YoutubePlaylists(
+    {
+      key: c.youtubeApiKey,
+      region: c.youtubeRegion,
+      clientId: c.youtubeClientId,
+      clientSecret: c.youtubeClientSecret,
+      redirect: c.youtubeRedirectUri,
+    },
+    undefined,
+    undefined,
+    (id) => party().youtubeBlocked(id),
+  ))
 }
 export const youtubeAccount = (event: H3Event) =>
   youtube().ownedAccount(getCookie(event, 'qroke_youtube'), playlistAccess(event).owner)

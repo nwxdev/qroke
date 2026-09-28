@@ -1657,3 +1657,37 @@ button {
   color: var(--text);
   background: var(--surface-2);
 }
+
+/* Alvos de navegação da busca e entrada do anfitrião. */
+#busca {
+  scroll-margin-top: 24px;
+}
+a.header-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+}
+a.header-control:hover {
+  border-color: var(--accent);
+}
+@media (max-width: 680px) {
+  .brand-header {
+    flex-wrap: wrap;
+  }
+  .brand-header .header-links {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  a.header-control {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+}

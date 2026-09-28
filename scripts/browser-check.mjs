@@ -7,7 +7,12 @@ const server = await startFixture(3198)
 const browser = await chromium.launch({
   headless: true,
   ...(process.env.QROKE_CHROMIUM ? { executablePath: process.env.QROKE_CHROMIUM } : {}),
-  args: ['--no-sandbox'],
+  // Mantém decodificação, relógio e eventos; evita a saída física instável do WSL no headless.
+  // QROKE_TEST_NATIVE_AUDIO=1 exercita também a saída do sistema.
+  args: [
+    '--no-sandbox',
+    ...(process.env.QROKE_TEST_NATIVE_AUDIO === '1' ? [] : ['--disable-audio-output']),
+  ],
 })
 const errors = []
 await mkdir('test-results', { recursive: true })
@@ -148,7 +153,9 @@ try {
     const scope = (await tv.getByRole('dialog').isVisible())
       ? tv.getByRole('dialog')
       : tv.locator('main')
-    const buttons = scope.locator('button:visible:not([disabled])')
+    const buttons = scope.locator(
+      'button:visible:not([disabled]),a[href]:visible,input:visible:not([disabled]),select:visible:not([disabled]),summary:visible',
+    )
     const count = await buttons.count(),
       visited = new Set([0]),
       todo = [0]
@@ -164,6 +171,21 @@ try {
         }
       }
     }
+    if (visited.size !== count)
+      console.log(
+        'Controles não alcançados:',
+        await buttons.evaluateAll(
+          (nodes, seen) =>
+            nodes
+              .filter((_, index) => !seen.includes(index))
+              .map((el) => ({
+                tag: el.tagName,
+                text: el.textContent,
+                label: el.getAttribute('aria-label'),
+              })),
+          [...visited],
+        ),
+      )
     expect(visited.size).toBe(count)
     return count
   }

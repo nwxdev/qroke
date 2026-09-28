@@ -6,6 +6,13 @@ import { normalizeName, uniqueName, orderQueue } from './rules'
 import type { PartyState, Guest, Device, PublicState } from '../../shared/types'
 export const initialState = (): PartyState => ({
   revision: 0,
+  karaokeDelaySeconds: 5,
+  karaokeTransitionMusic: true,
+  karaokeLeadSeconds: 0,
+  karaokeStartsAt: null,
+  volume: 100,
+  playbackIssue: null,
+  consecutivePlaybackErrors: 0,
   queue: [],
   current: null,
   history: [],
@@ -32,6 +39,7 @@ export class PartyDatabase {
       CREATE TABLE IF NOT EXISTS devices (id TEXT PRIMARY KEY, token TEXT UNIQUE NOT NULL, label TEXT NOT NULL, last_seen INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS pin_attempts (ip TEXT PRIMARY KEY, count INTEGER NOT NULL, until_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS quota (day TEXT PRIMARY KEY, searches INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS youtube_blocks (id TEXT PRIMARY KEY, title TEXT NOT NULL, code INTEGER NOT NULL, expires_at INTEGER NOT NULL);
 
     `)
     const columns = this.db.pragma('table_info(admins)') as { name: string }[]
@@ -48,10 +56,27 @@ export class PartyDatabase {
     this.db.exec(
       'CREATE TABLE IF NOT EXISTS queue_votes (queue_id TEXT NOT NULL, guest_id TEXT NOT NULL, PRIMARY KEY(queue_id,guest_id))',
     )
+    const voteColumns = this.db.pragma('table_info(queue_votes)') as { name: string }[]
+    if (!voteColumns.some((column) => column.name === 'value'))
+      this.db.exec(
+        'ALTER TABLE queue_votes ADD COLUMN value INTEGER NOT NULL DEFAULT 1 CHECK(value IN (-1,1))',
+      )
     this.db.exec(
-      'CREATE UNIQUE INDEX IF NOT EXISTS one_admin ON admins((1)); PRAGMA user_version=3;',
+      'CREATE UNIQUE INDEX IF NOT EXISTS one_admin ON admins((1)); PRAGMA user_version=5;',
     )
     this.db.prepare('INSERT OR IGNORE INTO party VALUES (1,?)').run(JSON.stringify(initialState()))
+  }
+  blockYoutube(id: string, title: string, code: number, now = Date.now()) {
+    if (![100, 101, 150].includes(code)) return
+    this.db.prepare('DELETE FROM youtube_blocks WHERE expires_at<=?').run(now)
+    this.db
+      .prepare('INSERT OR REPLACE INTO youtube_blocks VALUES (?,?,?,?)')
+      .run(id, title, code, now + 86400000)
+  }
+  youtubeBlocked(id: string, now = Date.now()) {
+    return !!this.db
+      .prepare('SELECT 1 FROM youtube_blocks WHERE id=? AND expires_at>?')
+      .get(id, now)
   }
   state(): PartyState {
     return JSON.parse(
@@ -81,6 +106,7 @@ export class PartyDatabase {
     const { history, ...state } = this.state()
     return {
       ...state,
+      serverTime: Date.now(),
       canGoBack: history.some((item) => item.outcome !== 'error'),
       guests: this.db
         .prepare('SELECT id,name FROM guests WHERE last_seen>? ORDER BY name')
@@ -133,26 +159,42 @@ export class PartyDatabase {
         ...state.queue,
         ...state.history,
         ...(state.current ? [state.current] : []),
-      ])
+      ]) {
         if (item.guestId === id) item.guestName = name
+        for (const singer of item.singers || []) if (singer.id === id) singer.name = name
+      }
     })
     return { id, name }
   }
   guestVotes(id: string) {
     return (
-      this.db.prepare('SELECT queue_id FROM queue_votes WHERE guest_id=?').all(id) as {
+      this.db.prepare('SELECT queue_id FROM queue_votes WHERE guest_id=? AND value=1').all(id) as {
         queue_id: string
       }[]
     ).map((row) => row.queue_id)
   }
+  guestReactions(id: string): Record<string, 1 | -1> {
+    const rows = this.db
+      .prepare('SELECT queue_id,value FROM queue_votes WHERE guest_id=?')
+      .all(id) as { queue_id: string; value: 1 | -1 }[]
+    return Object.fromEntries(rows.map((row) => [row.queue_id, row.value]))
+  }
   private syncVotes(state: PartyState) {
     const counts = this.db
-      .prepare('SELECT queue_id,COUNT(*) AS count FROM queue_votes GROUP BY queue_id')
-      .all() as { queue_id: string; count: number }[]
-    const scores = new Map(counts.map((row) => [row.queue_id, row.count]))
-    state.queue = state.queue.map((item) => ({ ...item, votes: scores.get(item.queueId) || 0 }))
+      .prepare(
+        'SELECT queue_id,SUM(value) AS score,SUM(value=1) AS likes,SUM(value=-1) AS dislikes FROM queue_votes GROUP BY queue_id',
+      )
+      .all() as { queue_id: string; score: number; likes: number; dislikes: number }[]
+    const scores = new Map(counts.map((row) => [row.queue_id, row]))
+    state.queue = state.queue.map((item) => ({
+      ...item,
+      votes: scores.get(item.queueId)?.score || 0,
+      likes: scores.get(item.queueId)?.likes || 0,
+      dislikes: scores.get(item.queueId)?.dislikes || 0,
+    }))
   }
-  vote(queueId: string, guestId: string, voted: boolean) {
+  vote(queueId: string, guestId: string, input: boolean | -1 | 0 | 1) {
+    const value = typeof input === 'boolean' ? (input ? 1 : 0) : input
     return this.mutate((state) => {
       if (!this.db.prepare('SELECT id FROM guests WHERE id=?').get(guestId))
         throw new Error('Entre na festa para votar.')
@@ -160,14 +202,19 @@ export class PartyDatabase {
       if (!item || item.origin !== 'human')
         throw new Error('Esta música não está mais disponível para voto.')
       const existing = this.db
-        .prepare('SELECT 1 FROM queue_votes WHERE queue_id=? AND guest_id=?')
-        .get(queueId, guestId)
-      if (voted && !existing) {
+        .prepare('SELECT value FROM queue_votes WHERE queue_id=? AND guest_id=?')
+        .get(queueId, guestId) as { value: number } | undefined
+      if (value !== 0 && existing?.value !== value) {
         if (state.queue.some((track) => track.manualOrder !== null))
           throw new Error('O anfitrião está controlando a ordem da fila.')
-        if (state.queue[0]?.queueId === queueId) throw new Error('Esta música já é a próxima.')
-        this.db.prepare('INSERT INTO queue_votes VALUES (?,?)').run(queueId, guestId)
-      } else if (!voted) {
+        if (value === 1 && state.queue[0]?.queueId === queueId)
+          throw new Error('Esta música já é a próxima.')
+        this.db
+          .prepare(
+            'INSERT INTO queue_votes(queue_id,guest_id,value) VALUES (?,?,?) ON CONFLICT(queue_id,guest_id) DO UPDATE SET value=excluded.value',
+          )
+          .run(queueId, guestId, value)
+      } else if (value === 0) {
         this.db
           .prepare('DELETE FROM queue_votes WHERE queue_id=? AND guest_id=?')
           .run(queueId, guestId)

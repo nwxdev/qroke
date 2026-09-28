@@ -4,7 +4,12 @@ const fixture = await startFixture(3196)
 const browser = await chromium.launch({
   headless: true,
   ...(process.env.QROKE_CHROMIUM ? { executablePath: process.env.QROKE_CHROMIUM } : {}),
-  args: ['--no-sandbox'],
+  // Mantém decodificação, relógio e eventos; evita a saída física instável do WSL no headless.
+  // QROKE_TEST_NATIVE_AUDIO=1 exercita também a saída do sistema.
+  args: [
+    '--no-sandbox',
+    ...(process.env.QROKE_TEST_NATIVE_AUDIO === '1' ? [] : ['--disable-audio-output']),
+  ],
 })
 try {
   const hostContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
@@ -33,7 +38,7 @@ try {
         }),
       )
 
-      await page.getByRole('link', { name: 'QR ↗', exact: true }).click()
+      await page.getByRole('link', { name: 'Abrir player', exact: true }).click()
       await expect(
         page.getByText('Som ativado. O próximo pedido começa automaticamente.'),
       ).toBeVisible()
@@ -59,7 +64,7 @@ try {
       .toBe(null)
     console.log(
       'Fila vazia: pedido remoto inicia e termina sem clique adicional na rota ' +
-        (i ? '/qr' : '/host') +
+        (i ? '/player' : '/host') +
         ' OK',
     )
   }

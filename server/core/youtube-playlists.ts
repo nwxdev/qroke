@@ -1,3 +1,4 @@
+import { youtubeAvailable, type YoutubeAvailability } from './youtube-availability'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { isIP } from 'node:net'
 import type { PartyState, Track } from '../../shared/types'
@@ -61,7 +62,13 @@ export function validRedirect(value: string) {
     return false
   }
 }
-type Config = { key: string; clientId: string; clientSecret: string; redirect: string }
+type Config = {
+  key: string
+  clientId: string
+  clientSecret: string
+  redirect: string
+  region?: string
+}
 type Account = {
   owner: string
   access: string
@@ -84,7 +91,7 @@ type GooglePlaylist = {
   contentDetails: { itemCount: number }
 }
 type GoogleList<T> = { items?: T[]; nextPageToken?: string }
-type Video = {
+type Video = YoutubeAvailability & {
   id: string
   snippet: {
     title: string
@@ -121,6 +128,7 @@ export class YoutubePlaylists {
     public config: Config,
     private http: typeof fetch = fetch,
     private now = Date.now,
+    private unavailable: (id: string) => boolean = () => false,
   ) {}
   get configured() {
     return !!(
@@ -384,9 +392,9 @@ export class YoutubePlaylists {
       const tracks: Track[] = unique.flatMap((id) => {
         const v = videos.get(id)
         if (
-          !v?.status?.embeddable ||
-          !['public', 'unlisted'].includes(v.status.privacyStatus || '') ||
-          v.status.uploadStatus !== 'processed' ||
+          !v ||
+          !youtubeAvailable(v, this.config.region, true) ||
+          this.unavailable(id) ||
           v.snippet.liveBroadcastContent === 'upcoming'
         )
           return []
@@ -422,7 +430,7 @@ export class YoutubePlaylists {
       this.active--
     }
   }
-  consume(ticket: string, owner: string, account?: string) {
+  peek(ticket: string, owner: string, account?: string) {
     this.prune()
     const cached = this.tickets.get(ticket)
     if (
@@ -434,15 +442,28 @@ export class YoutubePlaylists {
         410,
         'A prévia expirou ou já foi adicionada. Confira a playlist novamente.',
       )
+    const tracks = cached.preview.tracks.filter((track) => !this.unavailable(track.id))
+    return {
+      ...cached.preview,
+      tracks,
+      skipped: cached.preview.skipped + cached.preview.tracks.length - tracks.length,
+    }
+  }
+  consume(ticket: string, owner: string, account?: string) {
+    const preview = this.peek(ticket, owner, account)
     this.tickets.delete(ticket)
-    return cached.preview
+    return preview
   }
 }
 export function enqueuePlaylist(
   state: PartyState,
   tracks: Track[],
   now = Date.now(),
-  context?: { guest?: { id: string; name: string }; playlist: { id: string; title: string } },
+  context?: {
+    guest?: { id: string; name: string }
+    playlist?: { id: string; title: string }
+    singers?: { id: string; name: string }[]
+  },
 ) {
   const existing = new Set(
     [...state.queue, ...(state.current ? [state.current] : [])]
@@ -456,10 +477,15 @@ export function enqueuePlaylist(
     if (existing.has(track.id)) continue
     state.queue.push({
       ...track,
+      ...(track.karaoke && context?.singers
+        ? { singers: context.singers.map((person) => ({ ...person })) }
+        : {}),
       queueId: randomUUID(),
       guestId: context?.guest?.id || 'youtube-playlists',
       guestName: context?.guest?.name || 'Anfitrião',
-      ...(context ? { playlist: { id: context.playlist.id, title: context.playlist.title } } : {}),
+      ...(context?.playlist
+        ? { playlist: { id: context.playlist.id, title: context.playlist.title } }
+        : {}),
       origin: 'human',
       enqueuedAt: base + added,
       round: 0,

@@ -2,6 +2,7 @@
 const { failure, connected, state } = useParty()
 </script>
 <template>
+  <PlaybackNotice />
   <div v-if="failure" class="notice error" role="alert">
     {{ failure }}<button aria-label="Fechar aviso" @click="failure = ''">×</button>
   </div>

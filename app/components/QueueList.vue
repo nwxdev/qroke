@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { QueueItem } from '../../shared/types'
-const props = defineProps<{ manage?: boolean; compact?: boolean }>()
+const props = defineProps<{ manage?: boolean; compact?: boolean; items?: QueueItem[] }>()
 const { queue, guest, pending, remove, reorder } = useParty()
+const displayed = computed(() => props.items ?? queue.value)
+const position = (item: QueueItem) =>
+  queue.value.findIndex((track) => track.queueId === item.queueId)
 function move(index: number, delta: number) {
   const items = [...queue.value],
     target = index + delta
@@ -22,15 +25,16 @@ function duration(item: QueueItem) {
 }
 </script>
 <template>
-  <PlaylistGroups v-if="!compact" />
-  <div v-if="!queue.length" class="empty-queue">
+  <PlaylistGroups v-if="!compact && !items" />
+  <div v-if="!displayed.length" class="empty-queue">
     <span>♫</span>
     <h3>A próxima pode ser sua</h3>
     <p>Escolha uma música e dê o tom da festa.</p>
+    <QueueSearchLink />
   </div>
   <TransitionGroup v-else name="queue" tag="ol" class="queue-list" :class="{ compact }">
-    <li v-for="(item, index) in queue" :key="item.queueId" class="queue-row">
-      <span class="queue-number">{{ String(index + 1).padStart(2, '0') }}</span>
+    <li v-for="item in displayed" :key="item.queueId" class="queue-row">
+      <span class="queue-number">{{ String(position(item) + 1).padStart(2, '0') }}</span>
       <img
         v-if="item.thumbnail"
         :src="item.thumbnail"
@@ -46,21 +50,22 @@ function duration(item: QueueItem) {
           ><span v-if="item.manualOrder !== null" class="tag">Manual</span></small
         >
         <PlaylistBadge :playlist="item.playlist" />
-        <QueueVote v-if="!compact" :item="item" :index="index" />
+        <KaraokeSingers v-if="item.karaoke" :people="item.singers" :fallback="item.guestName" />
+        <QueueVote v-if="!compact" :item="item" :index="position(item)" />
       </div>
       <small class="duration">{{ duration(item) }}</small>
       <div v-if="manage" class="row-actions">
         <button
-          :disabled="pending || !canMove(index, -1)"
+          :disabled="pending || !canMove(position(item), -1)"
           :aria-label="'Mover ' + item.title + ' para cima'"
-          @click="move(index, -1)"
+          @click="move(position(item), -1)"
         >
           ↑
         </button>
         <button
-          :disabled="pending || !canMove(index, 1)"
+          :disabled="pending || !canMove(position(item), 1)"
           :aria-label="'Mover ' + item.title + ' para baixo'"
-          @click="move(index, 1)"
+          @click="move(position(item), 1)"
         >
           ↓
         </button>

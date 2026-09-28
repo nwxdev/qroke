@@ -3,6 +3,7 @@
 const { state, isPlayer, api, lastContact, device, soundDevice, armSound, adminDialogOpen } =
   useParty()
 const route = useRoute()
+const { waiting: karaokeWaiting } = useKaraokeCountdown()
 const frame = ref<HTMLDivElement | null>(null),
   slot = ref<HTMLElement | null>(null),
   audio = ref<HTMLAudioElement | null>(null)
@@ -21,8 +22,14 @@ let yt: YT.Player | undefined,
   timer: ReturnType<typeof setInterval>,
   generation = 0,
   reporting = false
+let terminalId: string | undefined
+let preparingId: string | undefined
+let pendingYoutubeError: { id: string; code: number } | undefined
 const current = computed(() => state.value?.current)
-const docked = computed(() => armed.value && current.value?.source === 'youtube' && !inView.value)
+const docked = computed(
+  () =>
+    armed.value && current.value?.source === 'youtube' && !inView.value && !karaokeWaiting.value,
+)
 // Observar o espaço original evita alternar entre fixo/normal em um ciclo.
 watch(
   docked,
@@ -48,27 +55,108 @@ const eligible = computed(
     armed.value &&
     (current.value?.source === 'local' || (pageVisible.value && !adminDialogOpen.value)) &&
     safe.value &&
-    !state.value?.paused,
+    !state.value?.paused &&
+    !state.value?.playbackIssue?.halted &&
+    !karaokeWaiting.value,
 )
 async function report(
   action: 'ended' | 'error' | 'progress',
   id = current.value?.queueId,
   position?: number,
   duration?: number,
+  errorCode?: number,
 ) {
-  if (!id || !safe.value) return
+  if (
+    !id ||
+    !safe.value ||
+    id !== current.value?.queueId ||
+    state.value?.playbackIssue?.halted ||
+    karaokeWaiting.value
+  )
+    return
+  if (action !== 'progress') {
+    if (!armed.value || terminalId === id) return
+    terminalId = id
+  }
   try {
-    await api('/api/player', { action, queueId: id, position, duration })
+    const volume =
+      yt?.getVolume?.() ?? (audio.value ? Math.round(audio.value.volume * 100) : undefined)
+    const muted = yt?.isMuted?.() ?? audio.value?.muted
+    await api('/api/player', {
+      action,
+      queueId: id,
+      position,
+      duration,
+      errorCode,
+      ...(action === 'progress' ? { volume, muted } : {}),
+    })
   } catch {
+    if (terminalId === id) terminalId = undefined
     warning.value = 'Sem conexão com o servidor. Reconectando…'
   }
 }
+function applyVolume() {
+  const volume = Math.min(100, Math.max(0, state.value?.volume ?? 100))
+  if (loadedId === current.value?.queueId) {
+    yt?.setVolume?.(volume)
+    if (volume === 0) yt?.mute?.()
+    else yt?.unMute?.()
+  }
+  if (audio.value) {
+    audio.value.volume = volume / 100
+    audio.value.muted = volume === 0
+  }
+}
+watch(() => state.value?.volume, applyVolume)
+const transitionMusic = computed(
+  () =>
+    karaokeWaiting.value &&
+    !!state.value?.karaokeStartsAt &&
+    !state.value.paused &&
+    !state.value.playbackIssue?.halted &&
+    (state.value.karaokeTransitionMusic ?? true) &&
+    safe.value &&
+    armed.value &&
+    pageVisible.value,
+)
+const { unlock: unlockMusic } = useTransitionMusic(
+  transitionMusic,
+  computed(() => state.value?.volume ?? 100),
+)
+async function prepare() {
+  const id = current.value?.queueId
+  if (
+    !karaokeWaiting.value ||
+    !id ||
+    loadedId !== id ||
+    !safe.value ||
+    !armed.value ||
+    state.value?.paused ||
+    state.value?.karaokeStartsAt ||
+    preparingId === id
+  )
+    return
+  preparingId = id
+  try {
+    await api('/api/player', { action: 'ready', queueId: id })
+  } catch {
+    /* O heartbeat tenta novamente quando o aparelho se reconectar. */
+  } finally {
+    if (preparingId === id) preparingId = undefined
+  }
+}
 async function sync() {
+  void prepare()
   if (!eligible.value) {
     yt?.pauseVideo?.()
     audio.value?.pause()
     return
   }
+  if (pendingYoutubeError?.id === current.value?.queueId && pendingYoutubeError) {
+    await report('error', pendingYoutubeError.id, undefined, undefined, pendingYoutubeError.code)
+    return
+  }
+  applyVolume()
   yt?.playVideo?.()
   if (audio.value)
     try {
@@ -84,6 +172,9 @@ async function mountTrack() {
   yt = undefined
   loadedId = undefined
   localFinish = undefined
+  terminalId = undefined
+  pendingYoutubeError = undefined
+  preparingId = undefined
   warning.value = ''
   if (!track || !isPlayer.value) return
   await nextTick()
@@ -108,7 +199,9 @@ async function mountTrack() {
           if (seq !== generation) return
           loadedId = track.queueId
           event.target.getIframe().tabIndex = -1
-          event.target.seekTo(start, true)
+          event.target.getIframe().referrerPolicy = 'strict-origin-when-cross-origin'
+          applyVolume()
+          if (start > 0) event.target.seekTo(start, true)
           void sync()
         },
         onStateChange(event) {
@@ -117,16 +210,16 @@ async function mountTrack() {
         },
         onError(event) {
           if (seq !== generation) return
-          if ([2, 5, 100, 101, 150].includes(event.data)) {
-            warning.value = 'Este vídeo não pode tocar aqui. Indo para a próxima…'
-            void report('error', track.queueId)
-          } else
-            warning.value =
-              'O YouTube recusou o player. Verifique o navegador, os cookies e o referenciador (erro ' +
-              event.data +
-              ').'
+          loadedId = track.queueId
+          pendingYoutubeError = { id: track.queueId, code: event.data }
+          void prepare()
+          warning.value = armed.value
+            ? ''
+            : 'O YouTube retornou erro ' + event.data + '. Ative o som para conferir a reprodução.'
+          void report('error', track.queueId, undefined, undefined, event.data)
         },
         onAutoplayBlocked() {
+          if (seq !== generation) return
           warning.value = 'Ative o som ou use o botão de play do vídeo.'
         },
       },
@@ -140,11 +233,19 @@ function localReady(element: HTMLAudioElement) {
   loadedId = element.dataset.queueId
   if (state.value?.position)
     element.currentTime = Math.min(state.value.position, Math.max(0, element.duration - 0.1))
+  applyVolume()
+  if (sink.value) void changeSink()
   void sync()
 }
 async function activate() {
   armSound()
+  void unlockMusic()
+  void prepare()
   warning.value = ''
+  if (pendingYoutubeError && pendingYoutubeError.id === current.value?.queueId) {
+    await report('error', pendingYoutubeError.id, undefined, undefined, pendingYoutubeError.code)
+    return
+  }
   await sync()
 }
 function pageVisibility() {
@@ -170,6 +271,7 @@ async function listOutputs() {
 async function changeSink() {
   try {
     await audio.value?.setSinkId(sink.value)
+    sessionStorage.setItem('qroke:audio-output', sink.value)
   } catch (error) {
     warning.value = errorText(error)
   }
@@ -190,6 +292,9 @@ watch(audio, (element, previous) => {
   if (previous && previous !== element) releaseAudio(previous)
 })
 onMounted(() => {
+  try {
+    sink.value = sessionStorage.getItem('qroke:audio-output') || ''
+  } catch {}
   void mountTrack()
   observer = new IntersectionObserver(
     (entries) => {
@@ -202,6 +307,7 @@ onMounted(() => {
   document.addEventListener('visibilitychange', pageVisibility)
   timer = setInterval(async () => {
     clock.value = Date.now()
+    void prepare()
     if (!safe.value) {
       yt?.pauseVideo?.()
       audio.value?.pause()
@@ -259,7 +365,13 @@ onBeforeUnmount(() => {
     </p>
     <p v-if="!safe" class="notice">Aguardando conexão ou transferência do PLAYER…</p>
     <p v-if="warning" role="status" class="notice">{{ warning }}</p>
-    <div ref="slot" class="media-slot" :style="docked ? { height: slotHeight + 'px' } : undefined">
+    <KaraokeCountdown v-if="route.path !== '/player'" />
+    <div
+      v-show="!karaokeWaiting"
+      ref="slot"
+      class="media-slot"
+      :style="docked ? { height: slotHeight + 'px' } : undefined"
+    >
       <div
         class="media-shell"
         :class="{
@@ -278,7 +390,7 @@ onBeforeUnmount(() => {
               :key="current.queueId"
               :data-queue-id="current.queueId"
               :src="'/api/library/' + current.id"
-              :controls="route.path !== '/tv'"
+              :controls="route.path !== '/player'"
               preload="metadata"
               @loadedmetadata="localReady($event.target as HTMLAudioElement)"
               @ended="report('ended', ($event.target as HTMLAudioElement).dataset.queueId)"
@@ -302,6 +414,11 @@ onBeforeUnmount(() => {
         <strong>{{ current.title }}</strong
         ><span>{{ current.artist }} · {{ current.guestName }}</span>
         <PlaylistBadge :playlist="current.playlist" />
+        <KaraokeSingers
+          v-if="current.karaoke"
+          :people="current.singers"
+          :fallback="current.guestName"
+        />
       </div>
     </Transition>
     <div v-if="current?.source === 'local'" class="audio-output">

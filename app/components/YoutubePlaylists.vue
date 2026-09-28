@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { PlaylistPreview, YoutubePlaylist, YoutubeStatus } from '../../shared/playlists'
-const { refresh, session } = useParty()
+const { refresh, session, state, queue } = useParty()
+const playlistQueued = (id: string) =>
+  [...queue.value, ...(state.value?.current ? [state.value.current] : [])].some(
+    (track) => track.playlist?.id === id,
+  )
+const singers = ref<string[]>([])
 const status = ref<YoutubeStatus | null>(null)
 const remoteConnect = computed(() => {
   if (!status.value?.connectOrigin) return false
@@ -76,21 +81,32 @@ async function inspect(value = input.value, personal = false, pageToken = '') {
     })
   })
 }
-async function add() {
+async function add(videoId?: string) {
   if (!preview.value || imported.value) return
   await task(async () => {
     const result = await $fetch<{ added: number; duplicates: number }>('/api/youtube/import', {
       method: 'POST',
-      body: { ticket: preview.value!.ticket },
+      body: { ticket: preview.value!.ticket, singers: singers.value, videoId },
       signal: controller?.signal,
     })
-    imported.value = true
+    imported.value = !videoId
     notice.value =
       result.added +
       ' música(s) adicionada(s) à fila.' +
       (result.duplicates ? ' ' + result.duplicates + ' já estava(m) na fila ou tocando.' : '')
     await refresh()
   })
+}
+async function expand(item: YoutubePlaylist) {
+  if (preview.value?.playlist.id === item.id && selected.value.personal) {
+    preview.value = null
+    return
+  }
+  await inspect(item.id, true)
+}
+async function addAll(item: YoutubePlaylist) {
+  await inspect(item.id, true)
+  if (preview.value?.playlist.id === item.id) await add()
 }
 async function connect() {
   if (busy.value) return
@@ -214,20 +230,44 @@ onBeforeUnmount(() => {
         <button :disabled="busy" @click="loadMine()">Atualizar playlists</button>
         <ul v-if="playlists.length" class="account-playlists">
           <li v-for="item in playlists" :key="item.id">
-            <button :disabled="busy" @click="inspect(item.id, true)">
-              <img
-                v-if="item.thumbnail"
-                :src="item.thumbnail"
-                alt=""
-                loading="lazy"
-                referrerpolicy="no-referrer"
-              />
-              <span
-                ><strong>{{ item.title }}</strong
-                ><small>{{ item.channel }} · {{ item.count }} faixas</small></span
+            <div class="playlist-result-actions">
+              <button
+                :disabled="busy"
+                :aria-expanded="preview?.playlist.id === item.id && selected.personal"
+                @click="expand(item)"
               >
-              <AppIcon name="next" />
-            </button>
+                <img
+                  v-if="item.thumbnail"
+                  :src="item.thumbnail"
+                  alt=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                />
+                <span
+                  ><strong>{{ item.title }}</strong
+                  ><small>{{ item.channel }} · {{ item.count }} faixas</small></span
+                >
+                <span v-if="playlistQueued(item.id)" class="tag">Na fila</span>
+                <AppIcon name="expand" />
+              </button>
+              <button
+                class="add-all-playlist"
+                :disabled="busy"
+                :aria-label="'Adicionar todas de ' + item.title"
+                title="Adicionar todas, sem duplicar faixas"
+                @click="addAll(item)"
+              >
+                <AppIcon name="playlist-plus" />
+              </button>
+            </div>
+            <PlaylistPreviewCard
+              v-if="preview?.playlist.id === item.id && selected.personal"
+              :preview="preview"
+              :busy="busy"
+              :imported="imported"
+              @add="add"
+              @more="inspect(selected.input, selected.personal, preview!.nextPageToken)"
+            />
           </li>
         </ul>
         <button v-if="nextListPage" :disabled="busy" @click="loadMine(true)">Mais playlists</button>
@@ -269,53 +309,42 @@ onBeforeUnmount(() => {
       karaokê</label
     >
     <p class="hint">A opção ativa o layout de karaokê. Ela não remove a voz dos vídeos.</p>
+    <KaraokePartners v-if="karaoke" v-model="singers" :disabled="busy" />
     <p v-if="busy" role="status" class="hint">Carregando playlist…</p>
     <p v-if="failure" class="notice" role="alert">{{ failure }}</p>
     <p v-if="notice" class="playlist-success" role="status">
       <AppIcon name="check" /> {{ notice }}
     </p>
-    <div v-if="preview" class="playlist-preview">
-      <h3>{{ preview.playlist.title }}</h3>
-      <p>{{ preview.playlist.channel }} · {{ preview.playlist.count }} itens na playlist</p>
-      <p class="hint">
-        {{ preview.tracks.length }} faixas disponíveis neste lote de {{ preview.inspected }} itens.
-        {{ preview.skipped }} indisponíveis ou repetidas foram ignoradas.
-      </p>
-      <ol v-if="preview.tracks.length" class="playlist-tracks" aria-label="Faixas da playlist">
-        <li v-for="track in preview.tracks" :key="track.id">
-          <strong>{{ track.title }}</strong
-          ><small>{{ track.artist }}</small>
-        </li>
-      </ol>
-      <p v-else class="notice">
-        Nenhuma faixa reproduzível neste lote. Vídeos privados, removidos ou sem permissão de
-        incorporação são ignorados.
-      </p>
-      <div class="playlist-actions">
-        <button
-          class="playlist-add"
-          :disabled="busy || imported || !preview.tracks.length"
-          @click="add"
-        >
-          <AppIcon :name="imported ? 'check' : 'plus'" />{{
-            imported ? 'Adicionadas à fila' : 'Adicionar ' + preview.tracks.length + ' músicas'
-          }}
-        </button>
-        <button
-          v-if="preview.nextPageToken"
-          :disabled="busy"
-          @click="inspect(selected.input, selected.personal, preview.nextPageToken)"
-        >
-          Próximo lote <AppIcon name="next" />
-        </button>
-      </div>
-      <p v-if="preview.nextPageToken" class="hint">
-        Esta playlist continua. Adicione este lote e confira o próximo (até 200 itens por lote).
-      </p>
-    </div>
+    <PlaylistPreviewCard
+      v-if="preview && !selected.personal"
+      :preview="preview"
+      :busy="busy"
+      :imported="imported"
+      @add="add"
+      @more="inspect(selected.input, selected.personal, preview!.nextPageToken)"
+    />
   </section>
 </template>
 <style scoped>
+.playlist-result-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.account-playlists .playlist-result-actions > button:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.account-playlists .playlist-result-actions > .add-all-playlist {
+  width: auto;
+  flex-shrink: 0;
+  min-width: 44px;
+  justify-content: center;
+}
+.account-playlists button[aria-expanded='true'] > .app-icon:last-child {
+  transform: rotate(180deg);
+}
+
 .youtube-playlists {
   margin-top: 20px;
   min-width: 0;

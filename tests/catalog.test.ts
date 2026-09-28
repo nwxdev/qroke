@@ -63,6 +63,7 @@ describe('catálogo', () => {
   it('cai no oficial, valida embeddable e sinaliza inclusive no cache', async () => {
     const p = provider()
     vi.mocked(p.searchSongs).mockRejectedValue(new Error('offline'))
+    vi.mocked(p.searchVideos).mockRejectedValue(new Error('offline'))
     const warn = vi.fn(),
       reserve = vi.fn(() => true)
     const http = vi.fn(async (url: URL | RequestInfo) => {
@@ -96,6 +97,7 @@ describe('catálogo', () => {
   it('não chama reserva sem chave nem ultrapassa quota', async () => {
     const p = provider()
     vi.mocked(p.searchSongs).mockRejectedValue(new Error('offline'))
+    vi.mocked(p.searchVideos).mockRejectedValue(new Error('offline'))
     const http = vi.fn(),
       reserve = vi.fn(() => false)
     await expect(new Catalog(p, '', reserve, () => {}, http).search('teste')).rejects.toThrow(
@@ -125,4 +127,62 @@ describe('catálogo', () => {
     expect(isoDuration('PT1H2M3S')).toBe(3723)
     expect(isoDuration('bad')).toBe(0)
   })
+})
+
+it('oferece outra versão e oculta recusas inclusive em cache e seleção antiga', async () => {
+  const p = provider(),
+    blocked = new Set<string>()
+  vi.mocked(p.searchVideos).mockResolvedValue([
+    { ...raw, videoId: 'zzzzzzzzzzz', name: 'Versão ao vivo' },
+  ])
+  const c = new Catalog(
+    p,
+    '',
+    () => true,
+    () => {},
+    undefined,
+    { unavailable: (id) => blocked.has(id) },
+  )
+  expect(await c.search('teste')).toHaveLength(2)
+  blocked.add(raw.videoId)
+  expect((await c.search('teste')).map((t) => t.id)).toEqual(['zzzzzzzzzzz'])
+  expect(c.selected(raw.videoId, false)).toBeUndefined()
+  expect(await c.related(raw.videoId)).toEqual([])
+})
+it('aplica país e idade na validação oficial', async () => {
+  const restrictions = [
+    { regionRestriction: { blocked: ['BR'] } },
+    { regionRestriction: { allowed: ['US'] } },
+    { regionRestriction: { allowed: [] } },
+    { contentRating: { ytRating: 'ytAgeRestricted' } },
+    { regionRestriction: { allowed: ['BR'] } },
+  ]
+  for (const [i, content] of restrictions.entries()) {
+    const c = new Catalog(
+      provider(),
+      'key',
+      () => true,
+      () => {},
+      vi.fn().mockResolvedValue(
+        Response.json({
+          items: [
+            {
+              id: raw.videoId,
+              status: { embeddable: true, privacyStatus: 'public' },
+              snippet: { title: 'Teste', channelTitle: 'Canal' },
+              contentDetails: { duration: 'PT3M', ...content },
+            },
+          ],
+        }),
+      ),
+    )
+    expect(await c.search('teste')).toHaveLength(i === 4 ? 1 : 0)
+  }
+})
+it('mantém a busca por vídeos se o catálogo de músicas falha', async () => {
+  const p = provider(),
+    reserve = vi.fn()
+  vi.mocked(p.searchSongs).mockRejectedValue(new Error('offline'))
+  expect(await new Catalog(p, '', reserve, () => {}).search('teste')).toHaveLength(1)
+  expect(reserve).not.toHaveBeenCalled()
 })

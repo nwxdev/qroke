@@ -13,14 +13,28 @@ defineProps<{
     | 'pause'
     | 'next'
     | 'previous'
+    | 'exit'
+    | 'like'
+    | 'dislike'
     | 'vote'
     | 'person'
     | 'edit'
+    | 'volume'
+    | 'muted'
     | 'tv'
+    | 'playlist-plus'
+    | 'expand'
     | 'playlist'
     | 'link'
 }>()
 const paths = {
+  'playlist-plus': 'M3 5h14 M3 10h14 M3 15h8 M17 14v8 M13 18h8',
+  expand: 'M5 9l7 7 7-7',
+  exit: 'M10 4H4v16h6 M14 8l4 4-4 4 M8 12h13',
+  like: 'M7 10v11H3V10z M7 10l5-8h2v6h5a2 2 0 0 1 2 2l-2 9a2 2 0 0 1-2 2H7',
+  dislike: 'M7 14V3H3v11z M7 14l5 8h2v-6h5a2 2 0 0 0 2-2l-2-9a2 2 0 0 0-2-2H7',
+  volume: 'M3 9h4l5-5v16l-5-5H3z M16 8a6 6 0 0 1 0 8 M19 5a10 10 0 0 1 0 14',
+  muted: 'M3 9h4l5-5v16l-5-5H3z M17 9l5 6 M22 9l-5 6',
   previous: 'M19 4L7 12l12 8z M4 4v16',
   vote: 'M12 20V4 M5 11l7-7 7 7',
   person: 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2',

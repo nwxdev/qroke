@@ -30,12 +30,12 @@ npm start
 
 `npm start` carrega `.env` e traduz as variáveis para o runtime Nuxt. Se iniciar diretamente com `node .output/server/index.mjs`, use os nomes `NUXT_*` e `NITRO_PORT` correspondentes; o servidor compilado não carrega `.env` sozinho.
 
-| Rota    | Uso                                                          |
-| ------- | ------------------------------------------------------------ |
-| `/`     | Entrada do convidado, busca, karaokê, biblioteca e pedidos   |
-| `/host` | PIN, fila, reordenação, modo de exibição e escolha do PLAYER |
-| `/tv`   | Tela da festa, próximas três e controles por D-pad           |
-| `/qr`   | QR grande para os convidados                                 |
+| Rota         | Uso                                                                      |
+| ------------ | ------------------------------------------------------------------------ |
+| `/`          | Entrada do convidado, busca, karaokê, biblioteca e pedidos               |
+| `/host`      | PIN, fila, reprodução, volume, karaokê e aparelhos                       |
+| `/player`    | Tela unificada: convite e fila no modo Música; vídeo/karaokê em destaque |
+| `/tv`, `/qr` | Redirecionamentos de compatibilidade para `/player`                      |
 
 ### Configuração
 
@@ -145,7 +145,7 @@ A exclusividade é garantida no SQLite por transação imediata e índice único
 
 Abas do mesmo navegador/origem compartilham o cookie e são a mesma sessão administrativa. `localhost` e o IP da LAN são origens diferentes: prefira uma URL consistente ou saia da sessão anterior antes de trocar.
 
-A migração administrativa foi introduzida no schema **2**; a versão atual é **3** (presença e votos). A migração adiciona o prazo e a unicidade e revoga as sessões administrativas do modelo antigo, preservando convidados, fila, histórico, dispositivos e quota. Após atualizar, informe o PIN novamente. O prazo de uma sessão nova sobrevive ao reinício do servidor.
+A migração administrativa foi introduzida no schema **2**; a versão atual é **5** (presença, votos positivos/negativos e recusas de vídeo). A migração adiciona o prazo e a unicidade e revoga as sessões administrativas do modelo antigo, preservando convidados, fila, histórico, dispositivos e quota. Após atualizar, informe o PIN novamente. O prazo de uma sessão nova sobrevive ao reinício do servidor.
 
 ### Recuperação no fim de áudio local
 
@@ -210,6 +210,81 @@ Se o IP mudar e a nova porta ainda não estiver encaminhada, a tela avisa. Ela n
 Reiniciar o roteador pode mudar o IP atribuído por DHCP. Reserve o IP do computador no roteador para reduzir esse risco. Reiniciar o WSL também pode mudar seu IP interno, exigindo reaplicar `scripts/wsl-lan.ps1` com o IP privado atual do Windows. Uma simples regeneração da imagem não corrige porta bloqueada, Wi-Fi desconectado ou isolamento entre clientes.
 
 `QROKE_INVITE_ENV_FILE` é opcional (padrão `.env`): define qual arquivo fornece a URL pública para releitura. Para executar o servidor compilado diretamente, use `NUXT_INVITE_ENV_FILE`; valor vazio desliga a releitura e mantém `NUXT_PUBLIC_PARTY_URL`. A descoberta de IP é somente leitura e só ocorre quando a URL privada falha; no WSL requer interoperabilidade com PowerShell.
+
+## Player, votos, playlists e karaokê — atualização de 28/09/2026
+
+A rota principal de reprodução agora é **`/player`**. `/tv` e `/qr` redirecionam para ela. Atualize as abas já abertas com **Ctrl+F5** depois desta atualização; no aparelho que emite o som, pressione **Ativar som** se o navegador solicitar. O código continua na worktree `qroke-v1`, branch `codex/qroke-v1`, sem push ou PR.
+
+### Tela e controles
+
+- **Música/áudio local ou festa vazia:** convite QR à esquerda e fila à direita no desktop; no celular, os blocos se empilham. O iframe YouTube permanece visível quando usado no modo Música.
+- **Vídeo:** reprodução em destaque e fila/convite ao lado. **Karaokê:** área ampliada e QR sempre disponível em um canto reservado, sem cobrir o vídeo. Os modos usam a mesma instância do player; a troca de modo não recarrega a faixa.
+- Cabeçalho com botão **Anfitrião** e ícone. **Sair do admin** fica no topo do anfitrião e do player. Controles separados em reprodução, volume, modo da tela, fila/continuação e karaokê; removido o comando duplicado de remover/pular a atual.
+- Fila vazia mostra **Buscar músicas**, com destino `/#busca` e foco no campo de busca ou nome. Elementos se adaptam a 320/360 px, tablet e desktop; controle remoto também navega pelos novos campos e expansores.
+
+### Pular, falhas e músicas indisponíveis
+
+**Pular** e **Tentar novamente** enviam o `queueId` da faixa exibida. Um comando repetido ou atrasado só pode afetar esse pedido; não pula a faixa que entrou depois. Eventos antigos do iframe também são ignorados. Tentar novamente gera outro identificador para impedir que uma falha atrasada encerre a tentativa nova.
+
+Uma recusa de conteúdo (2/100/101/150) pode avançar uma faixa. Uma segunda falha consecutiva pausa na faixa problemática e preserva o restante da fila. Erro de navegador (5), identificação do site (153), arquivo local ou erro desconhecido pausa imediatamente. O aviso informa a causa, oferece tentativa/pulo ao anfitrião e link para o vídeo no YouTube. Autoplay bloqueado solicita ativação, sem consumir a fila. Cinco segundos de reprodução bem-sucedida, término normal ou ação explícita reiniciam a contagem de falhas.
+
+O catálogo combina gravações e vídeos, deduplica IDs e usa metadados oficiais para filtrar incorporação, privacidade, processamento, idade e restrições de país. Configure **`QROKE_YOUTUBE_REGION=BR`** (padrão Brasil, código ISO de duas letras) conforme o país do PLAYER; a reserva oficial usa a mesma região. A API nem sempre antecipa a recusa do iframe.
+
+Recusas confirmadas 100/101/150 ficam ocultas por **24 horas**, persistidas em SQLite: buscas novas e em cache, seleção antiga, recomendações e playlists consultam esse registro. A importação verifica novamente os vídeos após a prévia. Erros genéricos de navegador/referenciador não entram nesse filtro. O bloqueio é por versão/ID, não por artista. Após expirar, a versão pode ser avaliada novamente. A fila já existente não é apagada por uma filtragem de catálogo.
+
+**Diagnóstico do Ramones:** as versões `bQWlgrYKfdk` (Swallow My Pride), `TP6PV5OjaeE` (Garden of Serenity) e `zfrEqSA4wz8` (I Don't Care) retornaram erro 150 no iframe oficial em teste isolado. A Data API informava incorporação permitida e Brasil entre os países permitidos. Portanto, não foi comprovado um bloqueio territorial do Brasil; foi observada recusa de incorporação dessas versões. Um vídeo de controle oficial reproduziu no mesmo ambiente. Somente esses três IDs verificados foram registrados no filtro da festa atual, sem modificar sua fila/histórico. Não há contorno de restrições, proxy de vídeo, extração ou substituição automática da escolha. Alternativas são outra versão disponível na busca ou um arquivo próprio na biblioteca local.
+
+Referências: [erros e controles da IFrame API](https://developers.google.com/youtube/iframe_api_reference) e [restrições do recurso videos](https://developers.google.com/youtube/v3/docs/videos).
+
+### Volume, aparelhos, Chrome e PWA
+
+O anfitrião controla **0–100% e silêncio** do PLAYER selecionado, de qualquer aparelho conectado à festa. O valor é persistido, acompanha a troca de música e é reaplicado quando o iframe/áudio fica pronto. O painel distingue o valor solicitado da confirmação enviada pelo PLAYER. Se não confirmar, verifique a conexão e atualize a aba que toca; não é necessário instalar PWA.
+
+Teste isolado com o iframe real e o aplicativo verificou o elemento de vídeo em **37%, 0% silenciado e 82%**, sem interromper a reprodução. O responsável confirmou depois que o volume passou a funcionar no computador conectado à caixa. O volume do sistema/caixa continua independente; navegadores móveis podem limitar volume programático.
+
+| Operação                                                            | Disponível agora / limite                                                                                                                                                   |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Adicionar aparelho                                                  | Abrir o endereço da festa no Chrome, entrar em Player, escolher no anfitrião e ativar som nesse aparelho                                                                    |
+| Selecionar PLAYER                                                   | Um aparelho por vez; troca espera até 9 s para o anterior parar                                                                                                             |
+| Renomear / remover                                                  | Painel lista online/offline; remover revoga a credencial e para o PLAYER sem descartar a faixa/fila. Reabrir a página registra um novo aparelho; não é banimento permanente |
+| Caixa Bluetooth                                                     | Parear e escolher a saída nas configurações do computador/celular/TV que reproduz                                                                                           |
+| Saída de áudio local                                                | `setSinkId`, quando suportado, autorizado e em contexto seguro; escolha é lembrada nessa aba. YouTube usa a saída do sistema                                                |
+| Chrome / PWA                                                        | Controles atuais funcionam no Chrome. Instalação PWA/HTTPS ainda é proposta; não concede controle nativo de Bluetooth nem desbloqueia áudio automaticamente                 |
+| Transmitir para Chromecast / tocar sincronizado em vários aparelhos | Não implementado; não confundir seleção de PLAYER com Cast ou reprodução multiroom                                                                                          |
+
+[API de volume do YouTube](https://developers.google.com/youtube/iframe_api_reference), [volume HTMLMediaElement](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/volume), [Web Bluetooth do Chrome](https://developer.chrome.com/docs/capabilities/bluetooth) e [instalação de PWA](https://web.dev/learn/pwa/installation).
+
+### Like e dislike
+
+Cada participante tem uma reação por pedido: **👍 +1** ou **👎 −1**. Clicar novamente no mesmo gesto remove o voto; clicar no outro troca a reação. A interface mostra as duas contagens e o saldo, que ordena a fila antes dos critérios de rodízio. É possível dar dislike na próxima faixa para fazê-la descer; um novo like na que já é a próxima permanece desabilitado.
+
+A ordem manual do anfitrião prevalece. Enquanto ativa, não entram novas reações/trocas, mas o participante pode retirar a sua. Reações são transacionais, únicas por pessoa/pedido e persistem após restart; saem com a música. Isso não é votação para pular a música em reprodução.
+
+### Playlists na própria lista e no PLAYER
+
+A lista de playlists pessoais possui **expandir/recolher** e **playlist +** para adicionar o lote completo. A expansão mostra as faixas no mesmo item da lista; cada faixa tem botão próprio de inclusão e indicação de posição/Tocando agora. Por link público, a prévia oferece as mesmas ações. Playlists grandes continuam em lotes de até 200 itens, com Próximo lote.
+
+Uma faixa escolhida individualmente entra **avulsa**. Adicionar todas inclui apenas as que faltam, com rótulo da playlist; uma faixa avulsa já existente não é transformada nem duplicada. No `/player`, faixas de uma playlist aparecem em um **card expansível**, com nome, solicitante, total pendente e indicação da atual. Faixas avulsas mantêm seu formato. As posições individuais dentro do card continuam refletindo a ordem global — votos e rodízio podem intercalar playlists.
+
+A proteção usa o ID do vídeo em toda a fila e na faixa atual, inclusive entre usuários/playlists diferentes. Repetir Adicionar todas não duplica conteúdo. Prévia e seleção individual permanecem vinculadas ao participante/conta; o servidor não aceita IDs arbitrários nem ticket de outra pessoa. A prévia dura cinco minutos. Inclusão individual mantém a prévia válida para outras escolhas; inclusão completa consome o ticket.
+
+### Preparação do karaokê e participantes
+
+Antes de cada novo karaokê, a tela destaca **contagem, título e quem vai cantar**. Padrão **5 s**; o anfitrião configura de **0 a 30 s** (0 desliga) e liga/desliga a vinheta em Karaokê. O tempo salvo vale para as próximas faixas e persiste após reiniciar.
+
+O relógio só começa depois que o PLAYER estiver preparado e com som ativado. O servidor confirma o instante, compartilhado com as telas; eventos de término/erro/progresso durante a preparação não consomem a fila. Pausar congela o restante da preparação; continuar inicia esse restante. Pular invalida a preparação anterior. Troca de aparelho mantém a janela de segurança. Faixa comum não recebe essa espera.
+
+A vinheta é uma sequência instrumental original sintetizada com Web Audio, sem arquivos externos nem áudio extraído do YouTube. Toca apenas no PLAYER autorizado durante a contagem, acompanha o volume/silêncio e para ao começar a música, pausar ou perder autorização/conexão. Se Web Audio não estiver disponível/autorizado, a contagem visual continua; mantenha o PLAYER visível e ativado.
+
+Na busca em Karaokê e na importação de playlist marcada como Karaokê, **Quem vai cantar?** permite selecionar vários participantes presentes (até 50 parceiros por pedido). Quem faz o pedido já está incluído quando entrou pelo nome. São aceitos apenas IDs de participantes existentes e presentes, com nomes obtidos pelo servidor; sair depois não apaga os nomes já anunciados. Editar o nome atualiza também a participação nas músicas. Os cantores aparecem na fila e na preparação. Marcar karaokê não remove a voz de um vídeo comum.
+
+### Dados, compatibilidade e aceite
+
+Schema **4** adicionou `youtube_blocks`; schema atual **5** acrescenta `queue_votes.value`. Votos antigos viram +1. Migrações preservam convidados, fila, histórico, contas de dispositivo e leases válidas. Os novos campos de volume, erro e karaokê são opcionais para compatibilidade com snapshots antigos. A aplicação continua com uma festa, um processo Node e SQLite.
+
+Novos contratos: `GET /api/devices` (admin); comandos `volume`, `rename-device`, `remove-device`, `retry`, `karaoke-settings`; `skip/retry` exigem `queueId`. `/api/player` aceita `ready`, código de erro e confirmação de volume, sempre com a credencial do PLAYER. Votos recebem `value: -1|0|1`; `voted: boolean` continua aceito para clientes antigos. Importação aceita `videoId` opcional e participantes; sem `videoId`, importa o lote.
+
+Antes de aprovar PR, testar fisicamente: dois controladores pulando a mesma faixa, volume pelo celular no computador com caixa, transferência entre aparelhos, likes/dislikes e desfazer, playlist completa versus avulsa, cinco karaokês com parceiros diferentes, tempo 0/5/10 s e vinheta, pausa durante a contagem, QR em TV/celular e reprodução longa. Acesso externo, domínio HTTPS, PWA instalável e planos comerciais permanecem no plano, sem implantação nesta entrega.
 
 ## Ajustes para participantes — 28/09/2026
 
@@ -299,7 +374,7 @@ A busca usa `ytmusic-api`; o playback usa o **IFrame oficial em `youtube.com`**.
 - **Karaokê:** selecionado na busca do convidado, por faixa. Busca vídeos nas grafias `karaoke` e `karaokê`. Na TV, a área de reprodução se expande; nos cinco segundos finais, libera espaço para a fila e as próximas três.
 - Controles, PIN e lista ficam fora do retângulo do player. A abertura dos controles reduz a área do vídeo.
 - O fundo usa a thumbnail desfocada, sem um segundo player.
-- Erros de vídeo 2, 5, 100, 101 e 150 avançam a fila. Outros erros, como 153, exibem orientação para corrigir o ambiente.
+- Recusas de conteúdo podem avançar uma faixa; a segunda falha consecutiva pausa e preserva a fila. Erros de navegador, referenciador e áudio local pausam imediatamente. Veja o tratamento detalhado na atualização acima.
 - O domínio, `origin` e referenciador são preservados. Não use uma política de referenciador que omita a origem do iframe.
 
 **Premium sem anúncios precisa ser testado no navegador real.** Login, cookies, política do navegador, restrições do conteúdo e comportamento do YouTube afetam o resultado. O uso de `youtube.com` não garante sozinho ausência de anúncios. O teste automatizado não utiliza nem valida sua conta Premium. Se a premissa falhar, a biblioteca local está disponível.
@@ -327,7 +402,7 @@ A tela `/tv` usa elementos HTML comuns, sem componentes Quasar no seu fluxo de c
 | MediaTrackNext                         | Pula com admin liberado                                       |
 | Dígitos 0–9                            | Preenchem o PIN quando o teclado da TV está aberto            |
 
-Teclado numérico 3 × 4, safe area de 5%, foco de alto contraste e suporte a `prefers-reduced-motion`. Setas de reordenação nas extremidades permanecem visíveis e desabilitadas. O PIN é validado no servidor; cinco tentativas por IP a cada minuto. Polling, progresso do player e consultas de sessão **não renovam** a sessão administrativa; interações renovam.
+Teclado numérico 3 × 4, safe area de 5%, foco de alto contraste e suporte a `prefers-reduced-motion`. Setas de reordenação nas extremidades permanecem visíveis e desabilitadas. O PIN é validado no servidor; cinco tentativas por IP a cada minuto. Polling, progresso do player e consultas de sessão **não renovam** a sessão administrativa; interações também não renovam o prazo absoluto.
 
 Temas são independentes por rota e aparelho, com chaves `qroke:theme:<rota>`. Escuro é o padrão. O script no head evita flash claro, e o Quasar acompanha a preferência nas telas que o usam. O QR permanece em placa branca em ambos os temas.
 
@@ -351,7 +426,7 @@ O ponto de partida era o commit `069010b`, contendo apenas `docs/plano.md`. A ú
 
 `shared/types.ts` contém o contrato compartilhado. `server/core` abriga regras, catálogo, biblioteca e banco testáveis sem Nuxt. `server/api` valida entrada e autorização. `app/composables` mantém estado, conexão, tema e navegação espacial. As quatro rotas estão em `app/pages`.
 
-SQLite armazena o estado da festa como um snapshot JSON transacional em `party`, e usa tabelas separadas para convidados, sessões admin, dispositivos, tentativas de PIN e quota. O schema é 2, com migração da sessão administrativa para prazo absoluto e exclusividade. Essa escolha atende uma festa em um processo; **não é uma arquitetura de múltiplas instâncias**. O histórico pertence à festa e permanece no banco; não há painel de estatísticas, rotação automática ou botão para apagar a festa nesta v1.
+SQLite armazena o estado da festa como um snapshot JSON transacional em `party`, e usa tabelas separadas para convidados, sessões admin, dispositivos, tentativas de PIN e quota. O schema atual é 5; inclui sessão administrativa exclusiva, presença, reações e recusas de vídeo. Essa escolha atende uma festa em um processo; **não é uma arquitetura de múltiplas instâncias**. O histórico pertence à festa e permanece no banco; não há painel de estatísticas, rotação automática ou botão para apagar a festa nesta v1.
 
 ### Rodízio e ordem manual
 
@@ -369,7 +444,7 @@ Reordenação usa a revisão do estado. Se outra ação alterou a fila durante o
 - Cache de busca por cinco minutos, até 256 consultas; catálogo de resultados selecionáveis por uma hora, até 10.000 entradas.
 - Consultas idênticas simultâneas compartilham a mesma chamada. Até quatro consultas diferentes simultâneas e 60 buscas/minuto por IP.
 - Karaokê combina as duas grafias e remove IDs duplicados.
-- Com chave, `videos.list` filtra vídeos não públicos ou não incorporáveis e obtém duração e metadados. Até 24 resultados por lote.
+- Com chave, `videos.list` filtra privacidade, incorporação, país, idade e processamento; obtém duração/metadados. Até 24 resultados por lote, combinando gravações e vídeos.
 - Sem chave, busca e fila funcionam, mas a possibilidade de incorporação só é conhecida durante a reprodução.
 - Falha do catálogo primário aciona `search.list` oficial se houver chave e saldo, com aviso no host. Sem reserva, retorna erro claro; a biblioteca local permanece utilizável.
 - Quota de emergência é debitada **antes** da chamada, inclusive se a API falhar. Persiste após restart e vira à meia-noite de `America/Los_Angeles`.
@@ -422,6 +497,7 @@ npm run typecheck
 npm run build
 npm run test:integration
 npm run test:browser
+npm run format:check
 npm run spike:catalog
 # Opt-in: usa a chave do .env; busca oficial de reserva e leitura de playlist pública.
 npm run test:youtube
@@ -429,8 +505,8 @@ npm run test:youtube
 
 - **Playlists e QR:** `tests/youtube-playlists.test.ts`, `tests/network-invite.test.ts`, `tests/playlists-integration.mjs` e `scripts/browser-playlists-check.mjs`. O provedor Google falso é injetado somente no processo de teste via preload Node; não existe bypass de OAuth na aplicação de produção.
 - **Unitários:** rodízio durante inclusão e consumo, camada automática, ordem manual, nomes, normalização, dedupe, sinal negativo do skip, cache, fallback, quota, sessões, persistência, caminhos e intervalos de bytes.
-- **Integração:** processo de produção real em `127.0.0.1:3197`, banco e sete WAVs temporários. Cobre quatro rotas, dois convidados, cookies, autorização, WS, reordenação, eventos atrasados, restart, rádio e rate limit.
-- **Navegador:** servidor isolado em `127.0.0.1:3198`, Chromium headless, contextos independentes. Gera capturas em `test-results/`. Verifica mobile 360 px, fluxo de pedidos, áudio local, controles do host, navegação por setas, tema, QR e polling.
+- **Integração:** processos reais do build de produção com portas/bancos temporários. Cobrem cookies, autorização, WS, concorrência, persistência, reordenação, eventos atrasados, rádio, rate limit, votos negativos, dispositivos, volume, preparação de karaokê e playlists.
+- **Navegador:** `scripts/browser-suite.mjs` executa os dez scripts em sequência, continua depois de uma falha e retorna erro se qualquer cenário falhar. Cada script usa servidor/porta e contextos independentes. Capturas ficam em `test-results/`. Cobre as páginas de 320 a 1440 px, pedidos, áudio local, player, controles, D-pad, temas, QR, polling, playlists, participantes, votos, falhas de reprodução e karaokê.
 - **Spike real:** consulta o YouTube Music sem credenciais. Requer internet; não valida Premium.
 - **YouTube oficial, opt-in:** valida resultados reais e força uma falha do primário para testar uma chamada de reserva. Após a correção da credencial, o teste oficial passou: 20 faixas validadas via videos.list, 20 faixas na reserva e cache confirmado, com uma chamada search.list. A tentativa anterior foi recusada com API_KEY_INVALID antes de chegar à reserva.
 
@@ -438,11 +514,25 @@ O teste `tests/playlists.live.ts` aceita `YOUTUBE_TEST_PLAYLIST_ID` para escolhe
 
 A expiração administrativa preserva a instância do PLAYER; o servidor continua aceitando eventos de reprodução pela credencial do dispositivo. O teste simula a expiração sem esperar o prazo real de dois minutos.
 
-**Limitação observada no teste estendido:** com WAVs de 8 segundos, o relógio de áudio do Chromium headless no WSL desacelerou após algumas transições, mesmo com o arquivo totalmente carregado e sem erro de reprodução. O comportamento também foi reproduzido em uma sequência de áudio HTML puro, fora do app. Também houve lentidão ao anexar um sétimo WAV ao mesmo contexto durante o teste desta correção. A suíte usa WAVs de 2 segundos e testa os pedidos após fila vazia em outro contexto/processo; reprodução prolongada em navegador normal/saída física continua sendo um aceite obrigatório. Para reproduzir o diagnóstico: `QROKE_TEST_TRACK_SECONDS=8 npm run test:browser`.
+**Saída de áudio nos testes:** no Chromium headless/WSL, a saída nativa travou o relógio de WAVs carregados (aproximadamente 1,4 s de 2 s), sem erro de mídia. O mesmo aconteceu em HTML puro, fora do QRokê: cinco arquivos concluídos e o sexto parado. Os sete WAVs concluíram com a saída virtual do Chromium. Por isso, `browser-check.mjs` e `browser-autostart-check.mjs` usam `--disable-audio-output`: o navegador ainda decodifica arquivos, controla seu relógio e emite eventos; somente a saída ao sistema é virtual. Não há avanço artificial, alteração de `currentTime` ou evento de término forjado para aprovar a fila. [Implementação e finalidade da opção no Chromium](https://chromium.googlesource.com/chromium/src/+/f29eb01290cd36a30177ecf8197f906c01088a0d).
+
+Para diagnosticar a saída nativa no Linux/WSL: `QROKE_TEST_NATIVE_AUDIO=1 node scripts/browser-check.mjs`. Para aumentar os WAVs: `QROKE_TEST_TRACK_SECONDS=8 npm run test:browser`. A aprovação automatizada não mede o som na caixa nem substitui reprodução prolongada em Chrome normal e dispositivos físicos. O volume com YouTube real foi validado separadamente e confirmado pelo responsável.
 
 O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Chromium headless correspondente à versão instalada do Playwright. Evite forçar uma versão antiga do cache. Em outra máquina, execute `npx playwright install chromium --only-shell` antes. Os testes usam dados próprios e removem apenas seus diretórios temporários ao encerrar; não alteram sua festa.
 
-### Validação desta entrega — 28/09/2026
+### Validação atual — player, playlists e karaokê, 28/09/2026
+
+- **58 testes unitários aprovados:** rodízio, catálogo/cache/filtros, playlists, autorização, persistência, migrações, votos, avanço e recuperação de reprodução.
+- **18 verificações de integração aprovadas:** build real com dados isolados, chamadas concorrentes, proteção contra pulo repetido, eventos antigos, pausa em cascata de falhas, volume, revogação de aparelhos, votos negativos, relógio do karaokê e importação individual/completa sem duplicar.
+- **10/10 scripts de navegador aprovados na execução completa:** fluxo geral, YouTube simulado, início automático, layout/scroll, temas/PIN, playlists/QR, participantes, reprodução remota, karaokê e expansão/importação de playlists. Inclui término natural de toda a fila WAV com saída virtual, recuperação quando o evento `ended` é omitido, D-pad, Enter, popup, reconexão e larguras de 320 a 1440 px. Capturas de playlist/contagem mobile inspecionadas visualmente.
+- A regressão encontrou e corrigiu uma regra antiga de CSS que escondia o QR no modo Música em telas pequenas. Os testes agora exigem QR visível nos tamanhos responsivos. Atualizados os seletores de playlists já adicionadas e a navegação por setas para considerar links, campos e expansores.
+- **Dois testes com API real do YouTube aprovados:** 24 resultados do primário validados, 20 da reserva com cache confirmado e uma chamada `search.list`; 200 faixas válidas de 200 itens de playlist pública. Nenhum desses testes adicionou músicas à festa do usuário. Login pessoal real não foi repetido; o fluxo OAuth foi exercitado com provedor de teste isolado.
+- **TypeScript, build de produção e formatação aprovados.** A verificação privada não encontrou os valores de API key/Client ID/Client Secret em 136 arquivos de código/documentação nem em 27 arquivos públicos do build.
+- **Smoke pelo Windows aprovado:** HTTP 200 em `/`, `/host` e `/player`, tanto por `localhost:3100` quanto por `192.168.31.95:3100`; `/tv` e `/qr` respondem 302 para `/player`. Processo atualizado iniciado, banco/fila preservados.
+- **Limites do aceite:** o áudio headless usa saída virtual conforme descrito acima; som físico prolongado, leitura de QR nos celulares que falharam, mudanças reais de rede/IP e importação de playlist pessoal devem ser confirmados no uso real. O volume do YouTube foi verificado separadamente em 37%, silêncio e 82%, e o responsável confirmou seu funcionamento. Acesso externo, PWA, Cast e planos comerciais permanecem propostas, sem publicação.
+- Trabalho mantido somente em `codex/qroke-v1`, worktree `qroke-v1`. Sem push ou PR; aprovação e teste do responsável continuam necessários antes do PR.
+
+### Validação anterior — participantes, 28/09/2026
 
 - **45 testes unitários e 15 verificações de integração aprovados**, incluindo migração do schema 2, persistência de votos, chamadas simultâneas, nomes, dedupe, retorno à música anterior, eventos atrasados e isolamento de contas OAuth. A leitura privada em andamento é recusada se a pessoa desconectar a conta antes da resposta.
 - TypeScript, build de produção e formatação aprovados. Verificação privada das três credenciais em 139 arquivos de código/documentação/bundle público sem ocorrência dos valores.

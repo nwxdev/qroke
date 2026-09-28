@@ -37,18 +37,27 @@ try {
   await expect(page.locator('.results li').first()).toContainText('Na fila · #1')
   await expect(page.locator('.results li').first().getByRole('button')).toBeDisabled()
   await page
-    .getByRole('button', { name: 'Votar para subir na fila: ' + tracks[2].title, exact: true })
+    .getByRole('button', { name: 'Like para subir na fila: ' + tracks[2].title, exact: true })
     .click()
   await expect(page.locator('.queue-card').first()).toContainText(tracks[2].title)
-  await expect(page.locator('.queue-card').first().locator('.queue-vote')).toHaveAttribute(
+  await expect(page.locator('.queue-card').first().locator('.queue-vote').first()).toHaveAttribute(
     'aria-pressed',
     'true',
   )
   await page
-    .getByRole('button', { name: 'Retirar meu voto: ' + tracks[2].title, exact: true })
+    .getByRole('button', { name: 'Retirar meu like: ' + tracks[2].title, exact: true })
     .click()
   await expect(page.locator('.queue-card').first()).toContainText(tracks[0].title)
-  await expect(page.locator('.queue-card').first().locator('.queue-vote')).toBeDisabled()
+  await expect(page.locator('.queue-card').first().locator('.queue-vote').first()).toBeDisabled()
+
+  await page
+    .getByRole('button', { name: 'Dislike para descer na fila: ' + tracks[0].title, exact: true })
+    .click()
+  await expect(page.locator('.queue-card').last()).toContainText(tracks[0].title)
+  await page
+    .getByRole('button', { name: 'Retirar meu dislike: ' + tracks[0].title, exact: true })
+    .click()
+  await expect(page.locator('.queue-card').first()).toContainText(tracks[0].title)
 
   await page
     .getByLabel('Link da playlist', { exact: true })
@@ -120,7 +129,10 @@ try {
   await page.getByRole('textbox', { name: 'Buscar música' }).fill('Faixa')
   await page.getByRole('textbox', { name: 'Buscar música' }).press('Enter')
   await expect(page.locator('.results')).toContainText('Tocando agora')
-  await host.request('/api/control', { action: 'skip' })
+  await host.request('/api/control', {
+    action: 'skip',
+    queueId: (await host.request('/api/state')).data.current.queueId,
+  })
   const before = (await host.request('/api/state')).data.current.id
   await host.request('/api/auth', { action: 'logout' })
   await context.request.post(fixture.base + '/api/auth', { data: { action: 'login', pin: '4321' } })

@@ -12,8 +12,11 @@ export interface PlaylistLabel {
   title: string
 }
 export interface QueueItem extends Track {
+  singers?: Guest[]
   playlist?: PlaylistLabel
   votes?: number
+  likes?: number
+  dislikes?: number
   queueId: string
   guestId: string
   guestName: string
@@ -22,7 +25,19 @@ export interface QueueItem extends Track {
   round: number
   manualOrder: number | null
 }
+export interface PlaybackIssue {
+  queueId: string
+  videoId: string
+  title: string
+  source: Track['source']
+  code?: number
+  message: string
+  halted: boolean
+  at: number
+}
 export interface HistoryItem extends QueueItem {
+  errorCode?: number
+  errorMessage?: string
   playedAt: number
   outcome: 'ended' | 'skipped' | 'error'
 }
@@ -32,6 +47,14 @@ export interface Device {
   lastSeen: number
 }
 export interface PartyState {
+  karaokeDelaySeconds?: number
+  karaokeTransitionMusic?: boolean
+  karaokeLeadSeconds?: number
+  karaokeStartsAt?: number | null
+  playerVolume?: { volume: number; muted: boolean; at: number; deviceId: string } | null
+  volume?: number
+  playbackIssue?: PlaybackIssue | null
+  consecutivePlaybackErrors?: number
   revision: number
   queue: QueueItem[]
   current: QueueItem | null
@@ -46,6 +69,7 @@ export interface PartyState {
   catalogWarning: string | null
 }
 export interface PublicState extends Omit<PartyState, 'history'> {
+  serverTime?: number
   devices: Device[]
   guests: Guest[]
   canGoBack: boolean

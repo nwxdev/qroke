@@ -106,3 +106,33 @@ it('voltar restaura faixa anterior, preserva a interrompida e invalida ids de ev
   expect(s.paused).toBe(false)
   expect(previousTrack(s)).toBe(false)
 })
+
+it('like/dislike têm saldo, troca atômica, repetição idempotente e remoção reversível', () => {
+  const d = db(),
+    a = d.createGuest('Ana'),
+    b = d.createGuest('Bia')
+  d.mutate((s) => {
+    s.queue = [track('1'), track('2'), track('3')]
+  })
+  d.vote('1', a.id, -1)
+  expect(d.state().queue.at(-1)?.queueId).toBe('1')
+  expect(d.guestReactions(a.id)).toEqual({ '1': -1 })
+  d.vote('1', a.id, -1)
+  expect(d.state().queue.at(-1)?.dislikes).toBe(1)
+  d.vote('1', a.id, 1)
+  expect(d.state().queue[0]?.queueId).toBe('1')
+  expect(d.state().queue[0]?.dislikes).toBe(0)
+  expect(d.state().queue[0]?.likes).toBe(1)
+  d.vote('1', b.id, -1)
+  expect(d.state().queue[0]?.votes).toBe(0)
+  d.vote('1', a.id, 0)
+  expect(d.guestReactions(a.id)).toEqual({})
+  expect(d.state().queue.at(-1)?.votes).toBe(-1)
+  d.mutate((s) => {
+    s.queue = s.queue.map((item, manualOrder) => ({ ...item, manualOrder }))
+  })
+  expect(() => d.vote('2', a.id, -1)).toThrow('controlando')
+  d.vote('1', b.id, 0)
+  expect(d.guestReactions(b.id)).toEqual({})
+  expect(d.state().queue.at(-1)?.queueId).toBe('1')
+})

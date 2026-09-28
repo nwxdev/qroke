@@ -1,3 +1,4 @@
+import { prepareKaraoke } from './playback'
 import { randomUUID } from 'node:crypto'
 import type { PartyState } from '../../shared/types'
 export function previousTrack(state: PartyState) {
@@ -20,6 +21,7 @@ export function previousTrack(state: PartyState) {
   }
   const { playedAt: _playedAt, outcome: _outcome, ...track } = previous
   state.current = { ...track, queueId: randomUUID(), votes: 0, manualOrder: null }
+  prepareKaraoke(state)
   state.position = 0
   state.duration = track.duration
   state.paused = false

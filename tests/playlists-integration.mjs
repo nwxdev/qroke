@@ -205,3 +205,43 @@ try {
   db.close()
   await fixture.close()
 }
+
+test('playlist: selecionar uma faixa avulsa, adicionar todas e deduplicar no servidor', async (t) => {
+  const fixture = await startFixture(3184, {
+    NODE_OPTIONS: '--import=' + new URL('./helpers/youtube-fetch.mjs', import.meta.url).pathname,
+    NUXT_YOUTUBE_API_KEY: 'fixture-key',
+  })
+  t.after(() => fixture.close())
+  const guest = client(fixture.base),
+    other = client(fixture.base)
+  await guest.request('/api/guest', { name: 'Ana' })
+  await other.request('/api/guest', { name: 'Bia' })
+  const preview = (await guest.request('/api/youtube/preview', { input: 'PLabcdefghijk' })).data
+  const id = preview.tracks[0].id,
+    ticket = preview.ticket
+  assert.equal((await other.request('/api/youtube/import', { ticket, videoId: id })).status, 410)
+  assert.equal(
+    (await guest.request('/api/youtube/import', { ticket, videoId: 'zzzzzzzzzzz' })).status,
+    409,
+  )
+  const first = await guest.request('/api/youtube/import', { ticket, videoId: id })
+  assert.equal(first.status, 200)
+  assert.equal(first.data.added, 1)
+  assert.equal(
+    (await guest.request('/api/youtube/import', { ticket, videoId: id })).data.duplicates,
+    1,
+  )
+  const all = await guest.request('/api/youtube/import', { ticket })
+  assert.equal(all.data.added, 1)
+  assert.equal(all.data.duplicates, 1)
+  const state = (await guest.request('/api/state')).data
+  assert.equal(state.queue.length, 2)
+  assert.equal(state.queue.find((track) => track.id === id).playlist, undefined)
+  assert.equal(state.queue.find((track) => track.id !== id).playlist.title, 'Playlist da festa')
+  const repeat = (await guest.request('/api/youtube/preview', { input: 'PLabcdefghijk' })).data
+  assert.equal(
+    (await guest.request('/api/youtube/import', { ticket: repeat.ticket })).data.added,
+    0,
+  )
+  assert.equal((await guest.request('/api/state')).data.queue.length, 2)
+})

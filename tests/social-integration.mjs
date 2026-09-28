@@ -54,7 +54,7 @@ test('participantes: votos simultâneos, identidade, dedupe global, anterior e p
   assert.deepEqual((await a.request('/api/session')).data.votedQueueIds, [])
   assert.equal((await a.request('/api/control', { action: 'previous' })).status, 401)
   assert.equal((await host.request('/api/control', { action: 'previous' })).status, 409)
-  await host.request('/api/control', { action: 'skip' })
+  await host.request('/api/control', { action: 'skip', queueId: state.current.queueId })
   const interrupted = (await a.request('/api/state')).data.current
   assert.equal(interrupted.queueId, fourth)
   await a.request('/api/queue', tracks[2])

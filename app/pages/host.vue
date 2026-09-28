@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
 import type { QueueItem } from '../../shared/types'
-const { state, admin, device, pending, control, reorder, isPlayer, playHere } = useParty()
+const { state, admin, pending, reorder, isPlayer } = useParty()
 const dragged = ref<QueueItem[]>([])
 const dragging = ref(false)
 watch(
@@ -29,8 +29,9 @@ watch(admin, (value) => {
     <BrandHeader
       ><button v-if="!admin" class="header-control" @click="unlock = true">
         <AppIcon name="lock" />Liberar controles</button
-      ><NuxtLink to="/tv" class="subtle-link">Abrir TV ↗</NuxtLink
-      ><NuxtLink to="/qr" class="subtle-link">QR ↗</NuxtLink></BrandHeader
+      ><AdminExit /><NuxtLink to="/player" class="header-control"
+        ><AppIcon name="tv" /> Abrir player</NuxtLink
+      ></BrandHeader
     ><PartyNotice />
     <GuestIdentity />
     <main>
@@ -58,30 +59,7 @@ watch(admin, (value) => {
             <HostControls />
             <p v-if="state?.catalogWarning" class="notice">{{ state.catalogWarning }}</p>
           </div>
-          <div v-if="admin" class="panel device-panel">
-            <h2>Onde o som toca</h2>
-            <p>Abra uma tela no aparelho e escolha o PLAYER. Ative o som nesse navegador.</p>
-            <div v-for="item in state?.devices" :key="item.id" class="device-row">
-              <span
-                >{{ item.label }} <small v-if="item.id === device?.id">(este aparelho)</small></span
-              ><button
-                :disabled="pending || state?.playerId === item.id"
-                @click="
-                  item.id === device?.id
-                    ? playHere()
-                    : control({ action: 'assign', deviceId: item.id })
-                "
-              >
-                {{ state?.playerId === item.id ? '● PLAYER' : 'Usar como PLAYER' }}
-              </button>
-            </div>
-            <p
-              v-if="state?.playerId && !state?.devices.some((d) => d.id === state?.playerId)"
-              class="notice"
-            >
-              O PLAYER está desconectado. Escolha outro dispositivo.
-            </p>
-          </div>
+          <DeviceManager v-if="admin" />
           <PartyPeople />
           <YoutubePlaylists v-if="admin" />
           <MediaPlayer v-if="isPlayer" />

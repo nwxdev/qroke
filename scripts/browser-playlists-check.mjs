@@ -82,7 +82,10 @@ try {
   ).toBe(true)
   await page.locator('.account-playlists button').first().click()
   await expect(page.locator('.playlist-tracks li')).toHaveCount(2)
-  await page.getByRole('button', { name: 'Adicionar 2 músicas', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Adicionadas à fila', exact: true })).toBeDisabled()
+  await page
+    .getByRole('button', { name: 'Adicionar todas de Playlist da festa', exact: true })
+    .click()
   await expect(page.locator('.playlist-success')).toContainText('2 já estava(m)')
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Conectar YouTube', exact: true })).toBeVisible()

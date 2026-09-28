@@ -9,6 +9,7 @@ export function errorText(error: unknown) {
   )
 }
 export function useParty() {
+  const clockOffset = useState('server-clock-offset', () => 0)
   const state = useState<PublicState | null>('party', () => null)
   const guest = useState<Guest | null>('guest', () => null),
     admin = useState('admin', () => false)
@@ -21,6 +22,7 @@ export function useParty() {
     lastContact = useState('contact', () => 0)
   const failure = useState('failure', () => ''),
     pending = useState('pending', () => false)
+  const queueReactions = useState<Record<string, 1 | -1>>('queue-reactions', () => ({}))
   const votedQueueIds = useState<string[]>('voted-queue-ids', () => [])
   const optimistic = useState<QueueItem[]>('optimistic', () => [])
   const queue = computed(() => [...(state.value?.queue || []), ...optimistic.value])
@@ -29,6 +31,7 @@ export function useParty() {
     try {
       const next = await $fetch<PublicState>('/api/state', { timeout: 4000 })
       if (!state.value || next.revision >= state.value.revision) state.value = next
+      clockOffset.value = (next.serverTime ?? Date.now()) - Date.now()
       connected.value = true
       lastContact.value = Date.now()
     } catch {
@@ -38,6 +41,7 @@ export function useParty() {
   async function session() {
     const result = await $fetch<{
       guest: Guest | null
+      queueReactions: Record<string, 1 | -1>
       votedQueueIds: string[]
       admin: boolean
       adminExpiresAt: number
@@ -47,6 +51,7 @@ export function useParty() {
     })
     guest.value = result.guest
     votedQueueIds.value = result.votedQueueIds || []
+    queueReactions.value = result.queueReactions || {}
     admin.value = result.admin
     adminExpiresAt.value = result.adminExpiresAt
     adminLeaseSeconds.value = result.adminLeaseSeconds
@@ -82,7 +87,14 @@ export function useParty() {
       pending.value = false
     }
   }
-  const control = (body: Record<string, unknown>) => act(() => api('/api/control', body))
+  const control = (body: Record<string, unknown>) => {
+    const command = ['skip', 'retry'].includes(String(body.action))
+      ? { ...body, queueId: state.value?.current?.queueId }
+      : body
+    if (['skip', 'retry'].includes(String(body.action)) && !state.value?.current)
+      return Promise.resolve()
+    return act(() => api('/api/control', command))
+  }
   function armSound() {
     if (device.value) soundDevice.value = device.value.id
   }
@@ -97,7 +109,7 @@ export function useParty() {
         block: 'center',
       })
   }
-  async function add(track: Track) {
+  async function add(track: Track, singers: string[] = []) {
     if (!guest.value || pending.value) return
     const temp: QueueItem = {
       ...track,
@@ -111,12 +123,12 @@ export function useParty() {
     }
     optimistic.value = [temp]
     await act(() =>
-      api('/api/queue', { id: track.id, source: track.source, karaoke: track.karaoke }),
+      api('/api/queue', { id: track.id, source: track.source, karaoke: track.karaoke, singers }),
     )
     optimistic.value = []
   }
-  const vote = (id: string, voted: boolean) =>
-    act(() => api('/api/queue/' + id + '/vote', { voted }))
+  const vote = (id: string, value: -1 | 0 | 1) =>
+    act(() => api('/api/queue/' + id + '/vote', { value }))
   const rename = (name: string) => act(() => api('/api/guest/name', { name }))
   const remove = (id: string) => act(() => api('/api/queue/' + id, {}, 'DELETE'))
   async function reorder(items: QueueItem[]) {
@@ -134,6 +146,7 @@ export function useParty() {
     })
   }
   return {
+    clockOffset,
     state,
     guest,
     admin,
@@ -160,6 +173,7 @@ export function useParty() {
     reorder,
     vote,
     votedQueueIds,
+    queueReactions,
     rename,
   }
 }
@@ -207,7 +221,7 @@ export function usePartyConnection() {
       else throw new Error('new')
     } catch {
       const label =
-        (route.path === '/tv' ? 'TV' : route.path === '/host' ? 'Host' : 'Celular') +
+        (route.path === '/player' ? 'PLAYER' : route.path === '/host' ? 'Host' : 'Celular') +
         ' · ' +
         new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       party.device.value = await $fetch('/api/device', {
@@ -244,7 +258,18 @@ export function usePartyConnection() {
       busy = false
     }, 2000)
     beat = setInterval(() => {
-      void party.api('/api/device/heartbeat', {}).catch(() => {})
+      if (!party.device.value) return
+      void party.api('/api/device/heartbeat', {}).catch((error) => {
+        if (error?.statusCode === 401 || error?.status === 401) {
+          party.device.value = null
+          party.soundDevice.value = null
+          try {
+            sessionStorage.removeItem('qroke:device')
+          } catch {}
+          party.failure.value =
+            'Este aparelho foi removido. Reabra a página para registrá-lo novamente.'
+        }
+      })
     }, 5000)
   })
   onBeforeUnmount(() => {

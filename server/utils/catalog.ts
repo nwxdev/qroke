@@ -5,10 +5,12 @@ let libraryInstance: Promise<Library> | undefined
 export function catalog() {
   const config = useRuntimeConfig()
   return (catalogInstance ||= new Catalog(
-    musicProvider(),
+    musicProvider(config.youtubeRegion),
     config.youtubeApiKey,
     () => party().consumeQuota(config.quotaDailyCap),
     publishWarning,
+    undefined,
+    { region: config.youtubeRegion, unavailable: (id) => party().youtubeBlocked(id) },
   ))
 }
 export function library() {

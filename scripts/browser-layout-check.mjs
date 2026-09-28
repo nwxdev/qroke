@@ -30,6 +30,7 @@ try {
   const state = JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
   Object.assign(state, {
     current: make(0),
+    mode: 'music',
     queue: Array.from({ length: 8 }, (_, i) => make(i + 1)),
     revision: state.revision + 1,
   })
@@ -74,6 +75,7 @@ try {
   await page.screenshot({ path: 'test-results/qr-split-desktop.png', fullPage: true })
   for (const width of [768, 360, 320]) {
     await page.setViewportSize({ width, height: 900 })
+    await expect(page.locator('.qr-plate svg')).toBeVisible()
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
       .toBe(true)

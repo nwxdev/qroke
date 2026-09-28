@@ -5,7 +5,8 @@ export function useSpatialNav(
 ) {
   let observer: MutationObserver | undefined
   let previous: HTMLElement | undefined
-  const selector = 'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled])'
+  const selector =
+    'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),summary'
   const elements = () =>
     Array.from(root.value?.querySelectorAll<HTMLElement>(selector) || []).filter(
       (el) => el.getClientRects().length > 0 && el.getAttribute('aria-hidden') !== 'true',
@@ -42,6 +43,12 @@ export function useSpatialNav(
       return
     }
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return
+    if (
+      event.target instanceof HTMLInputElement &&
+      event.target.type === 'range' &&
+      ['ArrowLeft', 'ArrowRight'].includes(event.key)
+    )
+      return
     event.preventDefault()
     const items = elements(),
       active = document.activeElement as HTMLElement

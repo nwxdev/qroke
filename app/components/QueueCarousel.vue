@@ -89,11 +89,12 @@ onBeforeUnmount(() => observer?.disconnect())
             Pedido de <strong>{{ item.guestName }}</strong>
           </p>
           <PlaylistBadge :playlist="item.playlist" />
+          <KaraokeSingers v-if="item.karaoke" :people="item.singers" :fallback="item.guestName" />
           <div class="queue-card-vote"><QueueVote :item="item" :index="index" /></div>
         </li>
       </TransitionGroup>
       <li v-if="!queue.length" class="queue-card-empty">
-        A fila está livre. Busque uma música abaixo para começar.
+        <div>A fila está livre. Escolha a próxima música.<br /><QueueSearchLink /></div>
       </li>
     </ol>
   </section>

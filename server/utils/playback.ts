@@ -1,21 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import { artistWeights, recommendation, orderQueue } from '../core/rules'
+import { startNext as nextTrack, finishTrack as completeTrack } from '../core/playback'
+import { artistWeights, recommendation } from '../core/rules'
 import type { PartyState, Track } from '../../shared/types'
 export function startNext(s: PartyState) {
-  if (!s.current && s.playerId) {
-    s.queue = orderQueue(s.queue, s.history)
-    s.current = s.queue.shift() || null
-    s.position = 0
-    s.duration = s.current?.duration || 0
-    s.paused = false
-  }
+  nextTrack(s)
 }
 export function finishTrack(s: PartyState, outcome: 'ended' | 'skipped' | 'error') {
-  if (s.current) s.history.push({ ...s.current, playedAt: Date.now(), outcome })
-  s.current = null
-  s.position = 0
-  s.duration = 0
-  startNext(s)
+  completeTrack(s, outcome)
 }
 let continuing: Promise<void> | undefined
 export function continueParty() {
@@ -31,7 +22,14 @@ export function continueParty() {
 }
 async function findContinuation() {
   const initial = party().state()
-  if (!initial.autoContinue || initial.current || initial.queue.length || !initial.playerId) return
+  if (
+    !initial.autoContinue ||
+    initial.current ||
+    initial.queue.length ||
+    !initial.playerId ||
+    initial.playbackIssue?.halted
+  )
+    return
   const last = initial.history.at(-1)
   if (!last) return
   let candidates: Track[] = []
@@ -55,7 +53,7 @@ async function findContinuation() {
   )
   // Reconfere após I/O: uma escolha humana pode ter chegado durante a busca.
   party().mutate((s) => {
-    if (!s.autoContinue || s.current || s.queue.length) return
+    if (!s.autoContinue || s.current || s.queue.length || s.playbackIssue?.halted) return
     const track = recommendation(candidates, s.history, s.queue)
     if (!track) return
     s.queue.push({

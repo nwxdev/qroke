@@ -1,0 +1,168 @@
+import { chromium, expect } from '@playwright/test'
+import Database from 'better-sqlite3'
+import { randomUUID } from 'node:crypto'
+import { join } from 'node:path'
+import { startFixture } from '../tests/helpers/server.mjs'
+const fixture = await startFixture(3188)
+const browser = await chromium.launch({
+  headless: true,
+  ...(process.env.QROKE_CHROMIUM ? { executablePath: process.env.QROKE_CHROMIUM } : {}),
+  args: ['--no-sandbox'],
+})
+const db = new Database(join(fixture.dir, 'party.sqlite'))
+try {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
+  const errors = []
+  await context.route('https://www.youtube.com/iframe_api', (route) =>
+    route.fulfill({
+      contentType: 'application/javascript',
+      body: `
+      window.fakes=[]
+      window.YT={PlayerState:{ENDED:0},Player:class {
+        constructor(node,options) { this.events=options.events; this.id=options.videoId; this.frame=document.createElement('iframe'); this.frame.title='YouTube simulado'; node.replaceWith(this.frame); window.fake=this; window.fakes.push(this); setTimeout(()=>this.events.onReady({target:this}),0) }
+        getIframe(){return this.frame}
+        getCurrentTime(){return 0}
+        getDuration(){return 30}
+        seekTo(){}
+        playVideo(){this.playing=true}
+        pauseVideo(){this.playing=false}
+        setVolume(value){this.volume=value}
+        mute(){this.muted=true}
+        unMute(){this.muted=false}
+        destroy(){this.playing=false; this.frame.remove()}
+      }}
+      window.onYouTubeIframeAPIReady?.()
+    `,
+    }),
+  )
+  await context.request.post(fixture.base + '/api/auth', { data: { action: 'login', pin: '4321' } })
+  const host = await context.newPage(),
+    player = await context.newPage()
+  for (const page of [host, player]) page.on('pageerror', (e) => errors.push(e.message))
+  await host.goto(fixture.base + '/host')
+  await player.goto(fixture.base + '/tv')
+  await expect
+    .poll(() => player.evaluate(() => sessionStorage.getItem('qroke:device')))
+    .not.toBe(null)
+  const device = await player.evaluate(() => JSON.parse(sessionStorage.getItem('qroke:device')))
+  await context.request.post(fixture.base + '/api/control', {
+    data: { action: 'assign', deviceId: device.id },
+  })
+  const state = () => JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+  const make = (n) => ({
+    id: String(n).padStart(11, '0'),
+    queueId: randomUUID(),
+    source: 'youtube',
+    title: 'Faixa ' + n,
+    artist: 'Teste',
+    duration: 30,
+    thumbnail: '',
+    karaoke: false,
+    guestId: 'test',
+    guestName: 'Ana',
+    origin: 'human',
+    enqueuedAt: n,
+    round: 0,
+    manualOrder: null,
+  })
+  const first = make(1),
+    second = make(2),
+    third = make(3),
+    fourth = make(4)
+  db.prepare('UPDATE party SET state=? WHERE id=1').run(
+    JSON.stringify({
+      ...state(),
+      current: first,
+      queue: [second, third, fourth],
+      revision: state().revision + 1,
+    }),
+  )
+  await expect(player.locator('iframe')).toBeVisible()
+  await player.getByLabel('Ativar som', { exact: true }).click()
+  await expect.poll(() => player.evaluate(() => window.fake.playing)).toBe(true)
+  const slider = host.getByRole('slider', { name: /Volume do PLAYER/ })
+  await slider.fill('37')
+  await slider.dispatchEvent('change')
+  await expect.poll(() => player.evaluate(() => window.fake.volume)).toBe(37)
+  await host.getByRole('button', { name: 'Silenciar player', exact: true }).click()
+  await expect.poll(() => player.evaluate(() => window.fake.muted)).toBe(true)
+  await host.getByRole('button', { name: 'Restaurar volume', exact: true }).click()
+  await expect.poll(() => player.evaluate(() => window.fake.volume)).toBe(37)
+  await expect.poll(() => player.evaluate(() => window.fake.muted)).toBe(false)
+  await host.getByRole('button', { name: 'Pular', exact: true }).click()
+  await expect.poll(() => player.evaluate(() => window.fake.id)).toBe(second.id)
+  await expect.poll(() => player.evaluate(() => window.fake.volume)).toBe(37)
+  await player.evaluate(() => {
+    window.fakes[0].events.onStateChange({ data: 0 })
+    window.fakes[0].events.onError({ data: 150 })
+    window.fake.events.onAutoplayBlocked()
+  })
+  await expect(player.getByText('Ative o som ou use o botão de play do vídeo.')).toBeVisible()
+  expect(state().current.queueId).toBe(second.queueId)
+  await player.evaluate(() => {
+    window.fake.events.onError({ data: 150 })
+    window.fake.events.onError({ data: 150 })
+  })
+  await expect.poll(() => player.evaluate(() => window.fake.id)).toBe(third.id)
+  expect(state().history.filter((t) => t.queueId === second.queueId)).toHaveLength(1)
+  await player.evaluate(() => window.fake.events.onError({ data: 150 }))
+  await expect(host.locator('.playback-notice')).toContainText('preservar a fila')
+  expect(state().current.queueId).toBe(third.queueId)
+  expect(state().queue.map((t) => t.queueId)).toEqual([fourth.queueId])
+  await expect.poll(() => player.evaluate(() => window.fake.playing)).toBe(false)
+  await host.getByRole('button', { name: 'Tentar novamente', exact: true }).click()
+  await expect.poll(() => state().current.queueId).not.toBe(third.queueId)
+  await expect.poll(() => player.evaluate(() => window.fakes.length)).toBe(4)
+  await player.evaluate(() => window.fake.events.onError({ data: 153 }))
+  await expect(host.locator('.playback-notice')).toContainText('erro 153')
+  expect(state().current.id).toBe(third.id)
+  expect(state().queue).toHaveLength(1)
+  await expect.poll(() => host.locator('.managed-device').count()).toBe(2)
+  const row = host
+    .locator('.managed-device')
+    .filter({ has: host.locator('.tag').filter({ hasText: /^PLAYER$/ }) })
+  await row.getByRole('button', { name: 'Renomear', exact: true }).click()
+  await row.getByRole('textbox').fill('TV da sala')
+  await row.getByRole('button', { name: 'Salvar aparelho', exact: true }).click()
+  await expect(row).toContainText('TV da sala')
+  for (const theme of ['light', 'dark']) {
+    await host
+      .getByRole('button', {
+        name: theme === 'light' ? 'Usar tema claro' : 'Usar tema escuro',
+        exact: true,
+      })
+      .click()
+    await host.setViewportSize({ width: 360, height: 800 })
+    await expect(slider).toBeVisible()
+    await host.screenshot({ path: 'test-results/playback-' + theme + '.png', fullPage: true })
+    const overflow = await host.evaluate(() => ({
+      width: innerWidth,
+      scroll: document.documentElement.scrollWidth,
+      elements: [...document.querySelectorAll('body *')]
+        .filter((el) => el.getBoundingClientRect().right > innerWidth + 1)
+        .map((el) => ({
+          tag: el.tagName,
+          class: el.className,
+          width: el.getBoundingClientRect().width,
+          text: el.textContent?.slice(0, 90),
+        }))
+        .slice(0, 20),
+    }))
+    if (overflow.scroll > overflow.width) console.log(JSON.stringify(overflow))
+    expect(overflow.scroll <= overflow.width).toBe(true)
+    await host.screenshot({ path: 'test-results/playback-' + theme + '.png', fullPage: true })
+  }
+  await host.getByRole('button', { name: 'Remover aparelho TV da sala', exact: true }).click()
+  await expect.poll(() => state().playerId).toBe(null)
+  await expect(player.locator('iframe')).toHaveCount(0)
+  expect(state().queue).toHaveLength(1)
+  expect(state().current.id).toBe(third.id)
+  expect(errors).toEqual([])
+  console.log(
+    'PLAYER remoto: volume/mute, pular, eventos duplicados/atrasados, autoplay, cascata, retry, erro153, renomear/remover e temas mobile OK',
+  )
+} finally {
+  db.close()
+  await browser.close()
+  await fixture.close()
+}

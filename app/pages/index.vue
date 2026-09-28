@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import type { Track } from '../../shared/types'
 const { state, guest, queue, pending, act, api, add, isPlayer } = useParty()
+const route = useRoute()
+async function focusSearchTarget() {
+  if (!import.meta.client || route.hash !== '#busca') return
+  await nextTick()
+  const target = document.getElementById('busca')
+  target?.scrollIntoView({ block: 'start' })
+  target?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
+}
+onMounted(focusSearchTarget)
+watch(() => [route.hash, !!guest.value], focusSearchTarget, { flush: 'post' })
 const name = ref(''),
   query = ref(''),
   karaoke = ref(false),
@@ -10,9 +20,10 @@ const name = ref(''),
   searched = ref(false),
   searchError = ref(''),
   addedId = ref('')
+const singers = ref<string[]>([])
 let feedbackTimer: ReturnType<typeof setTimeout>
 async function requestAdd(track: Track) {
-  await add(track)
+  await add(track, track.karaoke ? singers.value : [])
   if (alreadyQueued(track)) {
     addedId.value = track.source + track.id
     clearTimeout(feedbackTimer)
@@ -72,7 +83,10 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
 </script>
 <template>
   <div class="page-shell">
-    <BrandHeader><NuxtLink to="/host" class="subtle-link">Anfitrião ↗</NuxtLink></BrandHeader
+    <BrandHeader
+      ><NuxtLink to="/host" class="header-control"
+        ><AppIcon name="person" /> Anfitrião</NuxtLink
+      ></BrandHeader
     ><PartyNotice />
     <GuestIdentity />
     <QueueCarousel />
@@ -83,7 +97,7 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
           <h1>Sua vez de<br />dar o <em>play.</em></h1>
           <p>Um hit esquecido. Um refrão impossível.<br />Escolha o próximo momento da festa.</p>
         </div>
-        <section v-if="!guest" class="join-card panel">
+        <section v-if="!guest" id="busca" class="join-card panel">
           <h2>Como podemos te chamar?</h2>
           <p>Seu nome aparece na fila. Só precisa dizer uma vez.</p>
           <form @submit.prevent="join">
@@ -106,7 +120,7 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
             />
           </form>
         </section>
-        <section v-else class="search-section">
+        <section v-else id="busca" class="search-section">
           <div class="section-heading">
             <h2>Oi, {{ guest.name }} <span>✦</span></h2>
             <span>O que vamos ouvir?</span>
@@ -152,6 +166,11 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
               label="Karaokê"
             />
           </div>
+          <KaraokePartners
+            v-if="karaoke && source === 'youtube'"
+            v-model="singers"
+            :disabled="pending"
+          />
           <p v-if="karaoke && source === 'youtube'" class="hint">
             Microfone imaginário, voz de verdade. Escolha um vídeo com letra.
           </p>
@@ -236,12 +255,13 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
         <PartyPeople />
         <MediaPlayer v-if="isPlayer" />
         <div class="sidebar-footer">
-          Uma festa, muitas vozes.<br /><NuxtLink to="/tv">Abrir tela da TV ↗</NuxtLink>
+          Uma festa, muitas vozes.<br /><NuxtLink to="/player">Abrir player ↗</NuxtLink>
         </div>
       </aside>
     </main>
     <footer class="site-footer">
-      <span>QRokê · Feito para cantar junto.</span><NuxtLink to="/qr">Convidar pelo QR ↗</NuxtLink>
+      <span>QRokê · Feito para cantar junto.</span
+      ><NuxtLink to="/player">Player e convite QR ↗</NuxtLink>
     </footer>
   </div>
 </template>

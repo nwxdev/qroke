@@ -57,7 +57,7 @@ describe('SQLite e sessões', () => {
     expect(migrated.claimAdmin(undefined, 120).granted).toBe(true)
     migrated.db.close()
     const check = new Sqlite(path)
-    expect(check.pragma('user_version', { simple: true })).toBe(3)
+    expect(check.pragma('user_version', { simple: true })).toBe(5)
     check.close()
     rmSync(dir, { recursive: true })
   })
@@ -130,6 +130,38 @@ it('migra convidados da versão 2 preservando fila, cookie e lease ativa', () =>
   expect(migrated.publicState().guests).toEqual([])
   migrated.touchGuest(guest.id)
   expect(migrated.publicState().guests[0]?.id).toBe(guest.id)
+  migrated.db.close()
+  rmSync(dir, { recursive: true })
+})
+
+it('recusas de vídeo persistem por 24h, expiram e não incluem erro do navegador', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'qroke-blocks-')),
+    path = join(dir, 'db.sqlite')
+  const first = new PartyDatabase(path)
+  first.blockYoutube('aaaaaaaaaaa', 'Vídeo', 150, 1000)
+  first.blockYoutube('bbbbbbbbbbb', 'Navegador', 5, 1000)
+  first.blockYoutube('ccccccccccc', 'Referência', 153, 1000)
+  first.db.close()
+  const second = new PartyDatabase(path)
+  expect(second.youtubeBlocked('aaaaaaaaaaa', 1001)).toBe(true)
+  expect(second.youtubeBlocked('aaaaaaaaaaa', 86401000)).toBe(false)
+  expect(second.youtubeBlocked('bbbbbbbbbbb', 1001)).toBe(false)
+  expect(second.youtubeBlocked('ccccccccccc', 1001)).toBe(false)
+  second.db.close()
+  rmSync(dir, { recursive: true })
+})
+
+it('migra likes antigos para votos +1 sem perder convidados ou fila', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'qroke-votes-')),
+    path = join(dir, 'db.sqlite')
+  const old = new PartyDatabase(path),
+    guest = old.createGuest('Ana')
+  old.db.exec('ALTER TABLE queue_votes DROP COLUMN value; PRAGMA user_version=3;')
+  old.db.prepare('INSERT INTO queue_votes VALUES (?,?)').run('track', guest.id)
+  old.db.close()
+  const migrated = new PartyDatabase(path)
+  expect(migrated.guestReactions(guest.id)).toEqual({ track: 1 })
+  expect(migrated.guest(guest.token)?.name).toBe('Ana')
   migrated.db.close()
   rmSync(dir, { recursive: true })
 })
