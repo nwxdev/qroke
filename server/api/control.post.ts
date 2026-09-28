@@ -1,3 +1,4 @@
+import { previousTrack } from '../core/previous'
 import { finishTrack } from '../utils/playback'
 import { z } from 'zod'
 import { reorderQueue } from '../core/rules'
@@ -5,6 +6,7 @@ const command = z.discriminatedUnion('action', [
   z.object({ action: z.literal('assign'), deviceId: z.string().uuid() }),
   z.object({ action: z.literal('pause'), paused: z.boolean() }),
   z.object({ action: z.literal('skip') }),
+  z.object({ action: z.literal('previous') }),
   z.object({ action: z.literal('mode'), mode: z.enum(['video', 'music']) }),
   z.object({ action: z.literal('auto'), enabled: z.boolean() }),
   z.object({
@@ -17,6 +19,7 @@ const command = z.discriminatedUnion('action', [
 export default defineEventHandler(async (event) => {
   requireAdmin(event)
   const cmd = await readValidatedBody(event, command.parse)
+  requireAdmin(event)
   if (
     cmd.action === 'assign' &&
     !party()
@@ -36,6 +39,10 @@ export default defineEventHandler(async (event) => {
         break
       case 'skip':
         finishTrack(s, 'skipped')
+        break
+      case 'previous':
+        if (!previousTrack(s))
+          throw createError({ statusCode: 409, statusMessage: 'Ainda não há uma música anterior.' })
         break
       case 'mode':
         s.mode = cmd.mode

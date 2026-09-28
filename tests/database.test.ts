@@ -57,7 +57,7 @@ describe('SQLite e sessões', () => {
     expect(migrated.claimAdmin(undefined, 120).granted).toBe(true)
     migrated.db.close()
     const check = new Sqlite(path)
-    expect(check.pragma('user_version', { simple: true })).toBe(2)
+    expect(check.pragma('user_version', { simple: true })).toBe(3)
     check.close()
     rmSync(dir, { recursive: true })
   })
@@ -106,4 +106,30 @@ describe('SQLite e sessões', () => {
     expect(d.consumeQuota(1, new Date('2026-09-26T01:00:00Z'))).toBe(false)
     expect(d.consumeQuota(1, new Date('2026-09-26T08:00:00Z'))).toBe(true)
   })
+})
+
+it('migra convidados da versão 2 preservando fila, cookie e lease ativa', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'qroke-db-')),
+    path = join(dir, 'v2.sqlite')
+  const old = new PartyDatabase(path)
+  const guest = old.createGuest('Legado'),
+    lease = old.claimAdmin(undefined, 120)
+  old.mutate((s) => {
+    s.position = 77
+    s.mode = 'music'
+  })
+  const state = old.state()
+  old.db.exec(
+    'ALTER TABLE guests DROP COLUMN last_seen; DROP TABLE queue_votes; PRAGMA user_version=2;',
+  )
+  old.db.close()
+  const migrated = new PartyDatabase(path)
+  expect(migrated.state()).toEqual(state)
+  expect(migrated.guest(guest.token)?.name).toBe('Legado')
+  expect(migrated.admin(lease.token)).toBe(true)
+  expect(migrated.publicState().guests).toEqual([])
+  migrated.touchGuest(guest.id)
+  expect(migrated.publicState().guests[0]?.id).toBe(guest.id)
+  migrated.db.close()
+  rmSync(dir, { recursive: true })
 })

@@ -38,13 +38,13 @@ export default defineEventHandler(async (event) => {
   deleteCookie(event, 'qroke_youtube_oauth', { path: '/api/youtube/callback' })
   const message =
     result === 'connected'
-      ? 'YouTube conectado. Volte ao painel; se o controle expirou, use o PIN novamente.'
+      ? 'YouTube conectado. Volte à festa para escolher suas playlists.'
       : 'Conexão não concluída. Volte ao painel e tente novamente; confira as credenciais, o redirecionamento e a permissão de leitura.'
   // O callback não renova nem concede a sessão de anfitrião.
   return (
     '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>QRokê · YouTube</title><body><h1>' +
     message +
-    '</h1><p><a href="/host">Voltar ao painel</a></p><script nonce="' +
+    '</h1><p><a href="/">Voltar à festa</a></p><script nonce="' +
     nonce +
     '">' +
     'if(window.opener){window.opener.postMessage({type:"qroke-youtube",result:' +

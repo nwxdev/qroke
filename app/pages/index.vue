@@ -60,15 +60,21 @@ watch([karaoke, source], () => {
   searched.value = false
   searching.value = false
 })
-const alreadyQueued = (track: Track) =>
-  [...queue.value, ...(state.value?.current ? [state.value.current] : [])].some(
-    (t) => t.id === track.id && t.source === track.source && t.guestId === guest.value?.id,
+function queuedLabel(track: Track) {
+  if (state.value?.current?.id === track.id && state.value.current.source === track.source)
+    return 'Tocando agora'
+  const index = queue.value.findIndex(
+    (item) => item.id === track.id && item.source === track.source,
   )
+  return index < 0 ? '' : 'Na fila · #' + (index + 1)
+}
+const alreadyQueued = (track: Track) => !!queuedLabel(track)
 </script>
 <template>
   <div class="page-shell">
     <BrandHeader><NuxtLink to="/host" class="subtle-link">Anfitrião ↗</NuxtLink></BrandHeader
     ><PartyNotice />
+    <GuestIdentity />
     <QueueCarousel />
     <main class="guest-layout">
       <section class="discovery">
@@ -169,6 +175,9 @@ const alreadyQueued = (track: Track) =>
                 ><small
                   >{{ track.artist }} <span v-if="track.karaoke" class="tag">Karaokê</span></small
                 >
+                <span v-if="queuedLabel(track)" class="tag queued-label">{{
+                  queuedLabel(track)
+                }}</span>
               </div>
               <button
                 class="add-button"
@@ -189,6 +198,7 @@ const alreadyQueued = (track: Track) =>
             </p>
           </div>
         </section>
+        <YoutubePlaylists v-if="guest" />
       </section>
       <aside class="party-sidebar">
         <div class="section-heading">
@@ -221,7 +231,9 @@ const alreadyQueued = (track: Track) =>
             }}
           </p>
           <small v-if="state?.current">Pedido de {{ state.current.guestName }}</small>
+          <PlaylistBadge :playlist="state?.current?.playlist" />
         </div>
+        <PartyPeople />
         <MediaPlayer v-if="isPlayer" />
         <div class="sidebar-footer">
           Uma festa, muitas vozes.<br /><NuxtLink to="/tv">Abrir tela da TV ↗</NuxtLink>

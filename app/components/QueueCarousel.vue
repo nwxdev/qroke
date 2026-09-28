@@ -46,6 +46,10 @@ onBeforeUnmount(() => observer?.disconnect())
         <button :disabled="atEnd" aria-label="Ver próximas músicas" @click="slide(1)">→</button>
       </div>
     </div>
+    <PlaylistGroups />
+    <p v-if="queue.some((item) => item.manualOrder !== null)" class="hint">
+      Ordem definida pelo anfitrião. Novos votos ficam disponíveis quando ele liberar o rodízio.
+    </p>
     <ol
       ref="rail"
       class="queue-rail"
@@ -84,6 +88,8 @@ onBeforeUnmount(() => observer?.disconnect())
           <p class="queue-card-guest">
             Pedido de <strong>{{ item.guestName }}</strong>
           </p>
+          <PlaylistBadge :playlist="item.playlist" />
+          <div class="queue-card-vote"><QueueVote :item="item" :index="index" /></div>
         </li>
       </TransitionGroup>
       <li v-if="!queue.length" class="queue-card-empty">

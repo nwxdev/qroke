@@ -16,6 +16,7 @@ export function orderQueue(items: QueueItem[], served: QueueItem[] = []): QueueI
     (a, b) =>
       Number(a.origin === 'auto') - Number(b.origin === 'auto') ||
       (a.manualOrder ?? Infinity) - (b.manualOrder ?? Infinity) ||
+      (b.votes || 0) - (a.votes || 0) ||
       a.round - b.round ||
       a.enqueuedAt - b.enqueuedAt ||
       a.queueId.localeCompare(b.queueId),

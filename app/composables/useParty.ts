@@ -21,6 +21,7 @@ export function useParty() {
     lastContact = useState('contact', () => 0)
   const failure = useState('failure', () => ''),
     pending = useState('pending', () => false)
+  const votedQueueIds = useState<string[]>('voted-queue-ids', () => [])
   const optimistic = useState<QueueItem[]>('optimistic', () => [])
   const queue = computed(() => [...(state.value?.queue || []), ...optimistic.value])
   const isPlayer = computed(() => !!device.value && state.value?.playerId === device.value.id)
@@ -37,6 +38,7 @@ export function useParty() {
   async function session() {
     const result = await $fetch<{
       guest: Guest | null
+      votedQueueIds: string[]
       admin: boolean
       adminExpiresAt: number
       adminLeaseSeconds: number
@@ -44,6 +46,7 @@ export function useParty() {
       timeout: 4000,
     })
     guest.value = result.guest
+    votedQueueIds.value = result.votedQueueIds || []
     admin.value = result.admin
     adminExpiresAt.value = result.adminExpiresAt
     adminLeaseSeconds.value = result.adminLeaseSeconds
@@ -112,6 +115,9 @@ export function useParty() {
     )
     optimistic.value = []
   }
+  const vote = (id: string, voted: boolean) =>
+    act(() => api('/api/queue/' + id + '/vote', { voted }))
+  const rename = (name: string) => act(() => api('/api/guest/name', { name }))
   const remove = (id: string) => act(() => api('/api/queue/' + id, {}, 'DELETE'))
   async function reorder(items: QueueItem[]) {
     if (!state.value || pending.value) return
@@ -152,6 +158,9 @@ export function useParty() {
     add,
     remove,
     reorder,
+    vote,
+    votedQueueIds,
+    rename,
   }
 }
 export function usePartyConnection() {

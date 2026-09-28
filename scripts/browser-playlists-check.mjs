@@ -110,7 +110,12 @@ try {
   invite = { ...invite, status: 'unreachable', message: 'O IP mudou; confira o encaminhamento.' }
   await page.getByRole('button', { name: 'Verificar acesso', exact: true }).click()
   await expect(page.locator('.qr-network')).toContainText('confira o encaminhamento')
+  await expect(page.locator('.qr-plate')).toHaveCount(0)
+  await expect(page.locator('.invite-link')).toHaveCount(0)
+  invite = { ...invite, status: 'ok', message: 'Servidor alcançável.' }
+  await page.evaluate(() => window.dispatchEvent(new Event('online')))
   await expect(page.locator('.qr-plate')).toBeVisible()
+  await expect(page.locator('.invite-link')).toHaveAttribute('href', invite.url)
   expect(errors).toEqual([])
   console.log(
     'Playlists: Enter, prévia, importação, duplicatas, OAuth em popup sem recriar player, desconexão e layouts 320/360/1366 aprovados.',

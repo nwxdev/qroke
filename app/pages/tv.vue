@@ -111,9 +111,9 @@ watch(admin, (value) => {
           <div>
             <strong>{{ item.title }}</strong
             ><small>{{ item.guestName }}</small>
-          </div>
-        </div></TransitionGroup
-      >
+            <PlaylistBadge :playlist="item.playlist" />
+          </div></div
+      ></TransitionGroup>
     </div>
   </main>
 </template>

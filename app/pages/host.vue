@@ -32,6 +32,7 @@ watch(admin, (value) => {
       ><NuxtLink to="/tv" class="subtle-link">Abrir TV ↗</NuxtLink
       ><NuxtLink to="/qr" class="subtle-link">QR ↗</NuxtLink></BrandHeader
     ><PartyNotice />
+    <GuestIdentity />
     <main>
       <div class="page-title">
         <span class="eyebrow">BASTIDORES</span>
@@ -81,6 +82,7 @@ watch(admin, (value) => {
               O PLAYER está desconectado. Escolha outro dispositivo.
             </p>
           </div>
+          <PartyPeople />
           <YoutubePlaylists v-if="admin" />
           <MediaPlayer v-if="isPlayer" />
           <p v-else class="hint">O som será reproduzido apenas no dispositivo escolhido.</p>

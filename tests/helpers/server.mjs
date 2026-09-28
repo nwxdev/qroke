@@ -44,6 +44,10 @@ export async function startFixture(port = 3197, extraEnv = {}) {
         NUXT_YOUTUBE_REDIRECT_URI: '',
         NUXT_INVITE_ENV_FILE: '',
         ...extraEnv,
+        NODE_OPTIONS: [
+          extraEnv.NODE_OPTIONS || '',
+          '--import=' + new URL('./network-fetch.mjs', import.meta.url).pathname,
+        ].join(' '),
         NUXT_PUBLIC_PARTY_URL: 'http://192.0.2.10:' + port,
       },
       stdio: ['ignore', 'pipe', 'pipe'],

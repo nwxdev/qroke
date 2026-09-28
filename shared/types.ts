@@ -7,7 +7,13 @@ export interface Track {
   thumbnail: string
   karaoke: boolean
 }
+export interface PlaylistLabel {
+  id: string
+  title: string
+}
 export interface QueueItem extends Track {
+  playlist?: PlaylistLabel
+  votes?: number
   queueId: string
   guestId: string
   guestName: string
@@ -41,6 +47,8 @@ export interface PartyState {
 }
 export interface PublicState extends Omit<PartyState, 'history'> {
   devices: Device[]
+  guests: Guest[]
+  canGoBack: boolean
 }
 export interface Guest {
   id: string

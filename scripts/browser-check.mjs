@@ -90,6 +90,13 @@ try {
   const beforeDrag = (await (await host.request.get(server.base + '/api/state')).json()).queue
   await host.getByText('Reordenar arrastando', { exact: true }).click()
   const handles = host.locator('.drag-handle')
+  // Os cartões agora incluem votação: traga a lista de arrasto inteira à área visível.
+  await host
+    .locator('.drag-row')
+    .last()
+    .evaluate((el) => el.scrollIntoView({ block: 'center' }))
+  await expect(handles.first()).toBeInViewport()
+  await expect(handles.last()).toBeInViewport()
   const from = await handles.first().boundingBox()
   const to = await host.locator('.drag-row').last().boundingBox()
   await host.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
@@ -103,7 +110,7 @@ try {
         (await (await host.request.get(server.base + '/api/state')).json()).queue.at(-1)?.queueId,
     )
     .toBe(beforeDrag[0].queueId)
-  await host.getByRole('button', { name: 'Voltar ao rodízio', exact: true }).click()
+  await host.getByRole('button', { name: 'Liberar rodízio e votos', exact: true }).click()
   await host.getByText('Reordenar arrastando', { exact: true }).click()
   console.log('Arrasto preservado durante polling e retorno ao rodízio OK')
   await host.screenshot({ path: 'test-results/host.png', fullPage: true })

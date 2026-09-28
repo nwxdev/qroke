@@ -22,6 +22,7 @@ function duration(item: QueueItem) {
 }
 </script>
 <template>
+  <PlaylistGroups v-if="!compact" />
   <div v-if="!queue.length" class="empty-queue">
     <span>♫</span>
     <h3>A próxima pode ser sua</h3>
@@ -44,6 +45,8 @@ function duration(item: QueueItem) {
           >{{ item.guestName }} <span v-if="item.karaoke" class="tag">Karaokê</span
           ><span v-if="item.manualOrder !== null" class="tag">Manual</span></small
         >
+        <PlaylistBadge :playlist="item.playlist" />
+        <QueueVote v-if="!compact" :item="item" :index="index" />
       </div>
       <small class="duration">{{ duration(item) }}</small>
       <div v-if="manage" class="row-actions">

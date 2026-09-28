@@ -264,3 +264,33 @@ describe('playlists e conexão YouTube', () => {
     expect(s.current.id).toBe(ids[0])
   })
 })
+
+it('vincula a autorização ao ator e não desconecta a conta de outro na reconexão', async () => {
+  const { http } = mock(),
+    service = new YoutubePlaylists(config, http)
+  const a = service.begin(undefined, 'guest:ana')
+  const accountA = await service.complete(
+    new URL(a.url).searchParams.get('state')!,
+    a.binding,
+    'code',
+  )
+  expect(service.ownedAccount(accountA, 'guest:ana')).toBe(accountA)
+  expect(service.ownedAccount(accountA, 'guest:bia')).toBeUndefined()
+  const b = service.begin(accountA, 'guest:bia')
+  const accountB = await service.complete(
+    new URL(b.url).searchParams.get('state')!,
+    b.binding,
+    'code',
+  )
+  expect(service.connected(accountA)).toBe(true)
+  expect(service.ownedAccount(accountB, 'guest:bia')).toBe(accountB)
+  const preview = await service.preview('guest:ana', 'PLabcdefghijk', accountA)
+  expect(() => service.consume(preview.ticket, 'guest:bia', accountA)).toThrow()
+  const party = initialState()
+  enqueuePlaylist(party, preview.tracks, 100, {
+    guest: { id: 'ana', name: 'Ana' },
+    playlist: preview.playlist,
+  })
+  expect(party.queue[0]?.guestId).toBe('ana')
+  expect(party.queue[0]?.playlist).toEqual({ id: 'PLabcdefghijk', title: 'Minha playlist' })
+})

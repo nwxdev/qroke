@@ -119,6 +119,88 @@ try {
     assert.ok(!fixture.logs().includes('fixture-private-access'))
     assert.ok(!fixture.logs().includes('fixture-secret'))
   })
+
+  await test('convidados importam suas playlists sem PIN e não acessam nem desconectam contas alheias', async () => {
+    const ana = client(fixture.base),
+      bia = client(fixture.base)
+    const a = await ana.request('/api/guest', { name: 'Ana playlists' })
+    const b = await bia.request('/api/guest', { name: 'Bia playlists' })
+    const biaCookie = b.headers
+      .getSetCookie()
+      .find((cookie) => cookie.startsWith('qroke_guest='))
+      .split(';')[0]
+    assert.equal((await ana.request('/api/session')).data.admin, false)
+    const flow = await ana.request('/api/youtube/connect', {})
+    const callback = await ana.request(
+      '/api/youtube/callback?state=' +
+        new URL(flow.data.url).searchParams.get('state') +
+        '&code=fixture',
+    )
+    const privateCookie = callback.headers
+      .getSetCookie()
+      .find((cookie) => cookie.startsWith('qroke_youtube='))
+      .split(';')[0]
+    assert.equal((await ana.request('/api/youtube/status')).data.connected, true)
+    assert.equal((await bia.request('/api/youtube/status')).data.connected, false)
+    assert.equal((await bia.request('/api/youtube/playlists')).status, 409)
+    // Mesmo conhecendo um cookie OAuth (somente o teste), a identidade diferente é recusada.
+    const forgedHeaders = { cookie: biaCookie + '; ' + privateCookie }
+    assert.equal(
+      (await bia.request('/api/youtube/status', undefined, 'GET', forgedHeaders)).data.connected,
+      false,
+    )
+    assert.equal(
+      (await bia.request('/api/youtube/playlists', undefined, 'GET', forgedHeaders)).status,
+      409,
+    )
+    await bia.request('/api/youtube/disconnect', {}, 'POST', forgedHeaders)
+    assert.equal((await ana.request('/api/youtube/status')).data.connected, true)
+    const own = await ana.request('/api/youtube/playlists')
+    assert.equal(own.data.items[0].title, 'Playlist da festa')
+    const personal = await ana.request('/api/youtube/preview', {
+      input: 'PLabcdefghijk',
+      personal: true,
+    })
+    assert.equal(
+      (await bia.request('/api/youtube/import', { ticket: personal.data.ticket })).status,
+      410,
+    )
+    const s = JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+    Object.assign(s, {
+      current: null,
+      queue: [],
+      playerId: null,
+      history: [],
+      revision: s.revision + 1,
+    })
+    db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(s))
+    assert.equal(
+      (await ana.request('/api/youtube/import', { ticket: personal.data.ticket })).data.added,
+      2,
+    )
+    const queued = (await ana.request('/api/state')).data.queue
+    assert.ok(
+      queued.every((track) => track.guestId === a.data.id && track.guestName === 'Ana playlists'),
+    )
+    assert.ok(
+      queued.every(
+        (track) =>
+          track.playlist.id === 'PLabcdefghijk' && track.playlist.title === 'Playlist da festa',
+      ),
+    )
+    const publicPreview = await bia.request('/api/youtube/preview', {
+      input: 'https://music.youtube.com/playlist?list=PLabcdefghijk',
+    })
+    assert.equal(publicPreview.status, 200)
+    const repeat = await bia.request('/api/youtube/import', { ticket: publicPreview.data.ticket })
+    assert.equal(repeat.data.duplicates, 2)
+    assert.equal((await bia.request('/api/control', { action: 'skip' })).status, 401)
+    const pendingList = ana.request('/api/youtube/playlists?pageToken=slow')
+    await new Promise((resolve) => setTimeout(resolve, 120))
+    await ana.request('/api/youtube/disconnect', {})
+    assert.equal((await pendingList).status, 409)
+    assert.equal((await ana.request('/api/youtube/status')).data.connected, false)
+  })
 } finally {
   db.close()
   await fixture.close()

@@ -10,7 +10,8 @@ export function youtube() {
     redirect: c.youtubeRedirectUri,
   }))
 }
-export const youtubeAccount = (event: H3Event) => getCookie(event, 'qroke_youtube')
+export const youtubeAccount = (event: H3Event) =>
+  youtube().ownedAccount(getCookie(event, 'qroke_youtube'), playlistAccess(event).owner)
 export async function youtubeResult<T>(action: () => Promise<T> | T): Promise<T> {
   try {
     return await action()

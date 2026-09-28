@@ -22,6 +22,7 @@ const { isPlayer, state, queue } = useParty()
           <span class="eyebrow">{{ state.paused ? 'EM PAUSA' : 'AGORA NA FESTA' }}</span>
           <h3>{{ state.current.title }}</h3>
           <p>{{ state.current.artist }} · {{ state.current.guestName }}</p>
+          <PlaylistBadge :playlist="state.current.playlist" />
         </div>
         <div class="qr-queue-scroll" tabindex="0" role="region" aria-label="Músicas na fila">
           <QueueList />

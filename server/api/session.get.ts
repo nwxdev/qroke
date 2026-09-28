@@ -1,6 +1,11 @@
-export default defineEventHandler((event) => ({
-  guest: party().guest(getCookie(event, 'qroke_guest')) || null,
-  admin: party().admin(getCookie(event, 'qroke_admin')),
-  adminExpiresAt: party().adminExpiresAt(),
-  adminLeaseSeconds: adminLeaseSeconds(),
-}))
+export default defineEventHandler((event) => {
+  const guest = party().guest(getCookie(event, 'qroke_guest'))
+  if (guest) party().touchGuest(guest.id)
+  return {
+    guest: guest || null,
+    votedQueueIds: guest ? party().guestVotes(guest.id) : [],
+    admin: party().admin(getCookie(event, 'qroke_admin')),
+    adminExpiresAt: party().adminExpiresAt(),
+    adminLeaseSeconds: adminLeaseSeconds(),
+  }
+})

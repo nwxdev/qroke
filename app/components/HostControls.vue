@@ -5,6 +5,9 @@ const { state, device, control, pending, api, act, playHere } = useParty()
 <template>
   <div class="host-controls">
     <div class="control-row">
+      <button :disabled="pending || !state?.canGoBack" @click="control({ action: 'previous' })">
+        <AppIcon name="previous" /><span>Música anterior</span>
+      </button>
       <button
         class="primary-button"
         :disabled="pending || !state?.current"
@@ -45,7 +48,7 @@ const { state, device, control, pending, api, act, playHere } = useParty()
     <div class="control-row">
       <button :disabled="pending || !device" @click="playHere">Tocar neste dispositivo</button
       ><button :disabled="pending" @click="control({ action: 'reset-order' })">
-        Voltar ao rodízio</button
+        Liberar rodízio e votos</button
       ><button :disabled="pending" @click="act(() => api('/api/auth', { action: 'logout' }))">
         Sair do admin
       </button>

@@ -301,6 +301,7 @@ onBeforeUnmount(() => {
       <div v-if="current" :key="current.queueId" class="player-caption">
         <strong>{{ current.title }}</strong
         ><span>{{ current.artist }} · {{ current.guestName }}</span>
+        <PlaylistBadge :playlist="current.playlist" />
       </div>
     </Transition>
     <div v-if="current?.source === 'local'" class="audio-output">

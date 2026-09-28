@@ -2,6 +2,11 @@
 import type { PlaylistPreview, YoutubePlaylist, YoutubeStatus } from '../../shared/playlists'
 const { refresh, session } = useParty()
 const status = ref<YoutubeStatus | null>(null)
+const remoteConnect = computed(() => {
+  if (!status.value?.connectOrigin) return false
+  const url = new URL(status.value.connectOrigin)
+  return url.protocol === 'https:' && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+})
 const source = ref<'link' | 'mine'>('link')
 const input = ref(''),
   karaoke = ref(false),
@@ -188,8 +193,9 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <small
-        >Públicas e não listadas, suas ou de outros canais. Mixes automáticos e listas especiais
-        podem não estar disponíveis.</small
+        >Públicas e não listadas: suas, da comunidade, de outros canais ou do próprio YouTube,
+        quando disponíveis pela API. Mixes automáticos e listas especiais podem não estar
+        disponíveis.</small
       >
       <p v-if="status && !status.publicConfigured" class="notice">
         Configure YOUTUBE_API_KEY no servidor para usar links públicos.
@@ -202,8 +208,8 @@ onBeforeUnmount(() => {
           <button :disabled="busy" @click="disconnect">Desconectar</button>
         </div>
         <p class="hint">
-          Playlists criadas pela conta autorizada, incluindo privadas. Só as faixas adicionadas
-          ficam visíveis para a festa.
+          Playlists criadas pela conta autorizada, incluindo privadas. O nome da playlist e as
+          faixas adicionadas ficam visíveis para a festa. Sua conta continua privada.
         </p>
         <button :disabled="busy" @click="loadMine()">Atualizar playlists</button>
         <ul v-if="playlists.length" class="account-playlists">
@@ -235,11 +241,19 @@ onBeforeUnmount(() => {
           <AppIcon name="link" /> Conectar YouTube
         </button>
         <p v-else class="notice">
-          Conecte pelo painel em
-          <a :href="status.connectOrigin + '/host'" target="_blank" rel="noopener"
-            >{{ status.connectOrigin }}/host</a
-          >. Se for localhost, abra no computador que executa o QRokê. O acesso pelo celular
-          continua funcionando para links públicos.
+          <template v-if="remoteConnect"
+            >Para conectar, entre na festa pelo endereço seguro
+            <a :href="status.connectOrigin + '/'" target="_blank" rel="noopener">{{
+              status.connectOrigin
+            }}</a
+            >.
+          </template>
+          <template v-else
+            >O login Google pelo celular precisa de um endereço HTTPS da festa. O acesso local atual
+            só permite conectar a conta no computador do servidor. O anfitrião pode publicar esse
+            endereço seguindo o plano do README.</template
+          >
+          Enquanto isso, use Colar link para playlists públicas ou não listadas.
         </p>
       </template>
       <div v-else-if="status" class="notice">

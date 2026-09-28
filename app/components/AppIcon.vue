@@ -12,11 +12,19 @@ defineProps<{
     | 'play'
     | 'pause'
     | 'next'
+    | 'previous'
+    | 'vote'
+    | 'person'
+    | 'edit'
     | 'tv'
     | 'playlist'
     | 'link'
 }>()
 const paths = {
+  previous: 'M19 4L7 12l12 8z M4 4v16',
+  vote: 'M12 20V4 M5 11l7-7 7 7',
+  person: 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2',
+  edit: 'M14 5l5 5 M4 20l5-1L21 7l-4-4L5 15z',
   playlist: 'M4 5h13 M4 10h13 M4 15h7 M16 14l6 4-6 4z',
   link: 'M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2',
   lock: 'M6 11h12v10H6z M8 11V7a4 4 0 0 1 8 0v4 M12 15v2',

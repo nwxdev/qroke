@@ -1,5 +1,5 @@
 export default defineEventHandler((event) => {
-  requireAdmin(event)
+  playlistAccess(event)
   const service = youtube()
   const connectOrigin = service.configured ? new URL(service.config.redirect).origin : ''
   return {

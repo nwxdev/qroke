@@ -1648,3 +1648,12 @@ button {
     flex-wrap: wrap;
   }
 }
+
+.queue-card-vote {
+  margin-top: 10px;
+}
+.queued-label {
+  width: fit-content;
+  color: var(--text);
+  background: var(--surface-2);
+}

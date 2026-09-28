@@ -64,6 +64,8 @@ async function findContinuation() {
       guestId: 'auto',
       guestName: 'Rádio da festa',
       origin: 'auto',
+      playlist: undefined,
+      votes: 0,
       enqueuedAt: Date.now(),
       round: 0,
       manualOrder: null,

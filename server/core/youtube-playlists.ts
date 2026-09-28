@@ -63,13 +63,20 @@ export function validRedirect(value: string) {
 }
 type Config = { key: string; clientId: string; clientSecret: string; redirect: string }
 type Account = {
+  owner: string
   access: string
   refresh: string
   accessExpires: number
   expires: number
   refreshing?: Promise<string>
 }
-type Pending = { binding: string; verifier: string; expires: number; previous?: string }
+type Pending = {
+  owner: string
+  binding: string
+  verifier: string
+  expires: number
+  previous?: string
+}
 type Ticket = { preview: PlaylistPreview; owner: string; account?: string; expires: number }
 type GooglePlaylist = {
   id: string
@@ -132,12 +139,16 @@ export class YoutubePlaylists {
     this.prune()
     return !!id && this.accounts.has(id)
   }
+  ownedAccount(id: string | undefined, owner: string) {
+    this.prune()
+    return id && this.accounts.get(id)?.owner === owner ? id : undefined
+  }
   disconnect(id?: string) {
     if (!id) return
     this.accounts.delete(id)
     for (const [key, ticket] of this.tickets) if (ticket.account === id) this.tickets.delete(key)
   }
-  begin(previous?: string) {
+  begin(previous?: string, owner = 'legacy') {
     this.prune()
     if (!this.configured)
       throw new PlaylistError(503, 'Configure as credenciais OAuth do YouTube no servidor.')
@@ -146,7 +157,13 @@ export class YoutubePlaylists {
     const state = secret(),
       binding = secret(),
       verifier = secret()
-    this.pending.set(state, { binding, verifier, expires: this.now() + 600000, previous })
+    this.pending.set(state, {
+      owner,
+      binding,
+      verifier,
+      expires: this.now() + 600000,
+      previous: this.ownedAccount(previous, owner),
+    })
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
     url.search = new URLSearchParams({
       client_id: this.config.clientId,
@@ -179,6 +196,7 @@ export class YoutubePlaylists {
     const id = secret()
     this.disconnect(pending.previous)
     this.accounts.set(id, {
+      owner: pending.owner,
       access: data.access_token!,
       refresh: data.refresh_token || '',
       accessExpires: this.now() + Number(data.expires_in || 3600) * 1000,
@@ -420,7 +438,12 @@ export class YoutubePlaylists {
     return cached.preview
   }
 }
-export function enqueuePlaylist(state: PartyState, tracks: Track[], now = Date.now()) {
+export function enqueuePlaylist(
+  state: PartyState,
+  tracks: Track[],
+  now = Date.now(),
+  context?: { guest?: { id: string; name: string }; playlist: { id: string; title: string } },
+) {
   const existing = new Set(
     [...state.queue, ...(state.current ? [state.current] : [])]
       .filter((t) => t.source === 'youtube')
@@ -434,8 +457,9 @@ export function enqueuePlaylist(state: PartyState, tracks: Track[], now = Date.n
     state.queue.push({
       ...track,
       queueId: randomUUID(),
-      guestId: 'youtube-playlists',
-      guestName: 'Playlist do anfitrião',
+      guestId: context?.guest?.id || 'youtube-playlists',
+      guestName: context?.guest?.name || 'Anfitrião',
+      ...(context ? { playlist: { id: context.playlist.id, title: context.playlist.title } } : {}),
       origin: 'human',
       enqueuedAt: base + added,
       round: 0,

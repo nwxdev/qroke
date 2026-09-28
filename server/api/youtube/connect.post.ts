@@ -1,5 +1,6 @@
 export default defineEventHandler((event) => {
-  requireAdmin(event)
+  const access = playlistAccess(event)
+  playlistLimit(event, access.owner)
   return youtubeResult(() => {
     const service = youtube()
     if (
@@ -10,7 +11,7 @@ export default defineEventHandler((event) => {
         statusCode: 400,
         statusMessage: 'Abra o painel no endereço configurado para conectar o Google.',
       })
-    const flow = service.begin(youtubeAccount(event))
+    const flow = service.begin(youtubeAccount(event), access.owner)
     setCookie(event, 'qroke_youtube_oauth', flow.binding, {
       httpOnly: true,
       sameSite: 'lax',

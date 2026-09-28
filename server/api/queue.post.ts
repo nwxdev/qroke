@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const state = party().mutate((s) => {
     if (
       [...s.queue, ...(s.current ? [s.current] : [])].some(
-        (t) => t.guestId === guest.id && t.source === track.source && t.id === track.id,
+        (t) => t.source === track.source && t.id === track.id,
       )
     )
       return
