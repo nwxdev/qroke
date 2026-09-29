@@ -12,7 +12,7 @@ Executar npm ci, npm run typecheck, npm test, npm run test:storage, npm run buil
 
 - QROKE_MONGODB_URI e QROKE_MONGODB_DATABASE: conexão e banco exclusivos.
 - QROKE_DRAGONFLY_URL: serviço existente pela rede privada.
-- QROKE_PUBLIC_URL=https://qroke.nwx.ag.
+- QROKE_PUBLIC_URL=https://qroke.com.br.
 - QROKE_ACCESS_REQUIRED=true e QROKE_TRUST_PROXY=true na stack privada atrás do Nginx.
 - QROKE_HOST_PIN: PIN do anfitrião com 4 a 8 dígitos.
 - QROKE_SESSION_SECRET: segredo aleatório de pelo menos 32 caracteres.
@@ -23,7 +23,7 @@ Executar npm ci, npm run typecheck, npm test, npm run test:storage, npm run buil
 
 Acesso inicial: /entrar com PIN do anfitrião. A entrada gera um convite válido por 24 horas para a festa. Gerar novo convite revoga as entradas anteriores dos convidados; o anfitrião mantém seu acesso. A reserva de controles continua com duração configurável.
 
-O retorno Google deve ser cadastrado exatamente como https://qroke.nwx.ag/api/youtube/callback. Autorização Google dá acesso às playlists pessoais, sem conceder administração.
+O retorno Google deve ser cadastrado exatamente como https://qroke.com.br/api/youtube/callback. Autorização Google dá acesso às playlists pessoais, sem conceder administração.
 
 ## Concorrência e limites
 

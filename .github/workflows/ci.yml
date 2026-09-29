@@ -108,4 +108,4 @@ jobs:
           chmod 600 ~/.ssh/qroke-ci
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
           printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/qroke-ci -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "release $GITHUB_SHA $GITHUB_ACTOR"
-          curl --fail --silent --show-error --retry 6 --retry-delay 5 https://qroke.nwx.ag/api/health
+          curl --fail --silent --show-error --retry 6 --retry-delay 5 https://qroke.com.br/api/health

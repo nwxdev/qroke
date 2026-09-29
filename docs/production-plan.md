@@ -1,6 +1,6 @@
 # QRoke em produção
 
-Plano autorizado em 29/09/2026: MongoDB, Dragonfly, Docker Swarm e autodeploy existentes, https://qroke.nwx.ag, sem homologação.
+Plano autorizado em 29/09/2026: MongoDB, Dragonfly, Docker Swarm e autodeploy existentes, https://qroke.com.br, sem homologação.
 
 1. Persistência, concorrência e sessões compartilhadas.
 2. Convites revogáveis e isolamento de festas.
