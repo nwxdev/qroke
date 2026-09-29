@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 export default defineEventHandler(async (event) => {
-  const guest = requireGuest(event)
+  const guest = await requireGuest(event)
   const input = await readValidatedBody(
     event,
     z.object({
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
       singers: z.array(z.string().uuid()).max(50).default([]),
     }).parse,
   )
-  if (input.source === 'youtube' && party().youtubeBlocked(input.id))
+  if (input.source === 'youtube' && (await party(event).youtubeBlocked(input.id)))
     throw createError({
       statusCode: 409,
       statusMessage: 'Esta versão ficou indisponível. Busque outra versão da música.',
@@ -19,20 +19,25 @@ export default defineEventHandler(async (event) => {
   const track =
     input.source === 'local'
       ? (await library()).files.get(input.id)?.track
-      : catalog().selected(input.id, input.karaoke)
+      : await (await catalog(event)).selected(input.id, input.karaoke)
   if (!track)
     throw createError({
       statusCode: 400,
       statusMessage: 'Busque a faixa novamente antes de adicionar.',
     })
-  const singers = track.karaoke ? karaokeParticipants(input.singers, guest) : undefined
-  const state = party().mutate((s) => {
+  const singers = track.karaoke ? await karaokeParticipants(event, input.singers, guest) : undefined
+  const state = await party(event).mutate(async (s) => {
     if (
       [...s.queue, ...(s.current ? [s.current] : [])].some(
         (t) => t.source === track.source && t.id === track.id,
       )
     )
       return
+    if (s.queue.filter((t) => t.guestId === guest.id).length >= 200)
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Aguarde suas músicas antes de adicionar mais.',
+      })
     s.queue.push({
       ...track,
       ...(singers ? { singers } : {}),

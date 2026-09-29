@@ -1,0 +1,12 @@
+.git
+.github
+.claude
+node_modules
+.nuxt
+.output
+.data
+.env
+.env.*
+test-results
+playwright-report
+coverage

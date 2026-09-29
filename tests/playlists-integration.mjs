@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
-import Database from 'better-sqlite3'
+import { openFixtureDatabase } from './helpers/database.mjs'
 import { startFixture, client } from './helpers/server.mjs'
 const fixture = await startFixture(3192, {
   NODE_OPTIONS: '--import=' + new URL('./helpers/youtube-fetch.mjs', import.meta.url).pathname,
@@ -10,7 +10,7 @@ const fixture = await startFixture(3192, {
   NUXT_YOUTUBE_CLIENT_SECRET: 'fixture-secret',
   NUXT_YOUTUBE_REDIRECT_URI: 'http://127.0.0.1:3192/api/youtube/callback',
 })
-const db = new Database(join(fixture.dir, 'party.sqlite'))
+const db = await openFixtureDatabase(fixture.dir)
 try {
   await test('playlists: autenticação, OAuth, privacidade, importação e expiração', async () => {
     const admin = client(fixture.base),
@@ -98,7 +98,7 @@ try {
     )
     const waiting = admin.request('/api/youtube/playlists?pageToken=slow')
     await new Promise((r) => setTimeout(r, 120))
-    db.prepare('UPDATE admins SET expires_at=0').run()
+    await db.expireAdmin()
     assert.equal((await waiting).status, 401)
     assert.equal(
       (await admin.request('/api/youtube/import', { ticket: repeat.data.ticket })).status,
@@ -108,7 +108,7 @@ try {
     assert.equal((await guest.request('/api/youtube/status')).data.connected, false)
     assert.equal((await guest.request('/api/youtube/playlists')).status, 409)
     const guestFlow = await guest.request('/api/youtube/connect', {})
-    db.prepare('UPDATE admins SET expires_at=0').run()
+    await db.expireAdmin()
     await guest.request(
       '/api/youtube/callback?state=' +
         new URL(guestFlow.data.url).searchParams.get('state') +
@@ -165,7 +165,7 @@ try {
       (await bia.request('/api/youtube/import', { ticket: personal.data.ticket })).status,
       410,
     )
-    const s = JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+    const s = await db.readState()
     Object.assign(s, {
       current: null,
       queue: [],
@@ -173,7 +173,7 @@ try {
       history: [],
       revision: s.revision + 1,
     })
-    db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(s))
+    await db.writeState(JSON.stringify(s))
     assert.equal(
       (await ana.request('/api/youtube/import', { ticket: personal.data.ticket })).data.added,
       2,
@@ -202,7 +202,7 @@ try {
     assert.equal((await ana.request('/api/youtube/status')).data.connected, false)
   })
 } finally {
-  db.close()
+  await db.close()
   await fixture.close()
 }
 

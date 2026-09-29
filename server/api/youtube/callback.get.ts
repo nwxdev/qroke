@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { ACCOUNT_SECONDS } from '../../core/youtube-playlists'
 export default defineEventHandler(async (event) => {
-  const service = youtube(),
+  const service = await youtube(event),
     query = getQuery(event)
   setHeader(event, 'Referrer-Policy', 'no-referrer')
   const nonce = randomBytes(24).toString('base64')
@@ -15,7 +15,8 @@ export default defineEventHandler(async (event) => {
   try {
     if (
       !service.configured ||
-      getRequestURL(event).origin !== new URL(service.config.redirect).origin
+      (useRuntimeConfig().accessRequired ? requestOrigin() : getRequestURL(event).origin) !==
+        new URL(service.config.redirect).origin
     )
       throw new Error('Invalid origin')
     const id = await service.complete(
@@ -27,7 +28,7 @@ export default defineEventHandler(async (event) => {
     setCookie(event, 'qroke_youtube', id, {
       httpOnly: true,
       sameSite: 'strict',
-      secure: getRequestURL(event).protocol === 'https:',
+      secure: secureCookie(),
       path: '/',
       maxAge: ACCOUNT_SECONDS,
     })

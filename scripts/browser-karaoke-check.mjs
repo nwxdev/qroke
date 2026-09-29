@@ -1,5 +1,5 @@
 import { chromium, expect } from '@playwright/test'
-import Database from 'better-sqlite3'
+import { openFixtureDatabase } from '../tests/helpers/database.mjs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { startFixture, client } from '../tests/helpers/server.mjs'
@@ -13,7 +13,7 @@ const browser = await chromium.launch({
   args: ['--no-sandbox'],
   ...(process.env.QROKE_CHROMIUM ? { executablePath: process.env.QROKE_CHROMIUM } : {}),
 })
-const db = new Database(join(fixture.dir, 'party.sqlite'))
+const db = await openFixtureDatabase(fixture.dir)
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const errors = []
@@ -115,7 +115,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.locator('.header-persistent .screen-sound-button').click()
   await expect.poll(async () => !!(await state()).karaokeStartsAt).toBe(true)
-  await expect.poll(() => page.evaluate(() => window.toneStarts)).toBeGreaterThan(0)
+  await expect.poll(async () => page.evaluate(() => window.toneStarts)).toBeGreaterThan(0)
   expect(await page.evaluate(() => !!window.fake.playing)).toBe(false)
   for (const width of [1440, 768, 360, 320]) {
     await page.setViewportSize({ width, height: 900 })
@@ -123,7 +123,9 @@ try {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
   await page.screenshot({ path: 'test-results/karaoke-countdown-mobile.png', fullPage: true })
-  await expect.poll(() => page.evaluate(() => !!window.fake.playing), { timeout: 10000 }).toBe(true)
+  await expect
+    .poll(async () => page.evaluate(() => !!window.fake.playing), { timeout: 10000 })
+    .toBe(true)
   await expect(page.locator('.karaoke-countdown')).toHaveCount(0)
   const tones = await page.evaluate(() => window.toneStarts)
   await page.waitForTimeout(600)
@@ -156,12 +158,14 @@ try {
   await page.bringToFront()
   await page.evaluate(() => window.fake.events.onStateChange({ data: 0 }))
   await expect(page.locator('.countdown-number')).toHaveText('2')
-  await expect.poll(() => page.evaluate(() => !!window.fake.playing), { timeout: 7000 }).toBe(true)
+  await expect
+    .poll(async () => page.evaluate(() => !!window.fake.playing), { timeout: 7000 })
+    .toBe(true)
   await host.getByRole('button', { name: 'Sair do admin', exact: true }).click()
   await expect(host).toHaveURL(fixture.base + '/busca')
   await expect(page).toHaveURL(fixture.base + '/player')
   await page.bringToFront()
-  await expect.poll(() => page.evaluate(() => !!window.fake.playing)).toBe(true)
+  await expect.poll(async () => page.evaluate(() => !!window.fake.playing)).toBe(true)
   await expect(
     page.getByRole('button', { name: /Controles|Liberar controles|Sair do admin/ }),
   ).toHaveCount(0)
@@ -183,7 +187,7 @@ try {
     queueId: randomUUID(),
     title: 'Depois do karaokê',
   }
-  const saved = JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+  const saved = await db.readState()
   Object.assign(saved, {
     current: regular,
     queue: [following],
@@ -193,7 +197,7 @@ try {
     karaokeStartsAt: null,
     revision: saved.revision + 1,
   })
-  db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(saved))
+  await db.writeState(JSON.stringify(saved))
   await expect(page.locator('.tv-screen')).toHaveClass(/music-mode/)
   const preview = await (
     await context.request.post(fixture.base + '/api/youtube/preview', {
@@ -210,11 +214,13 @@ try {
   )
   await expect(page.locator('.karaoke-queue-heading')).toContainText('prioridade agora')
   await expect(page.locator('.player-karaoke-group .queue-number')).toHaveText('01')
-  await expect.poll(() => page.evaluate(() => !!window.fake.playing)).toBe(true)
+  await expect.poll(async () => page.evaluate(() => !!window.fake.playing)).toBe(true)
   await page.evaluate(() => window.fake.events.onStateChange({ data: 0 }))
   await expect(page.locator('.countdown-number')).toHaveText('2')
   await expect.poll(async () => (await state()).current.id).toBe(preview.tracks[0].id)
-  await expect.poll(() => page.evaluate(() => !!window.fake.playing), { timeout: 7000 }).toBe(true)
+  await expect
+    .poll(async () => page.evaluate(() => !!window.fake.playing), { timeout: 7000 })
+    .toBe(true)
   await page.evaluate(() => window.fake.events.onStateChange({ data: 0 }))
   await expect.poll(async () => (await state()).current.queueId).toBe(following.queueId)
   expect((await state()).current.playlist.title).toBe('Playlist de fundo')
@@ -224,6 +230,6 @@ try {
   )
 } finally {
   await browser.close()
-  db.close()
+  await db.close()
   await fixture.close()
 }

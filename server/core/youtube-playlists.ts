@@ -1,3 +1,4 @@
+import { MemoryStore, type AsyncStore } from './shared-store'
 import { youtubeAvailable, type YoutubeAvailability } from './youtube-availability'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { isIP } from 'node:net'
@@ -69,22 +70,21 @@ type Config = {
   redirect: string
   region?: string
 }
-type Account = {
+export type Account = {
   owner: string
   access: string
   refresh: string
   accessExpires: number
   expires: number
-  refreshing?: Promise<string>
 }
-type Pending = {
+export type Pending = {
   owner: string
   binding: string
   verifier: string
   expires: number
   previous?: string
 }
-type Ticket = { preview: PlaylistPreview; owner: string; account?: string; expires: number }
+export type Ticket = { preview: PlaylistPreview; owner: string; account?: string; expires: number }
 type GooglePlaylist = {
   id: string
   snippet: { title: string; channelTitle: string; thumbnails?: { medium?: { url: string } } }
@@ -120,16 +120,26 @@ function duration(value: string) {
     : 0
 }
 export class YoutubePlaylists {
-  private pending = new Map<string, Pending>()
-  private accounts = new Map<string, Account>()
-  private tickets = new Map<string, Ticket>()
+  private pending: AsyncStore<Pending>
+  private accounts: AsyncStore<Account>
+  private tickets: AsyncStore<Ticket>
   private active = 0
+  private refreshing = new Map<string, Promise<string>>()
   constructor(
     public config: Config,
     private http: typeof fetch = fetch,
     private now = Date.now,
     private unavailable: (id: string) => boolean = () => false,
-  ) {}
+    storage?: {
+      pending: AsyncStore<Pending>
+      accounts: AsyncStore<Account>
+      tickets: AsyncStore<Ticket>
+    },
+  ) {
+    this.pending = storage?.pending || new MemoryStore<Pending>(now)
+    this.accounts = storage?.accounts || new MemoryStore<Account>(now)
+    this.tickets = storage?.tickets || new MemoryStore<Ticket>(now)
+  }
   get configured() {
     return !!(
       this.config.clientId &&
@@ -137,40 +147,30 @@ export class YoutubePlaylists {
       validRedirect(this.config.redirect)
     )
   }
-  private prune() {
-    const now = this.now()
-    for (const [id, p] of this.pending) if (p.expires <= now) this.pending.delete(id)
-    for (const [id, a] of this.accounts) if (a.expires <= now) this.disconnect(id)
-    for (const [id, t] of this.tickets) if (t.expires <= now) this.tickets.delete(id)
+  async connected(id?: string) {
+    return !!id && !!(await this.accounts.get(id))
   }
-  connected(id?: string) {
-    this.prune()
-    return !!id && this.accounts.has(id)
+  async ownedAccount(id: string | undefined, owner: string) {
+    return id && (await this.accounts.get(id))?.owner === owner ? id : undefined
   }
-  ownedAccount(id: string | undefined, owner: string) {
-    this.prune()
-    return id && this.accounts.get(id)?.owner === owner ? id : undefined
-  }
-  disconnect(id?: string) {
+  async disconnect(id?: string) {
     if (!id) return
-    this.accounts.delete(id)
-    for (const [key, ticket] of this.tickets) if (ticket.account === id) this.tickets.delete(key)
+    await this.accounts.delete(id)
   }
-  begin(previous?: string, owner = 'legacy') {
-    this.prune()
+  async begin(previous?: string, owner = 'legacy') {
     if (!this.configured)
       throw new PlaylistError(503, 'Configure as credenciais OAuth do YouTube no servidor.')
-    if (this.pending.size >= 100 || this.accounts.size >= 100)
+    if ((await this.pending.size()) >= 100 || (await this.accounts.size()) >= 100)
       throw new PlaylistError(429, 'Muitas conexões. Tente novamente mais tarde.')
     const state = secret(),
       binding = secret(),
       verifier = secret()
-    this.pending.set(state, {
+    await this.pending.set(state, {
       owner,
       binding,
       verifier,
       expires: this.now() + 600000,
-      previous: this.ownedAccount(previous, owner),
+      previous: await this.ownedAccount(previous, owner),
     })
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
     url.search = new URLSearchParams({
@@ -187,11 +187,10 @@ export class YoutubePlaylists {
     return { url: url.toString(), binding }
   }
   async complete(state: string, binding: string, code: string, denied = false) {
-    this.prune()
-    const pending = this.pending.get(state)
+    const pending = await this.pending.get(state)
     if (!pending || !binding || binding !== pending.binding)
       throw new PlaylistError(400, 'Autorização inválida ou expirada. Conecte novamente.')
-    this.pending.delete(state)
+    if (!(await this.pending.take(state))) throw new PlaylistError(400, 'Autorização já utilizada.')
     if (denied || !code) throw new PlaylistError(400, 'A conexão com o Google foi cancelada.')
     const data = await this.token({
       grant_type: 'authorization_code',
@@ -202,8 +201,8 @@ export class YoutubePlaylists {
     if (!data.scope?.split(' ').includes(YOUTUBE_READONLY))
       throw new PlaylistError(403, 'Autorize a leitura do YouTube para acessar suas playlists.')
     const id = secret()
-    this.disconnect(pending.previous)
-    this.accounts.set(id, {
+    await this.disconnect(pending.previous)
+    await this.accounts.set(id, {
       owner: pending.owner,
       access: data.access_token!,
       refresh: data.refresh_token || '',
@@ -238,34 +237,37 @@ export class YoutubePlaylists {
     }
   }
   private async access(id: string) {
-    this.prune()
-    const account = this.accounts.get(id)
+    const account = await this.accounts.get(id)
     if (!account) throw new PlaylistError(409, 'Conecte sua conta do YouTube novamente.')
     if (account.accessExpires > this.now() + 60000) return account.access
     if (!account.refresh) {
-      this.disconnect(id)
+      await this.disconnect(id)
       throw new PlaylistError(409, 'Conecte sua conta do YouTube novamente.')
     }
-    account.refreshing ||= this.token({
-      grant_type: 'refresh_token',
-      refresh_token: account.refresh,
-    })
-      .then((data) => {
-        if (!this.accounts.has(id)) throw new PlaylistError(409, 'A conta foi desconectada.')
-        account.access = data.access_token!
-        account.accessExpires = this.now() + Number(data.expires_in || 3600) * 1000
-        if (data.refresh_token) account.refresh = data.refresh_token
-        return account.access
-      })
-      .catch(() => {
-        this.disconnect(id)
-        throw new PlaylistError(409, 'A autorização expirou. Conecte sua conta novamente.')
-      })
-      .finally(() => {
-        account.refreshing = undefined
-      })
-    return account.refreshing
+    const pending = this.refreshing.get(id)
+    if (pending) return pending
+    const request = this.refreshAccount(id, account).finally(() => this.refreshing.delete(id))
+    this.refreshing.set(id, request)
+    return request
   }
+  private async refreshAccount(id: string, account: Account) {
+    try {
+      const data = await this.token({ grant_type: 'refresh_token', refresh_token: account.refresh })
+      const next = {
+        ...account,
+        access: data.access_token!,
+        accessExpires: this.now() + Number(data.expires_in || 3600) * 1000,
+        refresh: data.refresh_token || account.refresh,
+      }
+      if (!(await this.accounts.replaceIfPresent(id, next)))
+        throw new PlaylistError(409, 'A conta foi desconectada.')
+      return next.access
+    } catch {
+      await this.accounts.delete(id)
+      throw new PlaylistError(409, 'A autorização expirou. Conecte sua conta novamente.')
+    }
+  }
+
   private async request<T>(
     path: string,
     params: Record<string, string>,
@@ -290,7 +292,7 @@ export class YoutubePlaylists {
         }
         const reasons = data.error?.errors?.map((e) => e.reason) || []
         if (response.status === 401 && account) {
-          this.disconnect(account)
+          await this.disconnect(account)
           throw new PlaylistError(409, 'A autorização expirou. Conecte sua conta novamente.')
         }
         if (reasons.some((r) => ['quotaExceeded', 'dailyLimitExceeded'].includes(r)))
@@ -315,7 +317,7 @@ export class YoutubePlaylists {
         )
       }
       const data = (await response.json()) as T
-      if (account && !this.connected(account))
+      if (account && !(await this.connected(account)))
         throw new PlaylistError(409, 'A conta foi desconectada.')
       return data
     } catch (error) {
@@ -337,7 +339,6 @@ export class YoutubePlaylists {
     return { items: (data.items || []).map(metadata), nextPageToken: data.nextPageToken || '' }
   }
   async preview(owner: string, input: string, account?: string, pageToken = '', karaoke = false) {
-    this.prune()
     if (this.active >= 3) throw new PlaylistError(429, 'Aguarde a leitura da outra playlist.')
     this.active++
     try {
@@ -418,25 +419,23 @@ export class YoutubePlaylists {
         skipped: inspected - tracks.length,
         nextPageToken: next,
       }
-      this.tickets.set(result.ticket, {
+      await this.tickets.set(result.ticket, {
         preview: result,
         owner,
         account,
         expires: this.now() + 300000,
       })
-      while (this.tickets.size > 100) this.tickets.delete(this.tickets.keys().next().value!)
       return result
     } finally {
       this.active--
     }
   }
-  peek(ticket: string, owner: string, account?: string) {
-    this.prune()
-    const cached = this.tickets.get(ticket)
+  async peek(ticket: string, owner: string, account?: string) {
+    const cached = await this.tickets.get(ticket)
     if (
       !cached ||
       cached.owner !== owner ||
-      (cached.account && (cached.account !== account || !this.connected(account)))
+      (cached.account && (cached.account !== account || !(await this.connected(account))))
     )
       throw new PlaylistError(
         410,
@@ -449,9 +448,10 @@ export class YoutubePlaylists {
       skipped: cached.preview.skipped + cached.preview.tracks.length - tracks.length,
     }
   }
-  consume(ticket: string, owner: string, account?: string) {
-    const preview = this.peek(ticket, owner, account)
-    this.tickets.delete(ticket)
+  async consume(ticket: string, owner: string, account?: string) {
+    const preview = await this.peek(ticket, owner, account)
+    if (!(await this.tickets.take(ticket)))
+      throw new PlaylistError(410, 'A prévia já foi adicionada.')
     return preview
   }
 }

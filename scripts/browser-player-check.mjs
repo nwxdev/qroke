@@ -1,6 +1,6 @@
 import { chromium, expect } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
-import Database from 'better-sqlite3'
+import { openFixtureDatabase } from '../tests/helpers/database.mjs'
 import { join } from 'node:path'
 import { startFixture } from '../tests/helpers/server.mjs'
 const fixture = await startFixture(3199)
@@ -9,7 +9,7 @@ const browser = await chromium.launch({
   ...(process.env.QROKE_CHROMIUM ? { executablePath: process.env.QROKE_CHROMIUM } : {}),
   args: ['--no-sandbox'],
 })
-const db = new Database(join(fixture.dir, 'party.sqlite'))
+const db = await openFixtureDatabase(fixture.dir)
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const page = await context.newPage(),
@@ -44,7 +44,7 @@ try {
   await context.request.post(fixture.base + '/api/auth', { data: { action: 'login', pin: '4321' } })
   await page.goto(fixture.base + '/tv')
   await expect
-    .poll(() => page.evaluate(() => sessionStorage.getItem('qroke:device')))
+    .poll(async () => page.evaluate(() => sessionStorage.getItem('qroke:device')))
     .not.toBe(null)
   const toggle = page.getByRole('button', { name: 'Abrir menu', exact: true })
   const themeControl = page.locator('.player-header .theme-toggle')
@@ -90,7 +90,7 @@ try {
   })
   const first = make('aaaaaaaaaaa', true),
     second = make('bbbbbbbbbbb', false)
-  const state = JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+  const state = await db.readState()
   Object.assign(state, {
     current: first,
     queue: [second],
@@ -99,7 +99,7 @@ try {
     duration: 30,
     revision: state.revision + 1,
   })
-  db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(state))
+  await db.writeState(JSON.stringify(state))
   await expect(page.locator('iframe')).toBeVisible()
   await expect(page.locator('.header-persistent')).toHaveCount(0)
   const menuSound = page.locator('.menu-actions .screen-sound-button')
@@ -115,7 +115,7 @@ try {
     true,
   )
   await page.locator('iframe').scrollIntoViewIfNeeded()
-  await expect.poll(() => page.evaluate(() => window.qrokePlaying)).toBe(true)
+  await expect.poll(async () => page.evaluate(() => window.qrokePlaying)).toBe(true)
   await expect(page.locator('.tv-screen')).toHaveClass(/karaoke-expanded/)
   await expect(page.locator('.next-strip')).not.toBeVisible()
   await expect(page.locator('.karaoke-qr .qr-plate svg')).toBeVisible()
@@ -198,12 +198,12 @@ try {
   ]) {
     await page.setViewportSize({ width, height })
     await expect
-      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      .poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
       .toBe(true)
     await expect(page.locator('.qr-plate svg')).toBeVisible()
     if (width >= 1024) {
       await expect
-        .poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
+        .poll(async () => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
         .toBe(true)
       const video = await page.locator('iframe').boundingBox()
       const invite = await page.locator('.player-invite').boundingBox()
@@ -234,7 +234,7 @@ try {
   await expect(toggle).toBeHidden()
   await expect(playerLink).toBeVisible()
   await expect
-    .poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
+    .poll(async () => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
     .toBe(true)
   const musicTheme = await themeControl.boundingBox()
   expect(musicTheme.x).toBe(initialTheme.x)
@@ -259,7 +259,7 @@ try {
     'YouTube simulado: erro 150 avança, modo música, ativação no rodapé fixo, ausência de admin/atalhos e fim de fila OK',
   )
 } finally {
-  db.close()
+  await db.close()
   await browser.close()
   await fixture.close()
 }

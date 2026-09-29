@@ -4,27 +4,8 @@ import { dirname } from 'node:path'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { normalizeName, uniqueName, orderQueue } from './rules'
 import type { PartyState, Guest, Device, PublicState } from '../../shared/types'
-export const initialState = (): PartyState => ({
-  revision: 0,
-  karaokeDelaySeconds: 5,
-  karaokeTransitionMusic: true,
-  karaokeLeadSeconds: 0,
-  karaokeStartsAt: null,
-  volume: 100,
-  playbackIssue: null,
-  consecutivePlaybackErrors: 0,
-  queue: [],
-  current: null,
-  history: [],
-  playerId: null,
-  playerReadyAt: 0,
-  mode: 'video',
-  autoContinue: false,
-  paused: false,
-  position: 0,
-  duration: 0,
-  catalogWarning: null,
-})
+import { initialState } from './initial-state'
+export { initialState } from './initial-state'
 export class PartyDatabase {
   db: Database.Database
   listeners = new Set<() => void>()

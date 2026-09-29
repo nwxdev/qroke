@@ -36,8 +36,11 @@ export function useParty() {
       clockOffset.value = (next.serverTime ?? Date.now()) - Date.now()
       connected.value = true
       lastContact.value = Date.now()
-    } catch {
+    } catch (error) {
       connected.value = false
+      const status = (error as { statusCode?: number }).statusCode
+      if (import.meta.client && status === 401 && location.pathname !== '/entrar')
+        location.assign('/entrar')
     }
   }
   async function session() {
@@ -244,6 +247,9 @@ export function usePartyConnection() {
     }
   }
   onMounted(async () => {
+    if (route.path === '/entrar') return
+    const access = await $fetch<{ authorized: boolean }>('/api/access').catch(() => null)
+    if (!access?.authorized || disposed || route.path === '/entrar') return
     if (typeof BroadcastChannel !== 'undefined') {
       channel = new BroadcastChannel('qroke-tabs')
       channel.onmessage = ({ data }) => {

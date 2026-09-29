@@ -1,5 +1,5 @@
 import { chromium, expect } from '@playwright/test'
-import Database from 'better-sqlite3'
+import { openFixtureDatabase } from '../tests/helpers/database.mjs'
 import { join } from 'node:path'
 import { startFixture } from '../tests/helpers/server.mjs'
 const fixture = await startFixture(3194)
@@ -8,7 +8,7 @@ const browser = await chromium.launch({
   args: ['--no-sandbox'],
   ...(process.env.QROKE_CHROMIUM ? { executablePath: process.env.QROKE_CHROMIUM } : {}),
 })
-const db = new Database(join(fixture.dir, 'party.sqlite'))
+const db = await openFixtureDatabase(fixture.dir)
 async function contrast(page, selector, backdrop = false) {
   return page
     .locator(selector)
@@ -52,7 +52,7 @@ async function checkBrand(page, theme) {
     const visible = logo.locator('.brand-logo-' + selected)
     await expect(visible).toBeVisible()
     await expect
-      .poll(() => visible.evaluate((img) => img.complete && img.naturalWidth === 2172))
+      .poll(async () => visible.evaluate((img) => img.complete && img.naturalWidth === 2172))
       .toBe(true)
     await expect(
       logo.locator('.brand-logo-' + (selected === 'dark' ? 'light' : 'dark')),
@@ -74,7 +74,7 @@ try {
         .getByRole('button', { name: theme === 'light' ? 'Usar tema claro' : 'Usar tema escuro' })
         .click()
     await checkBrand(page, theme)
-    await expect.poll(() => contrast(page, '.join-card .q-btn')).toBeGreaterThanOrEqual(4.5)
+    await expect.poll(async () => contrast(page, '.join-card .q-btn')).toBeGreaterThanOrEqual(4.5)
     expect(await contrast(page, '.hero p')).toBeGreaterThanOrEqual(4.5)
     expect(await contrast(page, '.hero .eyebrow')).toBeGreaterThanOrEqual(4.5)
     await page.screenshot({ path: 'test-results/theme-guest-' + theme + '.png', fullPage: true })
@@ -136,7 +136,7 @@ try {
   console.log(
     'PIN modal: fechar, Escape, foco contido, aviso de outro anfitrião e liberação após logout OK',
   )
-  const state = JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+  const state = await db.readState()
   state.current = {
     id: 'aaaaaaaaaaa',
     source: 'youtube',
@@ -156,7 +156,7 @@ try {
   }
   state.playerId = null
   state.revision++
-  db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(state))
+  await db.writeState(JSON.stringify(state))
   await page.goto(fixture.base + '/tv')
   await page.getByRole('button', { name: 'Usar tema claro' }).click()
   await expect(page.locator('.tv-backdrop')).toBeVisible()
@@ -182,7 +182,7 @@ try {
             .click()
         await checkBrand(page, theme)
         await expect
-          .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+          .poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
           .toBe(true)
         if (path === '/player') {
           const logo = await page.locator('.player-brand').boundingBox()
@@ -206,7 +206,7 @@ try {
   expect(errors).toEqual([])
   console.log('Contraste >=4.5 em botões, textos da TV e player; temas e movimento reduzido OK')
 } finally {
-  db.close()
+  await db.close()
   await browser.close()
   await fixture.close()
 }

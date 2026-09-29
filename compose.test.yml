@@ -1,0 +1,22 @@
+services:
+  mongo:
+    image: mongo:8.2.12
+    command: ['mongod', '--replSet', 'rs0', '--bind_ip_all', '--port', '37017']
+    ports: ['127.0.0.1:37017:37017']
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'mongosh',
+          '--port',
+          '37017',
+          '--quiet',
+          '--eval',
+          "try { rs.status() } catch { rs.initiate({_id:'rs0',members:[{_id:0,host:'127.0.0.1:37017'}]}) }",
+        ]
+      interval: 3s
+      retries: 30
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.40.1
+    command: ['--maxmemory=256mb', '--proactor_threads=1']
+    ports: ['127.0.0.1:36379:6379']

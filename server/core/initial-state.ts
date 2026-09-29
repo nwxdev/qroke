@@ -1,0 +1,22 @@
+import type { PartyState } from '../../shared/types'
+export const initialState = (): PartyState => ({
+  revision: 0,
+  karaokeDelaySeconds: 5,
+  karaokeTransitionMusic: true,
+  karaokeLeadSeconds: 0,
+  karaokeStartsAt: null,
+  volume: 100,
+  playbackIssue: null,
+  consecutivePlaybackErrors: 0,
+  queue: [],
+  current: null,
+  history: [],
+  playerId: null,
+  playerReadyAt: 0,
+  mode: 'video',
+  autoContinue: false,
+  paused: false,
+  position: 0,
+  duration: 0,
+  catalogWarning: null,
+})

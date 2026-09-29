@@ -114,7 +114,7 @@ onBeforeUnmount(() => {
     <template v-if="svg">
       <div class="qr-plate" role="img" :aria-label="'QR para ' + url" v-html="svg" />
       <BrandLogo class="invite-brand" />
-      <p v-if="!presentation">Conecte-se ao mesmo Wi-Fi. Escaneie. Escolha. Cante.</p>
+      <p v-if="!presentation">Escaneie o convite. Escolha sua música. Cante.</p>
       <a :href="url" class="invite-link">{{ url }}</a>
     </template>
     <p v-else-if="ready" class="notice" role="status">

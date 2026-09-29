@@ -6,3 +6,6 @@ test-results
 package-lock.json
 docs/plano.md
 .env*
+
+.claude
+.git

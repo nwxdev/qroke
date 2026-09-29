@@ -3,8 +3,20 @@ export default defineNuxtConfig({
   modules: ['nuxt-quasar-ui'],
   css: ['~/assets/main.css'],
   devServer: { host: '0.0.0.0', port: Number(process.env.QROKE_PORT || 3000) },
-  nitro: { experimental: { websocket: true }, externals: { external: ['better-sqlite3'] } },
+  nitro: { experimental: { websocket: true }, externals: { external: ['mongodb', 'redis'] } },
   runtimeConfig: {
+    mongodbUri:
+      process.env.QROKE_MONGODB_URI ||
+      'mongodb://127.0.0.1:37017/?replicaSet=rs0&directConnection=true',
+    mongodbDatabase: process.env.QROKE_MONGODB_DATABASE || 'qroke',
+    dragonflyUrl: process.env.QROKE_DRAGONFLY_URL || 'redis://127.0.0.1:36379',
+    organizationId: 'nwx',
+    partyId: 'principal',
+    accessRequired: process.env.QROKE_ACCESS_REQUIRED === 'true',
+    trustProxy: process.env.QROKE_TRUST_PROXY === 'true',
+    sessionSecret: process.env.QROKE_SESSION_SECRET || '',
+    encryptionKey: process.env.QROKE_ENCRYPTION_KEY || '',
+
     youtubeRegion: process.env.QROKE_YOUTUBE_REGION || 'BR',
     youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
     youtubeClientId: process.env.YOUTUBE_CLIENT_ID || '',

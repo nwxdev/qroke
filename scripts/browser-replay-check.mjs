@@ -1,5 +1,5 @@
 import { chromium, expect } from '@playwright/test'
-import Database from 'better-sqlite3'
+import { openFixtureDatabase } from '../tests/helpers/database.mjs'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { startFixture } from '../tests/helpers/server.mjs'
@@ -9,7 +9,7 @@ const browser = await chromium.launch({
   args: ['--no-sandbox'],
   ...(process.env.QROKE_CHROMIUM ? { executablePath: process.env.QROKE_CHROMIUM } : {}),
 })
-const db = new Database(join(fixture.dir, 'party.sqlite'))
+const db = await openFixtureDatabase(fixture.dir)
 try {
   const context = await browser.newContext()
   const page = await context.newPage()
@@ -33,7 +33,7 @@ try {
   await context.request.post(fixture.base + '/api/control', {
     data: { action: 'assign', deviceId: device.id },
   })
-  const state = () => JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+  const state = () => db.readState()
   const track = {
     id: 'aaaaaaaaaaa',
     queueId: randomUUID(),
@@ -50,17 +50,17 @@ try {
     round: 0,
     manualOrder: null,
   }
-  db.prepare('UPDATE party SET state=? WHERE id=1').run(
+  await db.writeState(
     JSON.stringify({
-      ...state(),
+      ...(await state()),
       current: track,
       queue: [],
       duration: 180,
-      revision: state().revision + 1,
+      revision: (await state()).revision + 1,
     }),
   )
   await expect(page.locator('iframe')).toBeVisible()
-  await expect.poll(() => page.evaluate(() => !!window.fake?.playing)).toBe(true)
+  await expect.poll(async () => page.evaluate(() => !!window.fake?.playing)).toBe(true)
   let blocked = true,
     endings = 0
   await context.route('**/api/player', async (route) => {
@@ -71,8 +71,8 @@ try {
     await route.continue()
   })
   await page.evaluate(() => window.fake.events.onStateChange({ data: 0 }))
-  await expect.poll(() => endings).toBeGreaterThan(0)
-  expect(state().current.queueId).toBe(track.queueId)
+  await expect.poll(async () => endings).toBeGreaterThan(0)
+  expect((await state()).current.queueId).toBe(track.queueId)
   const notice = page.locator('.media-alert')
   await expect(notice).toBeVisible()
   expect(await page.locator('.party-alerts').evaluate((el) => getComputedStyle(el).position)).toBe(
@@ -87,7 +87,9 @@ try {
     await expect(notice).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     const logo = page.locator('.player-brand .brand-logo-' + theme)
-    await expect.poll(() => logo.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true)
+    await expect
+      .poll(async () => logo.evaluate((el) => el.complete && el.naturalWidth > 0))
+      .toBe(true)
     await expect(notice.getByRole('button', { name: 'Tentar novamente', exact: true })).toHaveCSS(
       'background-color',
       theme === 'light' ? 'rgb(233, 235, 227)' : 'rgb(34, 38, 42)',
@@ -96,8 +98,8 @@ try {
   }
   blocked = false
   await notice.getByRole('button', { name: 'Tentar novamente', exact: true }).click()
-  await expect.poll(() => state().current, { timeout: 6000 }).toBe(null)
-  expect(state().history.filter((t) => t.queueId === track.queueId)).toHaveLength(1)
+  await expect.poll(async () => (await state()).current, { timeout: 6000 }).toBe(null)
+  expect((await state()).history.filter((t) => t.queueId === track.queueId)).toHaveLength(1)
   await expect(
     page.getByText('Sem conexão com o servidor. Reconectando…', { exact: true }),
   ).toBeHidden()
@@ -112,18 +114,20 @@ try {
   await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).fill('Faixa 1')
   await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).press('Enter')
   const add = guest.getByLabel('Adicionar Faixa 1 à fila')
-  const finishedRequests = () =>
-    state().history.filter((t) => t.title === 'Faixa 1' && t.outcome === 'ended')
+  const finishedRequests = async () =>
+    (await state()).history.filter((t) => t.title === 'Faixa 1' && t.outcome === 'ended')
   for (const completed of [1, 2]) {
     await add.click()
     await expect(add).toBeDisabled()
     // current também é null entre enfileirar e iniciar: aguarde a conclusão
     // desta ocorrência antes de afirmar que a faixa terminou e pode repetir.
-    await expect.poll(() => finishedRequests().length, { timeout: 10000 }).toBe(completed)
-    expect(state().current).toBe(null)
+    await expect
+      .poll(async () => (await finishedRequests()).length, { timeout: 10000 })
+      .toBe(completed)
+    expect((await state()).current).toBe(null)
     await expect(add).toBeEnabled()
   }
-  expect(new Set(finishedRequests().map((t) => t.queueId)).size).toBe(2)
+  expect(new Set((await finishedRequests()).map((t) => t.queueId)).size).toBe(2)
   let stateOffline = true
   await context.route('**/api/state', async (route) => {
     if (stateOffline) return route.abort('failed')
@@ -138,7 +142,7 @@ try {
     'Música concluída pode ser adicionada novamente pelos mesmos resultados; histórico não bloqueia pedido humano OK',
   )
 } finally {
-  db.close()
+  await db.close()
   await browser.close()
   await fixture.close()
 }

@@ -30,18 +30,16 @@ const command = z.discriminatedUnion('action', [
   z.object({ action: z.literal('reset-order') }),
 ])
 export default defineEventHandler(async (event) => {
-  requireAdmin(event)
+  await requireAdmin(event)
   const cmd = await readValidatedBody(event, command.parse)
-  requireAdmin(event)
-  if (
-    cmd.action === 'assign' &&
-    !party()
-      .db.prepare('SELECT id FROM devices WHERE id=? AND last_seen>?')
-      .get(cmd.deviceId, Date.now() - 20000)
-  )
+  await requireAdmin(event)
+  if (cmd.action === 'assign' && !(await party(event).deviceOnline(cmd.deviceId)))
     throw createError({ statusCode: 409, statusMessage: 'Dispositivo desconectado.' })
   let stale = false
-  party().mutate((s) => {
+  await party(event).mutate(async (s) => {
+    await requireAdmin(event)
+    if (cmd.action === 'assign' && !(await party(event).deviceOnline(cmd.deviceId)))
+      throw createError({ statusCode: 409, statusMessage: 'Dispositivo desconectado.' })
     switch (cmd.action) {
       case 'assign':
         s.playerReadyAt = Math.max(
@@ -79,14 +77,11 @@ export default defineEventHandler(async (event) => {
         s.playerVolume = null
         break
       case 'rename-device':
-        if (
-          !party().db.prepare('UPDATE devices SET label=? WHERE id=?').run(cmd.label, cmd.deviceId)
-            .changes
-        )
+        if (!(await party(event).renameDevice(cmd.deviceId, cmd.label)))
           throw createError({ statusCode: 404, statusMessage: 'Aparelho não encontrado.' })
         break
       case 'remove-device':
-        party().db.prepare('DELETE FROM devices WHERE id=?').run(cmd.deviceId)
+        await party(event).removeDevice(cmd.deviceId)
         if (s.playerId === cmd.deviceId) {
           s.playerId = null
           s.paused = true
@@ -118,6 +113,6 @@ export default defineEventHandler(async (event) => {
         }
     }
   })
-  void continueParty()
+  void continueParty(event)
   return { ok: true, stale }
 })

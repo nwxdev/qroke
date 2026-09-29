@@ -84,7 +84,7 @@ export class Catalog {
   constructor(
     public provider: CatalogProvider,
     public key: string,
-    public reserve: () => boolean,
+    public reserve: () => boolean | Promise<boolean>,
     public warn: (message: string | null) => void,
     public http: typeof fetch = fetch,
     public options: { region?: string; unavailable?: (id: string) => boolean } = {},
@@ -212,7 +212,7 @@ export class Catalog {
         throw new Error(
           'Busca indisponível. A biblioteca local continua disponível; configure YOUTUBE_API_KEY para habilitar a reserva.',
         )
-      if (!this.reserve())
+      if (!(await this.reserve()))
         throw new Error('Limite diário da busca de emergência atingido. Use a biblioteca local.')
       const data = (await this.official('search', {
         part: 'snippet',

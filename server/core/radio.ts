@@ -4,8 +4,8 @@ import { recommendation } from './rules'
 import { startNext } from './playback'
 
 interface RadioDependencies {
-  state: () => PartyState
-  mutate: (change: (state: PartyState) => void) => void
+  state: () => PartyState | Promise<PartyState>
+  mutate: (change: (state: PartyState) => void) => void | Promise<void>
   related: (id: string, karaoke: boolean) => Promise<Track[]>
   search: (query: string, karaoke: boolean) => Promise<Track[]>
   local: () => Promise<Track[]>
@@ -39,7 +39,7 @@ export class RadioContinuation {
     } while (this.again)
   }
   private async fill() {
-    const initial = this.deps.state()
+    const initial = await this.deps.state()
     if (!canContinue(initial)) return
     const last = initial.history.at(-1)
     if (!last) return
@@ -76,7 +76,7 @@ export class RadioContinuation {
       )
     }
     let unavailable = false
-    this.deps.mutate((state) => {
+    await this.deps.mutate((state) => {
       if (!canContinue(state)) return
       // Um pedido pode ter entrado e terminado enquanto a recomendação era consultada.
       if (state.history.at(-1)?.queueId !== last.queueId) {

@@ -79,7 +79,7 @@ function mock() {
   return { http, calls }
 }
 async function login(service: YoutubePlaylists) {
-  const flow = service.begin()
+  const flow = await service.begin()
   return service.complete(new URL(flow.url).searchParams.get('state')!, flow.binding, 'code')
 }
 describe('playlists e conexão YouTube', () => {
@@ -111,7 +111,7 @@ describe('playlists e conexão YouTube', () => {
   it('vincula state ao navegador, usa PKCE e consome a autorização uma única vez', async () => {
     const { http, calls } = mock(),
       service = new YoutubePlaylists(config, http)
-    const flow = service.begin(),
+    const flow = await service.begin(),
       url = new URL(flow.url),
       state = url.searchParams.get('state')!
     expect(url.searchParams.get('scope')).toBe(YOUTUBE_READONLY)
@@ -123,7 +123,7 @@ describe('playlists e conexão YouTube', () => {
     expect(createHash('sha256').update(body.get('code_verifier')!).digest('base64url')).toBe(
       url.searchParams.get('code_challenge'),
     )
-    expect(service.connected(account)).toBe(true)
+    expect(await service.connected(account)).toBe(true)
     await expect(service.complete(state, flow.binding, 'code')).rejects.toThrow('inválida')
     expect(calls).toHaveLength(1)
   })
@@ -131,12 +131,12 @@ describe('playlists e conexão YouTube', () => {
     const { http, calls } = mock()
     let now = 0
     const service = new YoutubePlaylists(config, http, () => now)
-    const flow = service.begin()
+    const flow = await service.begin()
     now = 600001
     await expect(
       service.complete(new URL(flow.url).searchParams.get('state')!, flow.binding, 'code'),
     ).rejects.toThrow('expirada')
-    const next = service.begin()
+    const next = await service.begin()
     await expect(
       service.complete(new URL(next.url).searchParams.get('state')!, next.binding, '', true),
     ).rejects.toThrow('cancelada')
@@ -160,7 +160,7 @@ describe('playlists e conexão YouTube', () => {
     expect(request.init!.headers).toEqual({ Authorization: 'Bearer private-access' })
     expect(JSON.stringify(results)).not.toContain('private-access')
     now = 8 * 3600000
-    expect(service.connected(account)).toBe(false)
+    expect(await service.connected(account)).toBe(false)
   })
   it('recupera acesso revogado sem expor respostas com credenciais', async () => {
     const { http } = mock()
@@ -175,7 +175,7 @@ describe('playlists e conexão YouTube', () => {
     now = 3600000
     fail = true
     await expect(service.list(account)).rejects.toThrow('Conecte sua conta novamente')
-    expect(service.connected(account)).toBe(false)
+    expect(await service.connected(account)).toBe(false)
   })
   it('lê todas as páginas do lote, preserva ordem e filtra privados, removidos, estreia e duplicatas', async () => {
     const { http, calls } = mock(),
@@ -193,9 +193,9 @@ describe('playlists e conexão YouTube', () => {
     expect(preview.skipped).toBe(5)
     expect(preview.nextPageToken).toBe('')
     expect(calls.filter((c) => c.url.pathname.endsWith('/playlistItems'))).toHaveLength(2)
-    expect(() => service.consume(preview.ticket, 'other-admin')).toThrow('expirou')
-    expect(service.consume(preview.ticket, 'admin').tracks).toHaveLength(2)
-    expect(() => service.consume(preview.ticket, 'admin')).toThrow('já foi adicionada')
+    await expect(service.consume(preview.ticket, 'other-admin')).rejects.toThrow('expirou')
+    expect((await service.consume(preview.ticket, 'admin')).tracks).toHaveLength(2)
+    await expect(service.consume(preview.ticket, 'admin')).rejects.toThrow('já foi adicionada')
   })
   it('oferece cursor para o próximo lote e limita requisições/IDs por lote', async () => {
     const { http, calls } = mock()
@@ -224,9 +224,11 @@ describe('playlists e conexão YouTube', () => {
       service = new YoutubePlaylists(config, http)
     const account = await login(service)
     const preview = await service.preview('admin', 'PLabcdefghijk', account)
-    expect(() => service.consume(preview.ticket, 'admin', 'other-browser')).toThrow('expirou')
-    service.disconnect(account)
-    expect(() => service.consume(preview.ticket, 'admin', account)).toThrow('expirou')
+    await expect(service.consume(preview.ticket, 'admin', 'other-browser')).rejects.toThrow(
+      'expirou',
+    )
+    await service.disconnect(account)
+    await expect(service.consume(preview.ticket, 'admin', account)).rejects.toThrow('expirou')
   })
   it('uma prévia expira; erros do provedor não revelam a key', async () => {
     const { http } = mock()
@@ -234,7 +236,7 @@ describe('playlists e conexão YouTube', () => {
     const service = new YoutubePlaylists(config, http, () => now)
     const preview = await service.preview('admin', 'PLabcdefghijk')
     now = 300001
-    expect(() => service.consume(preview.ticket, 'admin')).toThrow('expirou')
+    await expect(service.consume(preview.ticket, 'admin')).rejects.toThrow('expirou')
     const bad = new YoutubePlaylists(config, (async () => {
       throw new Error('private-key in URL')
     }) as typeof fetch)
@@ -268,24 +270,24 @@ describe('playlists e conexão YouTube', () => {
 it('vincula a autorização ao ator e não desconecta a conta de outro na reconexão', async () => {
   const { http } = mock(),
     service = new YoutubePlaylists(config, http)
-  const a = service.begin(undefined, 'guest:ana')
+  const a = await service.begin(undefined, 'guest:ana')
   const accountA = await service.complete(
     new URL(a.url).searchParams.get('state')!,
     a.binding,
     'code',
   )
-  expect(service.ownedAccount(accountA, 'guest:ana')).toBe(accountA)
-  expect(service.ownedAccount(accountA, 'guest:bia')).toBeUndefined()
-  const b = service.begin(accountA, 'guest:bia')
+  expect(await service.ownedAccount(accountA, 'guest:ana')).toBe(accountA)
+  expect(await service.ownedAccount(accountA, 'guest:bia')).toBeUndefined()
+  const b = await service.begin(accountA, 'guest:bia')
   const accountB = await service.complete(
     new URL(b.url).searchParams.get('state')!,
     b.binding,
     'code',
   )
-  expect(service.connected(accountA)).toBe(true)
-  expect(service.ownedAccount(accountB, 'guest:bia')).toBe(accountB)
+  expect(await service.connected(accountA)).toBe(true)
+  expect(await service.ownedAccount(accountB, 'guest:bia')).toBe(accountB)
   const preview = await service.preview('guest:ana', 'PLabcdefghijk', accountA)
-  expect(() => service.consume(preview.ticket, 'guest:bia', accountA)).toThrow()
+  await expect(service.consume(preview.ticket, 'guest:bia', accountA)).rejects.toThrow()
   const party = initialState()
   enqueuePlaylist(party, preview.tracks, 100, {
     guest: { id: 'ana', name: 'Ana' },
@@ -310,6 +312,6 @@ it('filtra região e recusas na prévia e verifica novamente ao importar', async
   const preview = await service.preview('guest', 'PLabcdefghijk')
   expect(preview.tracks.map((track) => track.id)).toEqual([ids[0]])
   blocked.add(ids[0]!)
-  expect(service.consume(preview.ticket, 'guest').tracks).toEqual([])
+  expect((await service.consume(preview.ticket, 'guest')).tracks).toEqual([])
   expect((await service.preview('guest', 'PLabcdefghijk')).tracks).toEqual([])
 })

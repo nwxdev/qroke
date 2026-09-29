@@ -1,6 +1,6 @@
 import { z } from 'zod'
 export default defineEventHandler(async (event) => {
-  const guest = requireGuest(event)
+  const guest = await requireGuest(event)
   const id = getRouterParam(event, 'id')!
   const input = await readValidatedBody(
     event,
@@ -11,7 +11,9 @@ export default defineEventHandler(async (event) => {
   )
   try {
     return {
-      revision: party().vote(id, guest.id, 'value' in input ? input.value : input.voted).revision,
+      revision: (
+        await party(event).vote(id, guest.id, 'value' in input ? input.value : input.voted)
+      ).revision,
     }
   } catch (error) {
     throw createError({ statusCode: 409, statusMessage: (error as Error).message })
