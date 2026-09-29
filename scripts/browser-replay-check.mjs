@@ -112,16 +112,18 @@ try {
   await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).fill('Faixa 1')
   await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).press('Enter')
   const add = guest.getByLabel('Adicionar Faixa 1 à fila')
-  await add.click()
-  await expect(add).toBeDisabled()
-  await expect.poll(() => state().current).toBe(null)
-  await expect(add).toBeEnabled()
-  await add.click()
-  await expect(add).toBeDisabled()
-  await expect.poll(() => state().current).toBe(null)
-  expect(
-    state().history.filter((t) => t.title === 'Faixa 1' && t.outcome === 'ended'),
-  ).toHaveLength(2)
+  const finishedRequests = () =>
+    state().history.filter((t) => t.title === 'Faixa 1' && t.outcome === 'ended')
+  for (const completed of [1, 2]) {
+    await add.click()
+    await expect(add).toBeDisabled()
+    // current também é null entre enfileirar e iniciar: aguarde a conclusão
+    // desta ocorrência antes de afirmar que a faixa terminou e pode repetir.
+    await expect.poll(() => finishedRequests().length, { timeout: 10000 }).toBe(completed)
+    expect(state().current).toBe(null)
+    await expect(add).toBeEnabled()
+  }
+  expect(new Set(finishedRequests().map((t) => t.queueId)).size).toBe(2)
   let stateOffline = true
   await context.route('**/api/state', async (route) => {
     if (stateOffline) return route.abort('failed')

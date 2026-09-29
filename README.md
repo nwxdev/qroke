@@ -638,6 +638,8 @@ Os testes usam festas temporárias, vídeos simulados e áudio de teste. O CI n�
 
 Para acompanhar, abra a aba **Checks** do PR ou **Actions → CI**. Uma execução verde valida aquele commit; se houver novo push, aguarde o novo resultado. Primeiro workflow adicionado em 29/09/2026, pois o repositório ainda não tinha CI configurado. A proteção obrigatória de branches permanece uma configuração separada do repositório.
 
+Na primeira execução, o CI identificou uma corrida no teste de repetição: current ainda podia estar vazio entre adicionar e iniciar, fazendo o teste avançar antes da conclusão. O teste agora espera cada ocorrência terminar no histórico e confirma dois identificadores distintos, antes de verificar a liberação do botão.
+
 Referências: [setup-node](https://github.com/actions/setup-node), [CI do Playwright](https://playwright.dev/docs/ci-intro) e [artefatos dos testes](https://github.com/actions/upload-artifact).
 
 ### Cabeçalho responsivo, menu em tela inteira e som sempre visível — 29/09/2026
