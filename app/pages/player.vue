@@ -1,24 +1,8 @@
 <script setup lang="ts">
-const { state, queue, isPlayer, device, soundDevice, connected } = useParty()
+const { state, queue, isPlayer } = useParty()
 const root = ref<HTMLElement | null>(null)
 const mediaPlayer = ref<{ activate: () => Promise<void> } | null>(null)
-const armed = computed(() => !!device.value && soundDevice.value === device.value.id)
-const soundStatus = computed(() => {
-  if (!connected.value) return 'Aguardando conexão com a festa.'
-  if (!armed.value) return 'Permita o áudio neste navegador.'
-  return isPlayer.value
-    ? 'Som ativado nesta tela.'
-    : 'Som autorizado. Aguardando o anfitrião escolher este aparelho.'
-})
-const soundLabel = computed(() => {
-  if (!connected.value) return 'Reconectando'
-  if (!armed.value) return 'Ativar som'
-  return isPlayer.value ? 'Som ativo' : 'Som autorizado'
-})
-const soundHint = computed(() => {
-  if (!connected.value) return 'Aguarde a conexão'
-  return armed.value && !isPlayer.value ? 'Aguardando seleção' : 'Nesta tela'
-})
+const { active: soundActive } = usePlayerSound()
 const { waiting: karaokeWaiting } = useKaraokeCountdown()
 const karaoke = computed(() => !!state.value?.current?.karaoke)
 const musicMode = computed(
@@ -33,7 +17,7 @@ const closing = computed(
 )
 const expanded = computed(() => karaoke.value && !closing.value)
 function back() {
-  root.value?.querySelector<HTMLButtonElement>('.screen-sound-button')?.focus()
+  root.value?.querySelector<HTMLButtonElement>('.menu-toggle')?.focus()
 }
 // Teclas de mídia não administram a festa pela tela de exibição.
 useSpatialNav(root, back, () => {})
@@ -42,6 +26,9 @@ useSpatialNav(root, back, () => {})
   <main
     ref="root"
     class="tv-screen"
+    :style="{
+      '--player-footer-space': soundActive ? '20px' : 'calc(80px + env(safe-area-inset-bottom))',
+    }"
     :class="{
       'karaoke-expanded': expanded,
       'karaoke-active': karaoke,
@@ -56,30 +43,12 @@ useSpatialNav(root, back, () => {})
     />
     <header class="tv-header player-header">
       <BrandLogo class="player-brand" />
-      <div class="screen-sound">
-        <button
-          class="screen-sound-button"
-          :class="{ 'is-armed': armed && connected, 'is-active': armed && isPlayer && connected }"
-          :aria-label="armed ? soundLabel + '. Reativar som nesta tela' : 'Ativar som nesta tela'"
-          :title="soundStatus"
-          :disabled="!device"
-          aria-describedby="screen-sound-status"
-          @click="mediaPlayer?.activate()"
-        >
-          <AppIcon :name="armed && connected ? 'check' : 'volume'" />
-          <span class="sound-button-copy"
-            ><strong>{{ soundLabel }}</strong
-            ><small>{{ soundHint }}</small></span
-          >
-        </button>
-        <small id="screen-sound-status" class="sr-only" role="status">{{ soundStatus }}</small>
-      </div>
-      <div class="screen-theme">
-        <NuxtLink to="/host" class="player-host-link" aria-label="Anfitrião">
-          <AppIcon name="person" /><span>Anfitrião</span>
-        </NuxtLink>
-        <ThemeToggle />
-      </div>
+      <HeaderMenu>
+        <PlayerSoundButton @activate="mediaPlayer?.activate()" />
+        <template v-if="!soundActive" #persistent>
+          <PlayerSoundButton @activate="mediaPlayer?.activate()" />
+        </template>
+      </HeaderMenu>
     </header>
     <PartyNotice />
     <div class="tv-stage">
@@ -234,14 +203,16 @@ useSpatialNav(root, back, () => {})
 }
 .tv-screen {
   --player-header-space: 98px;
+  --player-footer-space: calc(80px + env(safe-area-inset-bottom));
   padding-top: var(--player-header-space);
+  padding-bottom: var(--player-footer-space);
 }
 .player-header {
   position: fixed;
   inset: 0 0 auto;
   z-index: 30;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 8px 5vw;
@@ -249,75 +220,6 @@ useSpatialNav(root, back, () => {})
   margin: 0;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
-}
-.screen-sound {
-  min-width: 0;
-  justify-self: end;
-}
-.tv-screen .screen-sound-button {
-  min-height: 44px;
-  width: 168px;
-  justify-content: flex-start;
-  gap: 9px;
-  padding: 6px 12px;
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
-  border-radius: 12px;
-  white-space: nowrap;
-}
-.tv-screen .screen-sound-button.is-armed {
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
-  color: var(--text);
-}
-.tv-screen .screen-sound-button.is-active {
-  color: var(--accent);
-}
-.tv-screen .screen-sound-button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 15%, var(--surface));
-  color: var(--text);
-}
-.tv-screen .screen-sound-button:focus {
-  transform: none;
-}
-.sound-button-copy {
-  display: grid;
-  gap: 2px;
-  text-align: left;
-  line-height: 1.2;
-}
-.sound-button-copy strong {
-  font-size: 12px;
-}
-.sound-button-copy small {
-  color: inherit;
-  font-size: 10px;
-}
-.screen-theme {
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.player-host-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-}
-@media (max-width: 380px) {
-  .player-host-link {
-    padding: 10px;
-  }
-  .player-host-link span {
-    display: none;
-  }
 }
 @media (max-width: 760px) {
   .tv-screen.music-mode .tv-stage {
@@ -329,19 +231,11 @@ useSpatialNav(root, back, () => {})
     max-height: 460px;
   }
   .tv-screen {
-    --player-header-space: 136px;
+    --player-header-space: 90px;
   }
   .player-header {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 4px 8px;
-  }
-  .screen-sound {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-  .screen-theme {
-    grid-column: 2;
-    grid-row: 1;
   }
 }
 /* O convite tem uma coluna própria com respiro em relação ao vídeo. */
@@ -429,7 +323,7 @@ useSpatialNav(root, back, () => {})
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    padding-bottom: 20px;
+    padding-bottom: var(--player-footer-space);
   }
   .tv-screen > :deep(.notice) {
     flex-shrink: 0;
@@ -585,6 +479,14 @@ useSpatialNav(root, back, () => {})
     flex-shrink: 0;
     margin-top: 16px;
     padding-top: 12px;
+  }
+}
+.tv-screen :deep(.player-floating) {
+  bottom: var(--player-footer-space);
+}
+@media (max-width: 1023px) {
+  .tv-screen.karaoke-active .tv-aside :deep(.karaoke-qr) {
+    bottom: var(--player-footer-space);
   }
 }
 </style>

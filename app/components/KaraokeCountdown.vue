@@ -72,7 +72,7 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
   border: 0;
   border-radius: 0;
   padding: calc(var(--player-header-space, 98px) + 8px)
-    calc(5vw + var(--karaoke-qr-width, 180px) + 24px) 24px 5vw;
+    calc(5vw + var(--karaoke-qr-width, 180px) + 24px) var(--player-footer-space, 24px) 5vw;
   overflow: auto;
   background:
     radial-gradient(

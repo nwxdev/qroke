@@ -46,17 +46,20 @@ try {
   await expect
     .poll(() => page.evaluate(() => sessionStorage.getItem('qroke:device')))
     .not.toBe(null)
-  const activation = page.locator('.screen-sound-button')
+  const toggle = page.getByRole('button', { name: 'Abrir menu', exact: true })
+  const initialToggle = await toggle.boundingBox()
+  const activation = page.locator('.header-persistent .screen-sound-button')
   await expect(activation).toBeVisible()
   await expect(activation).toContainText('Ativar som')
   expect((await page.locator('.player-header').boundingBox()).height).toBeLessThanOrEqual(80)
-  await expect(page.locator('.tv-control-shelf, dialog')).toHaveCount(0)
+  await expect(page.locator('.tv-control-shelf, .admin-dialog')).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: /Liberar controles|Controles|Sair do admin/ }),
   ).toHaveCount(0)
-  const initialButton = await activation.boundingBox()
   await activation.click()
-  await expect(page.locator('#screen-sound-status')).toContainText('Aguardando o anfitrião')
+  await expect(page.locator('.header-persistent .sound-status')).toContainText(
+    'Aguardando o anfitrião',
+  )
   await expect(activation).toContainText('Som autorizado')
   expect((await (await context.request.get(fixture.base + '/api/state')).json()).playerId).toBe(
     null,
@@ -94,12 +97,13 @@ try {
   })
   db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(state))
   await expect(page.locator('iframe')).toBeVisible()
-  await expect(page.locator('#screen-sound-status')).toHaveText('Som ativado nesta tela.')
-  await expect(activation).toContainText('Som ativo')
-  await expect(activation).toHaveClass(/is-active/)
-  const playingButton = await activation.boundingBox()
-  expect(playingButton.x).toBe(initialButton.x)
-  expect(playingButton.y).toBe(initialButton.y)
+  await expect(page.locator('.header-persistent')).toHaveCount(0)
+  await toggle.click()
+  const menuSound = page.locator('.menu-actions .screen-sound-button')
+  await expect(page.locator('.menu-actions .sound-status')).toHaveText('Som ativado nesta tela.')
+  await expect(menuSound).toContainText('Som ativo')
+  await expect(menuSound).toHaveClass(/is-active/)
+  await page.keyboard.press('Escape')
   await page.evaluate(() => {
     window.originalFrame = document.querySelector('iframe')
   })
@@ -112,7 +116,7 @@ try {
   await expect(page.locator('.tv-screen')).toHaveClass(/karaoke-expanded/)
   await expect(page.locator('.next-strip')).not.toBeVisible()
   await expect(page.locator('.karaoke-qr .qr-plate svg')).toBeVisible()
-  await activation.focus()
+  await toggle.focus()
   await page.keyboard.press('MediaTrackNext')
   await page.keyboard.press('MediaPlayPause')
   await page.keyboard.press('Escape')
@@ -124,9 +128,9 @@ try {
   for (const width of [360, 320]) {
     await page.setViewportSize({ width, height: 800 })
     await expect(page.locator('.karaoke-qr .qr-plate svg')).toBeVisible()
-    const beforeScroll = await activation.boundingBox()
+    const beforeScroll = await toggle.boundingBox()
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-    const afterScroll = await activation.boundingBox()
+    const afterScroll = await toggle.boundingBox()
     expect(afterScroll.y).toBe(beforeScroll.y)
     expect(afterScroll.x).toBe(beforeScroll.x)
     await page.evaluate(() => window.scrollTo(0, 0))
@@ -224,13 +228,19 @@ try {
   const size = await page.locator('iframe').boundingBox()
   expect(size.width).toBeGreaterThanOrEqual(200)
   expect(size.width).toBeLessThanOrEqual(320)
-  await expect(activation).toBeVisible()
+  await expect(toggle).toBeVisible()
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
     .toBe(true)
-  const musicButton = await activation.boundingBox()
-  expect(musicButton.x).toBe(initialButton.x)
-  expect(musicButton.y).toBe(initialButton.y)
+  const musicToggle = await toggle.boundingBox()
+  expect(musicToggle.x).toBe(initialToggle.x)
+  expect(musicToggle.y).toBe(initialToggle.y)
+  await expect(page.locator('.header-persistent')).toHaveCount(0)
+  await toggle.click()
+  await expect(menuSound).toContainText('Som ativo')
+  await menuSound.click()
+  await expect(page.getByRole('dialog', { name: 'Menu da festa' })).toBeVisible()
+  await page.keyboard.press('Escape')
   await expect(
     page.locator('.tv-control-shelf, .remove-button, .row-actions, .queue-vote'),
   ).toHaveCount(0)
@@ -243,7 +253,7 @@ try {
     .toBe(null)
   expect(errors).toEqual([])
   console.log(
-    'YouTube simulado: erro 150 avança, modo música, ativação fixa, ausência de admin/atalhos e fim de fila OK',
+    'YouTube simulado: erro 150 avança, modo música, ativação no rodapé fixo, ausência de admin/atalhos e fim de fila OK',
   )
 } finally {
   db.close()

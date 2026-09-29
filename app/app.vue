@@ -8,4 +8,4 @@ watch(
   { flush: 'post' },
 )
 </script>
-<template><NuxtPage /></template>
+<template><NuxtPage /><PartyAlerts /></template>

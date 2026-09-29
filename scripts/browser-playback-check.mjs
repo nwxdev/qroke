@@ -94,12 +94,32 @@ try {
     }),
   )
   await expect(player.locator('iframe')).toBeVisible()
-  await player.locator('.screen-sound-button').click()
+  await player.locator('.header-persistent .screen-sound-button').click()
   await expect.poll(() => player.evaluate(() => window.fake.playing)).toBe(true)
   const slider = host.getByRole('slider', { name: /Volume do PLAYER/ })
   await slider.fill('37')
   await slider.dispatchEvent('change')
   await expect.poll(() => player.evaluate(() => window.fake.volume)).toBe(37)
+  await player.evaluate(() => {
+    window.frameBeforeMenu = document.querySelector('iframe')
+  })
+  await player.getByRole('button', { name: 'Abrir menu', exact: true }).click()
+  await expect(player.getByRole('dialog', { name: 'Menu da festa' })).toBeVisible()
+  expect(
+    await player.evaluate(
+      () => window.frameBeforeMenu === document.querySelector('iframe') && window.fake.playing,
+    ),
+  ).toBe(true)
+  await player.getByRole('button', { name: 'Fechar menu', exact: true }).click()
+  expect(
+    await player.evaluate(
+      () =>
+        window.frameBeforeMenu === document.querySelector('iframe') &&
+        window.fake.playing &&
+        window.fake.volume === 37,
+    ),
+  ).toBe(true)
+
   await host.getByRole('button', { name: 'Silenciar player', exact: true }).click()
   await expect.poll(() => player.evaluate(() => window.fake.muted)).toBe(true)
   await host.getByRole('button', { name: 'Restaurar volume', exact: true }).click()
@@ -179,8 +199,8 @@ try {
   await host.getByRole('button', { name: 'Remover aparelho TV da sala', exact: true }).click()
   await expect.poll(() => state().playerId).toBe(null)
   await expect(player.locator('iframe')).toHaveCount(0)
-  await expect(player.locator('.screen-sound-button')).toBeVisible()
-  await expect(player.locator('dialog')).toHaveCount(0)
+  await expect(player.locator('.header-persistent .screen-sound-button')).toBeVisible()
+  await expect(player.locator('dialog[open]')).toHaveCount(0)
   expect(state().queue).toHaveLength(1)
   expect(state().current.id).toBe(third.id)
   expect(errors).toEqual([])

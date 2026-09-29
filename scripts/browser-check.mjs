@@ -77,6 +77,7 @@ try {
   expiryDb.close()
   await expect(host).toHaveURL(server.base + '/busca')
   await expect(host.getByRole('button', { name: 'Pular', exact: true })).toHaveCount(0)
+  await host.getByRole('button', { name: 'Abrir menu', exact: true }).click()
   await host.getByRole('link', { name: 'Anfitrião', exact: true }).click()
   await expect(host.getByLabel('PIN do anfitrião', { exact: true })).toBeVisible()
   await host.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
@@ -139,12 +140,12 @@ try {
   const tv = await tvContext.newPage()
   watch(tv)
   await tv.goto(server.base + '/tv')
-  await tv.locator('.screen-sound-button').focus()
+  await tv.locator('.header-persistent .screen-sound-button').focus()
   await tv.keyboard.press('Enter')
   await expect(tv.getByRole('dialog')).toHaveCount(0)
   // Todos os elementos da tela de exibição continuam navegáveis por setas.
   async function reachableButtons() {
-    await expect(tv.locator('.screen-sound-button')).toBeEnabled()
+    await expect(tv.locator('.header-persistent .screen-sound-button')).toBeEnabled()
     await expect(tv.locator('.qr-plate svg')).toBeVisible()
     await expect(tv.getByRole('button', { name: 'Verificar acesso', exact: true })).toBeEnabled()
     const scope = (await tv.getByRole('dialog').isVisible())
@@ -191,7 +192,7 @@ try {
     data: { action: 'login', pin: '4321' },
   })
   await tv.reload()
-  await expect(tv.locator('.tv-control-shelf, dialog')).toHaveCount(0)
+  await expect(tv.locator('.tv-control-shelf, .admin-dialog')).toHaveCount(0)
   expect(await reachableButtons()).toBe(playerButtons)
   console.log(
     'Player: ' +
@@ -200,7 +201,7 @@ try {
   )
   await tv.screenshot({ path: 'test-results/tv.png', fullPage: true })
   await tv.keyboard.press('Backspace')
-  await expect(tv.locator('.screen-sound-button')).toBeFocused()
+  await expect(tv.locator('.menu-toggle')).toBeFocused()
   const original = await tv.evaluate(() => document.documentElement.dataset.theme)
   await tv.getByRole('button', { name: 'Usar tema claro' }).click()
   await tv.reload()
@@ -211,6 +212,7 @@ try {
 
   await tvContext.request.post(server.base + '/api/auth', { data: { action: 'logout' } })
   await expect(host).toHaveURL(server.base + '/busca')
+  await host.getByRole('button', { name: 'Abrir menu', exact: true }).click()
   await host.getByRole('link', { name: 'Anfitrião', exact: true }).click()
   await host.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
   await expect(

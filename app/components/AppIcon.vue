@@ -1,6 +1,11 @@
 <script setup lang="ts">
 defineProps<{
   name:
+    | 'warning'
+    | 'refresh'
+    | 'menu'
+    | 'close'
+    | 'arrow-right'
     | 'lock'
     | 'unlock'
     | 'qr'
@@ -29,6 +34,11 @@ defineProps<{
     | 'link'
 }>()
 const paths = {
+  warning: 'M12 3l10 18H2z M12 9v5 M12 17v1',
+  refresh: 'M20 7v5h-5 M4 17v-5h5 M5 8a8 8 0 0 1 13-3l2 3 M4 16l2 3a8 8 0 0 0 13-3',
+  menu: 'M4 6h16 M4 12h16 M4 18h16',
+  close: 'M6 6l12 12 M18 6L6 18',
+  'arrow-right': 'M4 12h16 M14 6l6 6-6 6',
   microphone: 'M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0z M6 10v2a6 6 0 0 0 12 0v-2 M12 18v4 M8 22h8',
   'playlist-plus': 'M3 5h14 M3 10h14 M3 15h8 M17 14v8 M13 18h8',
   expand: 'M5 9l7 7 7-7',

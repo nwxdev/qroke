@@ -83,11 +83,7 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
 </script>
 <template>
   <div class="page-shell">
-    <BrandHeader
-      ><NuxtLink to="/host" class="header-control"
-        ><AppIcon name="person" /> Anfitrião</NuxtLink
-      ></BrandHeader
-    ><PartyNotice />
+    <BrandHeader /><PartyNotice />
     <GuestIdentity />
     <QueueCarousel />
     <main class="guest-layout">
@@ -174,7 +170,12 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
           <p v-if="karaoke && source === 'youtube'" class="hint">
             Microfone imaginário, voz de verdade. Escolha um vídeo com letra.
           </p>
-          <p v-if="searchError" role="alert" class="notice error">{{ searchError }}</p>
+          <div v-if="searchError" role="alert" class="notice error">
+            <p>{{ searchError }}</p>
+            <button type="button" :disabled="searching || query.trim().length < 2" @click="search">
+              <AppIcon name="refresh" /> Tentar busca novamente
+            </button>
+          </div>
           <div v-if="searching" class="search-status" role="status">Procurando o próximo hit…</div>
           <div v-else-if="searched && !results.length && !searchError" class="empty-queue">
             <span>⌕</span>

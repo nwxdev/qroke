@@ -1,14 +1,27 @@
 <script setup lang="ts">
 /// <reference types="youtube" />
-const { state, isPlayer, api, lastContact, device, soundDevice, armSound, adminDialogOpen } =
-  useParty()
+const {
+  state,
+  isPlayer,
+  api,
+  refresh,
+  lastContact,
+  device,
+  soundDevice,
+  armSound,
+  adminDialogOpen,
+} = useParty()
 const route = useRoute()
 const { waiting: karaokeWaiting } = useKaraokeCountdown()
 const frame = ref<HTMLDivElement | null>(null),
   slot = ref<HTMLElement | null>(null),
   audio = ref<HTMLAudioElement | null>(null)
 const armed = computed(() => !!device.value && soundDevice.value === device.value.id),
-  warning = ref(''),
+  warning = useState('player-warning', () => ''),
+  warningKind = useState<'network' | 'activate' | 'load' | 'other'>(
+    'player-warning-kind',
+    () => 'other',
+  ),
   pageVisible = ref(true),
   inView = ref(true),
   slotHeight = ref(200),
@@ -22,6 +35,7 @@ let yt: YT.Player | undefined,
   timer: ReturnType<typeof setInterval>,
   generation = 0,
   reporting = false
+let pendingEndId: string | undefined
 let terminalId: string | undefined
 let preparingId: string | undefined
 let pendingYoutubeError: { id: string; code: number } | undefined
@@ -73,9 +87,9 @@ async function report(
     state.value?.playbackIssue?.halted ||
     karaokeWaiting.value
   )
-    return
+    return false
   if (action !== 'progress') {
-    if (!armed.value || terminalId === id) return
+    if (!armed.value || terminalId === id) return false
     terminalId = id
   }
   try {
@@ -90,11 +104,28 @@ async function report(
       errorCode,
       ...(action === 'progress' ? { volume, muted } : {}),
     })
+    if (warningKind.value === 'network') warning.value = ''
+    return true
   } catch {
     if (terminalId === id) terminalId = undefined
+    warningKind.value = 'network'
     warning.value = 'Sem conexão com o servidor. Reconectando…'
+    return false
   }
 }
+async function flushEnd() {
+  const id = pendingEndId
+  if (!id || id !== current.value?.queueId) return
+  if (await report('ended', id)) {
+    if (pendingEndId === id) pendingEndId = undefined
+  }
+}
+function ended(id?: string) {
+  if (!id || id !== current.value?.queueId || !armed.value || !isPlayer.value) return
+  pendingEndId = id
+  void flushEnd()
+}
+
 function applyVolume() {
   const volume = Math.min(100, Math.max(0, state.value?.volume ?? 100))
   if (loadedId === current.value?.queueId) {
@@ -156,12 +187,17 @@ async function sync() {
     await report('error', pendingYoutubeError.id, undefined, undefined, pendingYoutubeError.code)
     return
   }
+  if (pendingEndId === current.value?.queueId) {
+    await flushEnd()
+    return
+  }
   applyVolume()
   yt?.playVideo?.()
   if (audio.value)
     try {
       await audio.value.play()
     } catch {
+      warningKind.value = 'activate'
       warning.value = 'Toque em Ativar som para permitir a reprodução neste navegador.'
     }
 }
@@ -173,6 +209,7 @@ async function mountTrack() {
   loadedId = undefined
   localFinish = undefined
   terminalId = undefined
+  pendingEndId = undefined
   pendingYoutubeError = undefined
   preparingId = undefined
   warning.value = ''
@@ -205,14 +242,14 @@ async function mountTrack() {
           void sync()
         },
         onStateChange(event) {
-          if (event.data === YT.PlayerState.ENDED && seq === generation)
-            void report('ended', track.queueId)
+          if (event.data === YT.PlayerState.ENDED && seq === generation) ended(track.queueId)
         },
         onError(event) {
           if (seq !== generation) return
           loadedId = track.queueId
           pendingYoutubeError = { id: track.queueId, code: event.data }
           void prepare()
+          warningKind.value = 'activate'
           warning.value = armed.value
             ? ''
             : 'O YouTube retornou erro ' + event.data + '. Ative o som para conferir a reprodução.'
@@ -220,11 +257,13 @@ async function mountTrack() {
         },
         onAutoplayBlocked() {
           if (seq !== generation) return
+          warningKind.value = 'activate'
           warning.value = 'Ative o som ou use o botão de play do vídeo.'
         },
       },
     })
   } catch (error) {
+    warningKind.value = 'load'
     warning.value = errorText(error)
   }
 }
@@ -254,8 +293,19 @@ function pageVisibility() {
     yt?.pauseVideo?.()
   } else void sync()
 }
+async function retryWarning() {
+  if (!isPlayer.value) return
+  if (warningKind.value === 'activate') return activate()
+  if (warningKind.value === 'load') return mountTrack()
+  if (warningKind.value === 'network') {
+    await refresh()
+    clock.value = Date.now()
+    await sync()
+  }
+}
 async function listOutputs() {
   if (!window.isSecureContext || !audio.value || !('setSinkId' in audio.value)) {
+    warningKind.value = 'other'
     warning.value =
       'Selecione a saída pelo sistema operacional. A escolha pelo app exige navegador compatível e localhost ou HTTPS.'
     return
@@ -305,6 +355,7 @@ onMounted(() => {
   pageVisible.value = !document.hidden
   if (slot.value) observer.observe(slot.value)
   document.addEventListener('visibilitychange', pageVisibility)
+  window.addEventListener('qroke:retry-media', retryWarning)
   timer = setInterval(async () => {
     clock.value = Date.now()
     void prepare()
@@ -314,6 +365,15 @@ onMounted(() => {
       return
     }
     if (reporting || !current.value || !armed.value || loadedId !== current.value.queueId) return
+    if (pendingEndId === current.value.queueId) {
+      reporting = true
+      try {
+        await flushEnd()
+      } finally {
+        reporting = false
+      }
+      return
+    }
     const position = yt?.getCurrentTime?.() ?? audio.value?.currentTime ?? 0,
       duration = yt?.getDuration?.() ?? audio.value?.duration ?? 0
     if (!Number.isFinite(duration) || !Number.isFinite(position)) return
@@ -334,7 +394,8 @@ onMounted(() => {
       const id = localFinish.id
       localFinish = undefined
       reporting = true
-      await report('ended', id)
+      pendingEndId = id
+      await flushEnd()
       reporting = false
       return
     }
@@ -350,6 +411,8 @@ onBeforeUnmount(() => {
   observer?.disconnect()
   clearInterval(timer)
   document.removeEventListener('visibilitychange', pageVisibility)
+  window.removeEventListener('qroke:retry-media', retryWarning)
+  warning.value = ''
 })
 defineExpose({ activate })
 </script>
@@ -365,7 +428,6 @@ defineExpose({ activate })
       Som ativado. O próximo pedido começa automaticamente.
     </p>
     <p v-if="!safe" class="notice">Aguardando conexão ou transferência do PLAYER…</p>
-    <p v-if="warning" role="status" class="notice">{{ warning }}</p>
     <KaraokeCountdown v-if="route.path !== '/player'" />
     <div
       v-show="!karaokeWaiting"
@@ -394,7 +456,7 @@ defineExpose({ activate })
               :controls="route.path !== '/player'"
               preload="metadata"
               @loadedmetadata="localReady($event.target as HTMLAudioElement)"
-              @ended="report('ended', ($event.target as HTMLAudioElement).dataset.queueId)"
+              @ended="ended(($event.target as HTMLAudioElement).dataset.queueId)"
               @error="report('error', ($event.target as HTMLAudioElement).dataset.queueId)"
             />
           </div>

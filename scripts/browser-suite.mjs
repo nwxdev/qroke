@@ -5,9 +5,11 @@ const scripts = [
   'browser-autostart-check.mjs',
   'browser-layout-check.mjs',
   'browser-theme-check.mjs',
+  'browser-menu-check.mjs',
   'browser-playlists-check.mjs',
   'browser-social-check.mjs',
   'browser-playback-check.mjs',
+  'browser-replay-check.mjs',
   'browser-karaoke-check.mjs',
   'browser-playlist-items-check.mjs',
 ]

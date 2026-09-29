@@ -38,7 +38,8 @@ try {
         }),
       )
 
-      await page.getByRole('link', { name: 'Abrir player', exact: true }).click()
+      await page.getByRole('button', { name: 'Abrir menu', exact: true }).click()
+      await page.getByRole('link', { name: 'Player', exact: true }).click()
       await expect(
         page.getByText('Som ativado. O próximo pedido começa automaticamente.'),
       ).toBeVisible()

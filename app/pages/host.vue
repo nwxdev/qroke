@@ -33,11 +33,7 @@ watch(admin, (value, previous) => {
     <BrandHeader
       ><button v-if="!admin" class="header-control" @click="unlock = true">
         <AppIcon name="lock" />Liberar controles</button
-      ><AdminExit /><NuxtLink to="/busca" class="header-control">
-        <AppIcon name="search" /> Buscar músicas</NuxtLink
-      ><NuxtLink to="/player" class="header-control"
-        ><AppIcon name="tv" /> Abrir player</NuxtLink
-      ></BrandHeader
+      ><AdminExit /></BrandHeader
     ><PartyNotice />
     <GuestIdentity />
     <main>
@@ -50,7 +46,7 @@ watch(admin, (value, previous) => {
         <section>
           <div v-if="!admin" class="panel">
             <h2>O controle é seu por alguns minutos.</h2>
-            <p>Use o botão Liberar controles no topo para entrar com o PIN.</p>
+            <p>Abra o menu e escolha Liberar controles para entrar com o PIN.</p>
           </div>
           <div v-if="admin" class="panel">
             <div class="section-heading">
