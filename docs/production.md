@@ -14,7 +14,7 @@ Executar npm ci, npm run typecheck, npm test, npm run test:storage, npm run buil
 - QROKE_DRAGONFLY_URL: serviço existente pela rede privada.
 - QROKE_PUBLIC_URL=https://qroke.nwx.ag.
 - QROKE_ACCESS_REQUIRED=true e QROKE_TRUST_PROXY=true na stack privada atrás do Nginx.
-- QROKE_HOST_PIN: oito dígitos aleatórios em produção.
+- QROKE_HOST_PIN: PIN do anfitrião com 4 a 8 dígitos.
 - QROKE_SESSION_SECRET: segredo aleatório de pelo menos 32 caracteres.
 - QROKE_ENCRYPTION_KEY: 32 bytes em hexadecimal para AES-256-GCM.
 - YOUTUBE_API_KEY, YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET e YOUTUBE_REDIRECT_URI.

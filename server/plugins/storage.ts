@@ -5,7 +5,7 @@ export default defineNitroPlugin(async (app) => {
     config.accessRequired &&
     (config.sessionSecret.length < 32 ||
       config.encryptionKey.length !== 64 ||
-      !/^\d{6,8}$/.test(config.hostPin))
+      !/^\d{4,8}$/.test(config.hostPin))
   )
     throw new Error('Configure os secrets de produção do QRoke.')
   await (await openParty(config.organizationId, config.partyId)).ensure()
