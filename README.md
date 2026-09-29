@@ -630,6 +630,16 @@ Para diagnosticar a saída nativa no Linux/WSL: `QROKE_TEST_NATIVE_AUDIO=1 node 
 
 O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Chromium headless correspondente à versão instalada do Playwright. Evite forçar uma versão antiga do cache. Em outra máquina, execute `npx playwright install chromium --only-shell` antes. Os testes usam dados próprios e removem apenas seus diretórios temporários ao encerrar; não alteram sua festa.
 
+### CI no GitHub Actions
+
+O workflow [.github/workflows/ci.yml](.github/workflows/ci.yml) executa em pull requests, pushes para main e acionamento manual quando disponível na branch padrão. O check **Build e testes** usa Ubuntu e Node.js 24, instala as versões do lockfile com npm ci e verifica formatação, TypeScript, 83 testes unitários, build de produção, 22 verificações de integração e os 12 scripts de navegador. O Chromium correspondente ao Playwright é instalado com as bibliotecas do sistema; capturas dos testes ficam no artefato browser-screenshots por 7 dias.
+
+Os testes usam festas temporárias, vídeos simulados e áudio de teste. O CI não recebe .env, API keys nem OAuth; testes reais de YouTube continuam opcionais e locais. As ações oficiais estão fixadas por SHA, com permissão de leitura do repositório e sem persistir credenciais no checkout. Execuções anteriores do mesmo PR são canceladas ao chegar outro commit; o job tem limite de 20 minutos. Não há publicação ou merge automático.
+
+Para acompanhar, abra a aba **Checks** do PR ou **Actions → CI**. Uma execução verde valida aquele commit; se houver novo push, aguarde o novo resultado. Primeiro workflow adicionado em 29/09/2026, pois o repositório ainda não tinha CI configurado. A proteção obrigatória de branches permanece uma configuração separada do repositório.
+
+Referências: [setup-node](https://github.com/actions/setup-node), [CI do Playwright](https://playwright.dev/docs/ci-intro) e [artefatos dos testes](https://github.com/actions/upload-artifact).
+
 ### Cabeçalho responsivo, menu em tela inteira e som sempre visível — 29/09/2026
 
 O componente **HeaderMenu.vue** reúne a navegação das três páginas. No desktop e no tablet quando há espaço, os botões ficam **lado a lado no cabeçalho**, com a marca à esquerda e o tema à direita. O hambúrguer aparece apenas no modo compacto, ao lado do tema. Container queries consideram a largura útil do cabeçalho: 40rem para busca e 51,25rem quando existem ações adicionais (host/player). Assim, um tablet pode mostrar a busca em linha e recolher a navegação nas páginas com mais controles. Ao expandir, o menu compacto ocupa toda a janela (100dvh), acima da contagem de karaokê. A página atual fica identificada nos dois formatos.
