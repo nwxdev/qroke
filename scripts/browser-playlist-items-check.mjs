@@ -34,12 +34,22 @@ try {
   let s = await state()
   expect(s.queue).toHaveLength(2)
   expect(s.queue.filter((t) => t.playlist)).toHaveLength(1)
+  await expect(
+    page
+      .locator('.queue-card')
+      .filter({ has: page.locator('.playlist-badge') })
+      .locator('.queue-card-guest'),
+  ).toHaveCount(0)
+  await expect(page.locator('.queue-card-guest')).toHaveCount(1)
   await page.goto(fixture.base + '/qr')
   await expect(page).toHaveURL(fixture.base + '/player')
   await expect(page.locator('.player-playlist-card')).toHaveCount(1)
-  await expect(page.locator('.player-queue-cards > .queue-list .queue-row')).toHaveCount(1)
+  await expect(page.locator('.player-queue-items > .queue-list .queue-row')).toHaveCount(1)
   await page.locator('.player-playlist-card summary').click()
   await expect(page.locator('.player-playlist-card .queue-row')).toHaveCount(1)
+  await expect(page.locator('.player-playlist-card summary')).toContainText('Ana')
+  await expect(page.locator('.player-playlist-card .queue-row')).not.toContainText('Ana')
+  await expect(page.locator('.player-queue-items > .queue-list .queue-row')).toContainText('Ana')
   for (const width of [1440, 768, 360, 320]) {
     await page.setViewportSize({ width, height: 900 })
     await expect(page.locator('.qr-plate svg')).toBeVisible()

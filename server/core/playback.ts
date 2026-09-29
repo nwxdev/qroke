@@ -5,10 +5,15 @@ export function prepareKaraoke(state: PartyState) {
   state.karaokeLeadSeconds = state.current?.karaoke ? (state.karaokeDelaySeconds ?? 5) : 0
   state.karaokeStartsAt = null
 }
-export function startNext(state: PartyState) {
+export function startNext(state: PartyState, preferKaraoke = false) {
   if (!state.current && state.playerId && !state.playbackIssue?.halted) {
-    state.queue = orderQueue(state.queue, state.history)
+    state.queue = orderQueue(state.queue, state.history, preferKaraoke)
     state.current = state.queue.shift() || null
+    state.queue = orderQueue(
+      state.queue,
+      [...state.history, ...(state.current ? [state.current] : [])],
+      !!state.current?.karaoke,
+    )
     prepareKaraoke(state)
     state.position = 0
     state.duration = state.current?.duration || 0
@@ -21,6 +26,7 @@ export function finishTrack(
   code?: number,
   message?: string,
 ) {
+  const preferKaraoke = !!state.current?.karaoke
   if (state.current)
     state.history.push({
       ...state.current,
@@ -31,7 +37,7 @@ export function finishTrack(
   state.current = null
   state.position = 0
   state.duration = 0
-  startNext(state)
+  startNext(state, preferKaraoke)
 }
 export function clearPlaybackIssue(state: PartyState) {
   state.playbackIssue = null

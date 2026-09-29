@@ -82,3 +82,30 @@ describe('transições do player', () => {
     expect(s.volume).toBe(37)
   })
 })
+
+describe('sequência de karaokê', () => {
+  it.each(['ended', 'skipped', 'error'] as const)(
+    'continua o grupo após %s e retoma músicas comuns ao acabar',
+    (outcome) => {
+      const s = setup()
+      s.current.karaoke = true
+      s.queue[1]!.karaoke = true
+      s.queue[2]!.karaoke = true
+      finishTrack(s, outcome)
+      expect(s.current?.title).toBe('Faixa 3')
+      expect(s.karaokeLeadSeconds).toBe(5)
+      expect(s.queue.map((item) => item.title)).toEqual(['Faixa 4', 'Faixa 2'])
+      finishTrack(s, 'ended')
+      expect(s.current?.title).toBe('Faixa 4')
+      finishTrack(s, 'ended')
+      expect(s.current?.title).toBe('Faixa 2')
+      expect(s.karaokeLeadSeconds).toBe(0)
+    },
+  )
+  it('não antecipa karaokê quando a faixa atual é comum', () => {
+    const s = setup()
+    s.queue[1]!.karaoke = true
+    finishTrack(s, 'ended')
+    expect(s.current?.title).toBe('Faixa 2')
+  })
+})

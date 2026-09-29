@@ -46,8 +46,10 @@ try {
   await expect
     .poll(() => page.evaluate(() => sessionStorage.getItem('qroke:device')))
     .not.toBe(null)
-  const activation = page.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true })
+  const activation = page.locator('.screen-sound-button')
   await expect(activation).toBeVisible()
+  await expect(activation).toContainText('Ativar som')
+  expect((await page.locator('.player-header').boundingBox()).height).toBeLessThanOrEqual(80)
   await expect(page.locator('.tv-control-shelf, dialog')).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: /Liberar controles|Controles|Sair do admin/ }),
@@ -55,6 +57,7 @@ try {
   const initialButton = await activation.boundingBox()
   await activation.click()
   await expect(page.locator('#screen-sound-status')).toContainText('Aguardando o anfitrião')
+  await expect(activation).toContainText('Som autorizado')
   expect((await (await context.request.get(fixture.base + '/api/state')).json()).playerId).toBe(
     null,
   )
@@ -92,6 +95,8 @@ try {
   db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(state))
   await expect(page.locator('iframe')).toBeVisible()
   await expect(page.locator('#screen-sound-status')).toHaveText('Som ativado nesta tela.')
+  await expect(activation).toContainText('Som ativo')
+  await expect(activation).toHaveClass(/is-active/)
   const playingButton = await activation.boundingBox()
   expect(playingButton.x).toBe(initialButton.x)
   expect(playingButton.y).toBe(initialButton.y)
@@ -174,6 +179,45 @@ try {
     )
     .toBe(second.id)
   await context.request.post(fixture.base + '/api/control', {
+    data: { action: 'mode', mode: 'video' },
+  })
+  await expect(page.locator('.tv-screen')).toHaveClass(/video-mode/)
+  for (const [width, height] of [
+    [1440, 900],
+    [1280, 720],
+    [1024, 600],
+    [390, 844],
+    [320, 720],
+  ]) {
+    await page.setViewportSize({ width, height })
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      .toBe(true)
+    await expect(page.locator('.qr-plate svg')).toBeVisible()
+    if (width >= 1024) {
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
+        .toBe(true)
+      const video = await page.locator('iframe').boundingBox()
+      const invite = await page.locator('.player-invite').boundingBox()
+      const qr = await page.locator('.qr-plate').boundingBox()
+      expect(invite.x - (video.x + video.width)).toBeGreaterThanOrEqual(28)
+      expect(video.y + video.height).toBeLessThanOrEqual(height)
+      expect(qr.y + qr.height).toBeLessThanOrEqual(height)
+      expect(video.height).toBeGreaterThanOrEqual(height >= 720 ? 280 : 200)
+    } else {
+      expect(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(
+        true,
+      )
+      expect((await page.locator('.player-header').boundingBox()).height).toBeLessThanOrEqual(124)
+    }
+    await page.screenshot({
+      path: 'test-results/player-window-video-' + width + '.png',
+      fullPage: width < 1024,
+    })
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await context.request.post(fixture.base + '/api/control', {
     data: { action: 'mode', mode: 'music' },
   })
   await expect(page.locator('.tv-screen')).toHaveClass(/music-mode/)
@@ -181,6 +225,9 @@ try {
   expect(size.width).toBeGreaterThanOrEqual(200)
   expect(size.width).toBeLessThanOrEqual(320)
   await expect(activation).toBeVisible()
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
+    .toBe(true)
   const musicButton = await activation.boundingBox()
   expect(musicButton.x).toBe(initialButton.x)
   expect(musicButton.y).toBe(initialButton.y)

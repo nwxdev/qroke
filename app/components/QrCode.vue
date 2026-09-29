@@ -2,7 +2,7 @@
 import QRCode from 'qrcode'
 import type { InviteStatus } from '../../shared/network'
 import { partyUrl } from '../utils/party-url'
-defineProps<{ large?: boolean }>()
+defineProps<{ large?: boolean; presentation?: boolean }>()
 const url = ref(''),
   svg = ref(''),
   ready = ref(false),
@@ -110,15 +110,12 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <div class="qr-card" :class="{ large }">
+  <div class="qr-card" :class="{ large, presentation }">
     <template v-if="svg">
       <div class="qr-plate" role="img" :aria-label="'QR para ' + url" v-html="svg" />
       <BrandLogo class="invite-brand" />
-      <p>Conecte-se ao mesmo Wi-Fi. Escaneie. Escolha. Cante.</p>
+      <p v-if="!presentation">Conecte-se ao mesmo Wi-Fi. Escaneie. Escolha. Cante.</p>
       <a :href="url" class="invite-link">{{ url }}</a>
-      <button class="copy-invite" @click="copyLink">
-        {{ copied ? 'Link copiado' : 'Copiar link da festa' }}
-      </button>
     </template>
     <p v-else-if="ready" class="notice" role="status">
       O endereço desta festa ainda não está disponível para o celular. Peça ao anfitrião para
@@ -127,11 +124,27 @@ onBeforeUnmount(() => {
     <p v-else role="status">Preparando convite…</p>
     <div class="qr-network">
       <p v-if="warning" class="notice" role="status">{{ warning }}</p>
-      <p v-else-if="message && large" class="hint" role="status">{{ message }}</p>
-      <button :disabled="checking" @click="check">
-        {{ checking ? 'Verificando rede…' : 'Verificar acesso' }}
-      </button>
-      <small v-if="large"
+      <p v-else-if="message && large && !presentation" class="hint" role="status">{{ message }}</p>
+      <div class="qr-actions">
+        <button
+          v-if="svg"
+          class="copy-invite"
+          :aria-label="copied ? 'Link copiado' : 'Copiar link da festa'"
+          @click="copyLink"
+        >
+          <AppIcon v-if="presentation" :name="copied ? 'check' : 'link'" />
+          {{ copied ? 'Copiado' : presentation ? 'Copiar link' : 'Copiar link da festa' }}
+        </button>
+        <button
+          :disabled="checking"
+          :aria-label="checking ? 'Verificando rede…' : 'Verificar acesso'"
+          @click="check"
+        >
+          <AppIcon v-if="presentation" name="qr" />
+          {{ presentation ? 'Rede' : checking ? 'Verificando rede…' : 'Verificar acesso' }}
+        </button>
+      </div>
+      <small v-if="large && !presentation"
         >Verificação automática a cada 30 segundos. O teste confirma o acesso pelo servidor; redes
         de convidados ou isolamento do Wi-Fi podem bloquear outros aparelhos.</small
       >
@@ -181,5 +194,33 @@ onBeforeUnmount(() => {
 .qr-network-warning {
   color: var(--coral);
   font-size: 10px;
+}
+.qr-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.qr-actions .copy-invite {
+  margin: 0;
+}
+.presentation .invite-brand {
+  --brand-logo-width: 144px;
+}
+.presentation .qr-network {
+  margin-top: 12px;
+}
+.presentation .qr-actions button {
+  font-size: 11px;
+  padding: 6px 8px;
+}
+.presentation .qr-actions .app-icon {
+  width: 16px;
+  height: 16px;
+}
+.presentation .invite-link {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
 }
 </style>

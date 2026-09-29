@@ -97,7 +97,11 @@ export class PartyDatabase {
           "DELETE FROM queue_votes WHERE queue_id NOT IN (SELECT json_extract(value,'$.queueId') FROM json_each(?))",
         )
         .run(JSON.stringify(s.queue))
-      s.queue = orderQueue(s.queue, [...s.history, ...(s.current ? [s.current] : [])])
+      s.queue = orderQueue(
+        s.queue,
+        [...s.history, ...(s.current ? [s.current] : [])],
+        !!s.current?.karaoke,
+      )
       s.revision++
       this.db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(s))
       return s

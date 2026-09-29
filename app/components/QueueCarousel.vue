@@ -85,7 +85,7 @@ onBeforeUnmount(() => observer?.disconnect())
               ><small>{{ item.artist }}</small>
             </div>
           </div>
-          <p class="queue-card-guest">
+          <p v-if="!item.playlist" class="queue-card-guest">
             Pedido de <strong>{{ item.guestName }}</strong>
           </p>
           <PlaylistBadge :playlist="item.playlist" />

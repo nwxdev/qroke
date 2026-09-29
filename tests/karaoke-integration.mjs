@@ -94,3 +94,71 @@ test('karaokê: cantores, configuração, preparação confirmada e votos negati
   assert.equal(read().current.queueId, first)
   assert.equal(read().karaokeLeadSeconds, 0)
 })
+
+test('karaokê: prioridade publicada, reordenação protegida e sequência após restart', async (t) => {
+  const fixture = await startFixture(3186)
+  const db = new Database(join(fixture.dir, 'party.sqlite'))
+  t.after(async () => {
+    db.close()
+    await fixture.close()
+  })
+  const host = client(fixture.base)
+  await host.request('/api/auth', { action: 'login', pin: '4321' })
+  const device = (await host.request('/api/device', { label: 'Karaokê' })).data
+  const read = () => JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+  const make = (index, karaoke) => ({
+    id: String(index).padStart(11, '0'),
+    source: 'youtube',
+    title: 'Faixa ' + index,
+    artist: 'Teste',
+    duration: 30,
+    thumbnail: '',
+    karaoke,
+    queueId: randomUUID(),
+    guestId: 'fixture',
+    guestName: 'Ana',
+    origin: 'human',
+    enqueuedAt: index,
+    round: 0,
+    manualOrder: null,
+  })
+  const first = make(1, true),
+    regular = make(2, false),
+    next = make(3, true)
+  const state = read()
+  Object.assign(state, {
+    current: first,
+    queue: [regular, next],
+    playerId: device.id,
+    revision: state.revision + 1,
+  })
+  db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(state))
+  await host.request('/api/control', { action: 'karaoke-settings', seconds: 0, music: false })
+  assert.deepEqual(
+    (await host.request('/api/state')).data.queue.map((item) => item.id),
+    [next.id, regular.id],
+  )
+  const rejected = await host.request('/api/control', {
+    action: 'reorder',
+    ids: [regular.queueId, next.queueId],
+    revision: read().revision,
+  })
+  assert.equal(rejected.status, 409)
+  assert.match(rejected.data.statusMessage, /Durante o karaok/)
+  assert.deepEqual(
+    read().queue.map((item) => item.id),
+    [next.id, regular.id],
+  )
+  await fixture.restart()
+  assert.deepEqual(
+    (await host.request('/api/state')).data.queue.map((item) => item.id),
+    [next.id, regular.id],
+  )
+  await host.request('/api/control', { action: 'skip', queueId: first.queueId })
+  assert.equal(read().current.id, next.id)
+  await host.request('/api/control', { action: 'skip', queueId: first.queueId })
+  assert.equal(read().current.id, next.id)
+  await host.request('/api/control', { action: 'skip', queueId: next.queueId })
+  assert.equal(read().current.id, regular.id)
+  assert.equal(read().queue.length, 0)
+})

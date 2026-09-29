@@ -119,3 +119,44 @@ describe('continuação', () => {
     expect(recommendation([item('a', 'Ana', 1)], history, [], now)).toBeUndefined()
   })
 })
+
+describe('prioridade durante karaokê', () => {
+  it('prioriza karaokê sobre músicas comuns, preservando votos dentro do grupo', () => {
+    const queue = [
+      item('music', 'Ana', 1, { manualOrder: 0, votes: 20 }),
+      item('k1', 'Ana', 2, { karaoke: true }),
+      item('k2', 'Bia', 3, { karaoke: true, votes: 2 }),
+      item('auto', 'radio', 0, { karaoke: true, origin: 'auto' }),
+    ]
+    expect(orderQueue(queue, [], true).map((item) => item.id)).toEqual([
+      'k2',
+      'k1',
+      'music',
+      'auto',
+    ])
+    expect(orderQueue(queue).map((item) => item.id)).toEqual(['music', 'k2', 'k1', 'auto'])
+  })
+  it('mantém o rodízio entre participantes do grupo prioritário', () => {
+    const queue = [
+      item('m', 'Caio', 0),
+      item('a1', 'Ana', 1, { karaoke: true }),
+      item('a2', 'Ana', 2, { karaoke: true }),
+      item('b1', 'Bia', 3, { karaoke: true }),
+    ]
+    expect(orderQueue(queue, [], true).map((item) => item.id)).toEqual(['a1', 'b1', 'a2', 'm'])
+  })
+  it('permite reordenar dentro do grupo e recusa inverter a prioridade', () => {
+    const queue = [
+      item('m', 'Ana', 1),
+      item('k1', 'Ana', 2, { karaoke: true }),
+      item('k2', 'Bia', 3, { karaoke: true }),
+    ]
+    expect(() => reorderQueue(queue, ['m', 'k1', 'k2'], true)).toThrow('Durante o karaokê')
+    expect(reorderQueue(queue, ['k2', 'k1', 'm'], true).map((item) => item.id)).toEqual([
+      'k2',
+      'k1',
+      'm',
+    ])
+    expect(reorderQueue(queue, ['m', 'k1', 'k2']).map((item) => item.id)).toEqual(['m', 'k1', 'k2'])
+  })
+})

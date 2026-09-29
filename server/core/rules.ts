@@ -1,5 +1,9 @@
 import type { HistoryItem, QueueItem, Track } from '../../shared/types'
-export function orderQueue(items: QueueItem[], served: QueueItem[] = []): QueueItem[] {
+export function orderQueue(
+  items: QueueItem[],
+  served: QueueItem[] = [],
+  preferKaraoke = false,
+): QueueItem[] {
   const rounds = new Map<string, number>()
   const humans = served.filter((item) => item.origin === 'human')
   const base = humans.at(-1)?.round || 0
@@ -15,6 +19,7 @@ export function orderQueue(items: QueueItem[], served: QueueItem[] = []): QueueI
   return annotated.sort(
     (a, b) =>
       Number(a.origin === 'auto') - Number(b.origin === 'auto') ||
+      (preferKaraoke ? Number(b.karaoke) - Number(a.karaoke) : 0) ||
       (a.manualOrder ?? Infinity) - (b.manualOrder ?? Infinity) ||
       (b.votes || 0) - (a.votes || 0) ||
       a.round - b.round ||
@@ -22,7 +27,11 @@ export function orderQueue(items: QueueItem[], served: QueueItem[] = []): QueueI
       a.queueId.localeCompare(b.queueId),
   )
 }
-export function reorderQueue(items: QueueItem[], ids: string[]): QueueItem[] {
+export function reorderQueue(
+  items: QueueItem[],
+  ids: string[],
+  preferKaraoke = false,
+): QueueItem[] {
   if (
     ids.length !== items.length ||
     new Set(ids).size !== items.length ||
@@ -35,6 +44,13 @@ export function reorderQueue(items: QueueItem[], ids: string[]): QueueItem[] {
     if (item.origin === 'auto') auto = true
     else if (auto) throw new Error('Escolhas humanas devem ficar antes da continuação.')
   }
+  if (preferKaraoke)
+    for (let index = 1; index < ordered.length; index++) {
+      const previous = ordered[index - 1]!,
+        current = ordered[index]!
+      if (previous.origin === current.origin && !previous.karaoke && current.karaoke)
+        throw new Error('Durante o karaokê, as músicas de karaokê vêm antes das demais.')
+    }
   return ordered.map((item, index) => ({ ...item, manualOrder: index }))
 }
 export function normalizeName(value: string) {

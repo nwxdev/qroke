@@ -68,8 +68,48 @@ try {
   })
   await expect(page.locator('.karaoke-countdown')).toContainText('Ana · Bia · Caio')
   await expect(page.locator('.countdown-number')).toHaveText('5')
+  await expect(page.locator('.player-karaoke-group')).toBeVisible()
+  await expect(page.locator('.karaoke-queue-heading')).toContainText('prioridade agora')
+  await expect(page.locator('.player-karaoke-group .player-playlist-card')).toHaveCount(1)
   await expect(page.locator('.karaoke-countdown')).toContainText('Aguardando o PLAYER')
-  await page.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true }).click()
+  const countdown = page.locator('.karaoke-countdown')
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    for (const theme of ['dark', 'light']) {
+      if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== theme)
+        await page
+          .getByRole('button', { name: theme === 'light' ? 'Usar tema claro' : 'Usar tema escuro' })
+          .click()
+      const bounds = await countdown.boundingBox()
+      expect(bounds).toEqual({ x: 0, y: 0, width, height: 900 })
+      const singers = await page.locator('.countdown-performers').boundingBox()
+      const qr = await page.locator('.karaoke-qr').boundingBox()
+      expect(singers.x + singers.width).toBeLessThanOrEqual(qr.x)
+      await expect(page.locator('.countdown-song')).toHaveAccessibleName(
+        (await state()).current.title,
+      )
+      await countdown.evaluate(async (element) => {
+        await Promise.all(
+          element
+            .getAnimations({ subtree: true })
+            .map((animation) => animation.finished.catch(() => {})),
+        )
+      })
+      await page.screenshot({
+        path: 'test-results/countdown-fullscreen-' + width + '-' + theme + '.png',
+        fullPage: false,
+      })
+    }
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  expect(
+    await page
+      .locator('.countdown-digit text')
+      .evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe('none')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.locator('.screen-sound-button').click()
   await expect.poll(async () => !!(await state()).karaokeStartsAt).toBe(true)
   await expect.poll(() => page.evaluate(() => window.toneStarts)).toBeGreaterThan(0)
   expect(await page.evaluate(() => !!window.fake.playing)).toBe(false)
@@ -84,6 +124,23 @@ try {
   const tones = await page.evaluate(() => window.toneStarts)
   await page.waitForTimeout(600)
   expect(await page.evaluate(() => window.toneStarts)).toBe(tones)
+  for (const width of [1440, 768, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    const group = page.locator('.player-karaoke-group')
+    await expect(group).toBeVisible()
+    const playlist = group.locator('.player-playlist-card')
+    if (!(await playlist.evaluate((element) => element.open)))
+      await playlist.locator('summary').click()
+    await expect(playlist.locator('.queue-row')).toContainText('Ana · Bia · Caio')
+    const bounds = await group.boundingBox()
+    const qr = await page.locator('.karaoke-qr').boundingBox()
+    if (width < 1024) expect(bounds.x + bounds.width).toBeLessThanOrEqual(qr.x)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({
+      path: 'test-results/karaoke-queue-' + width + '.png',
+      fullPage: true,
+    })
+  }
   const host = await context.newPage()
   host.on('pageerror', (e) => errors.push(e.message))
   await host.goto(fixture.base + '/host')

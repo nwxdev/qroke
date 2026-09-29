@@ -139,14 +139,12 @@ try {
   const tv = await tvContext.newPage()
   watch(tv)
   await tv.goto(server.base + '/tv')
-  await tv.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true }).focus()
+  await tv.locator('.screen-sound-button').focus()
   await tv.keyboard.press('Enter')
   await expect(tv.getByRole('dialog')).toHaveCount(0)
   // Todos os elementos da tela de exibição continuam navegáveis por setas.
   async function reachableButtons() {
-    await expect(
-      tv.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true }),
-    ).toBeEnabled()
+    await expect(tv.locator('.screen-sound-button')).toBeEnabled()
     await expect(tv.locator('.qr-plate svg')).toBeVisible()
     await expect(tv.getByRole('button', { name: 'Verificar acesso', exact: true })).toBeEnabled()
     const scope = (await tv.getByRole('dialog').isVisible())
@@ -202,7 +200,7 @@ try {
   )
   await tv.screenshot({ path: 'test-results/tv.png', fullPage: true })
   await tv.keyboard.press('Backspace')
-  await expect(tv.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true })).toBeFocused()
+  await expect(tv.locator('.screen-sound-button')).toBeFocused()
   const original = await tv.evaluate(() => document.documentElement.dataset.theme)
   await tv.getByRole('button', { name: 'Usar tema claro' }).click()
   await tv.reload()

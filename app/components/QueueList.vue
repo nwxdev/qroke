@@ -6,7 +6,7 @@ const props = defineProps<{
   compact?: boolean
   items?: QueueItem[]
 }>()
-const { queue, guest, pending, remove, reorder } = useParty()
+const { queue, state, guest, pending, remove, reorder } = useParty()
 const displayed = computed(() => props.items ?? queue.value)
 const position = (item: QueueItem) =>
   queue.value.findIndex((track) => track.queueId === item.queueId)
@@ -21,7 +21,12 @@ function move(index: number, delta: number) {
 function canMove(index: number, delta: number) {
   const a = queue.value[index],
     b = queue.value[index + delta]
-  return !!a && !!b && a.origin === b.origin
+  return (
+    !!a &&
+    !!b &&
+    a.origin === b.origin &&
+    (!state.value?.current?.karaoke || a.karaoke === b.karaoke)
+  )
 }
 function duration(item: QueueItem) {
   return item.duration
@@ -50,8 +55,9 @@ function duration(item: QueueItem) {
       <span v-else class="track-art">♫</span>
       <div class="track-info">
         <strong>{{ item.title }}</strong
-        ><small
-          >{{ item.guestName }} <span v-if="item.karaoke" class="tag">Karaokê</span
+        ><small v-if="!item.playlist || item.karaoke || item.manualOrder !== null"
+          ><span v-if="!item.playlist" class="queue-guest">{{ item.guestName }}</span>
+          <span v-if="item.karaoke" class="tag">Karaokê</span
           ><span v-if="item.manualOrder !== null" class="tag">Manual</span></small
         >
         <PlaylistBadge :playlist="item.playlist" />

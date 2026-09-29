@@ -94,7 +94,7 @@ try {
     }),
   )
   await expect(player.locator('iframe')).toBeVisible()
-  await player.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true }).click()
+  await player.locator('.screen-sound-button').click()
   await expect.poll(() => player.evaluate(() => window.fake.playing)).toBe(true)
   const slider = host.getByRole('slider', { name: /Volume do PLAYER/ })
   await slider.fill('37')
@@ -179,9 +179,7 @@ try {
   await host.getByRole('button', { name: 'Remover aparelho TV da sala', exact: true }).click()
   await expect.poll(() => state().playerId).toBe(null)
   await expect(player.locator('iframe')).toHaveCount(0)
-  await expect(
-    player.getByRole('button', { name: 'ATIVAR SOM NESTA TELA', exact: true }),
-  ).toBeVisible()
+  await expect(player.locator('.screen-sound-button')).toBeVisible()
   await expect(player.locator('dialog')).toHaveCount(0)
   expect(state().queue).toHaveLength(1)
   expect(state().current.id).toBe(third.id)

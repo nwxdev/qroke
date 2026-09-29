@@ -19,6 +19,7 @@ defineProps<{
     | 'vote'
     | 'person'
     | 'edit'
+    | 'microphone'
     | 'volume'
     | 'muted'
     | 'tv'
@@ -28,6 +29,7 @@ defineProps<{
     | 'link'
 }>()
 const paths = {
+  microphone: 'M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0z M6 10v2a6 6 0 0 0 12 0v-2 M12 18v4 M8 22h8',
   'playlist-plus': 'M3 5h14 M3 10h14 M3 15h8 M17 14v8 M13 18h8',
   expand: 'M5 9l7 7 7-7',
   exit: 'M10 4H4v16h6 M14 8l4 4-4 4 M8 12h13',
