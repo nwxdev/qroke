@@ -12,7 +12,13 @@ const ready = ref(false),
 let idempotencyKey = '',
   refreshTimer: ReturnType<typeof setInterval>,
   timer: ReturnType<typeof setInterval>
-async function load() {
+let loading: Promise<void> | undefined
+function load() {
+  return (loading ||= refreshList().finally(() => {
+    loading = undefined
+  }))
+}
+async function refreshList() {
   try {
     const result = await $fetch<{ parties: MyParty[]; serverTime: number }>('/api/parties')
     parties.value = result.parties
