@@ -30,6 +30,8 @@ try {
   const state = await db.readState()
   Object.assign(state, {
     current: make(0),
+    playerId: 'fixture-player',
+    paused: false,
     mode: 'music',
     queue: Array.from({ length: 8 }, (_, i) => make(i + 1)),
     revision: state.revision + 1,
@@ -42,10 +44,16 @@ try {
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto(fixture.base)
   await expect(page.locator('.queue-card')).toHaveCount(8)
+  const currentCard = page.locator('.queue-current-card')
+  await expect(currentCard).toContainText('Tocando agora')
+  await expect(currentCard).toContainText('Música da festa 0')
+  await expect(currentCard).toContainText('Convidado 0')
+  await expect(page.locator('.queue-rail > li').first()).toHaveClass('queue-current-card')
+  await expect(page.locator('.queue-card .queue-number').first()).toHaveText('01')
   expect(
     await page.evaluate(() => {
       const rail = document.querySelector('.queue-rail').getBoundingClientRect()
-      const cards = [...document.querySelectorAll('.queue-card')].map((el) =>
+      const cards = [...document.querySelectorAll('.queue-card, .queue-current-card')].map((el) =>
         el.getBoundingClientRect(),
       )
       return cards.filter((r) => r.left >= rail.left - 1 && r.right <= rail.right + 1).length
@@ -58,6 +66,11 @@ try {
         document.querySelector('.search-section').getBoundingClientRect().top,
     ),
   ).toBe(true)
+  await page.screenshot({
+    path: 'test-results/queue-current-desktop.png',
+    fullPage: true,
+    animations: 'disabled',
+  })
   await page.getByRole('button', { name: 'Ver próximas músicas' }).click()
   await expect
     .poll(async () => page.locator('.queue-rail').evaluate((el) => el.scrollLeft))
@@ -93,13 +106,43 @@ try {
   await page.goto(fixture.base)
   await expect(page.locator('.queue-card')).toHaveCount(8)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await expect(currentCard).toContainText('Tocando agora')
+  await page.screenshot({
+    path: 'test-results/queue-current-mobile.png',
+    fullPage: true,
+    animations: 'disabled',
+  })
   await page.locator('.queue-rail').evaluate((el) => el.scrollTo({ left: el.scrollWidth }))
   await expect
     .poll(async () => page.locator('.queue-rail').evaluate((el) => el.scrollLeft))
     .toBeGreaterThan(0)
   await page.screenshot({ path: 'test-results/queue-mobile.png', fullPage: true })
+  const initialCurrent = state.current
+  const initialQueue = state.queue
+  state.current = make(9)
+  state.queue = []
+  state.paused = true
+  state.revision++
+  await db.writeState(state)
+  await expect(currentCard).toContainText('Música da festa 9', { timeout: 10000 })
+  await expect(currentCard).toContainText('Em pausa')
+  await expect(page.locator('.queue-card')).toHaveCount(0)
+  await expect(page.locator('.queue-card-empty')).toBeVisible()
+  state.playerId = null
+  state.revision++
+  await db.writeState(state)
+  await expect(currentCard).toContainText('Aguardando reprodução', { timeout: 10000 })
+  state.current = null
+  state.revision++
+  await db.writeState(state)
+  await expect(currentCard).toHaveCount(0, { timeout: 10000 })
+  state.current = initialCurrent
+  state.queue = initialQueue
+  state.paused = false
+  state.revision++
+  await db.writeState(state)
   console.log(
-    'QR em duas colunas/empilhado, fila acima da busca, quatro cartões e scroll horizontal OK',
+    'QR responsivo, música atual na fila com atualização e pausa, quatro cartões e scroll horizontal OK',
   )
 
   const hostContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
