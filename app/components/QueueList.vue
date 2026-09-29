@@ -6,7 +6,7 @@ const props = defineProps<{
   compact?: boolean
   items?: QueueItem[]
 }>()
-const { queue, state, guest, pending, remove, reorder } = useParty()
+const { queue, guest, pending, remove, reorder } = useParty()
 const displayed = computed(() => props.items ?? queue.value)
 const position = (item: QueueItem) =>
   queue.value.findIndex((track) => track.queueId === item.queueId)
@@ -21,12 +21,7 @@ function move(index: number, delta: number) {
 function canMove(index: number, delta: number) {
   const a = queue.value[index],
     b = queue.value[index + delta]
-  return (
-    !!a &&
-    !!b &&
-    a.origin === b.origin &&
-    (!state.value?.current?.karaoke || a.karaoke === b.karaoke)
-  )
+  return !!a && !!b && a.origin === b.origin && a.karaoke === b.karaoke
 }
 function duration(item: QueueItem) {
   return item.duration

@@ -246,11 +246,11 @@ export class Catalog {
     this.warn(warning)
     return { tracks: this.remember(this.available(tracks)), warning }
   }
-  async related(id: string) {
-    return this.remember(
-      await this.validate(
-        (await this.provider.getUpNexts(id)).slice(0, 24).map((t) => mapTrack(t)),
-      ),
+  async related(id: string, karaoke = false) {
+    const tracks = await this.validate(
+      (await this.provider.getUpNexts(id)).slice(0, 24).map((track) => mapTrack(track, karaoke)),
     )
+    // Recomendações podem misturar versões normais e karaokê; não basta mudar o rótulo.
+    return this.remember(tracks.filter((track) => /karaok[eê]/iu.test(track.title) === karaoke))
   }
 }

@@ -8,7 +8,7 @@
 Uma jukebox para festas na rede local. Cada convidado escolhe músicas e playlists pelo celular; a fila combina rodízio, votos e controle do anfitrião, e um único dispositivo reproduz o som. Música, vídeo e karaokê compartilham a mesma fila.
 
 > Implementação da [issue #1 — execução da v1](https://github.com/nwxdev/qroke/issues/1), baseada em [docs/plano.md](docs/plano.md).
-> Trabalho concentrado em **`codex/qroke-v1`**, na worktree **`/home/rpolan/projects/nwx/qroke-v1`**. Nenhum PR ou push realizado. Abrir PR somente depois dos testes e da aprovação do responsável.
+> Trabalho concentrado em **`codex/qroke-v1`**, na worktree **`/home/rpolan/projects/nwx/qroke-v1`**. O responsável autorizou a abertura do PR em 28/09/2026, após testes, revisão da branch e correção dos achados. Merge e deploy não estão autorizados.
 
 ## Identidade visual
 
@@ -29,7 +29,7 @@ Os pedidos desta conversa foram confrontados com o código e os testes. **Implem
 
 | Pedido acumulado                                                                       | Estado e evidência                                                                                                                                                                                                                                                 |
 | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Uma worktree, uma branch `codex/`, sem PR                                              | Mantido em `codex/qroke-v1`; alterações e documentação concentradas nesta worktree. Sem push, PR ou deploy.                                                                                                                                                        |
+| Uma worktree, uma branch `codex/`, publicação controlada                               | Mantido em `codex/qroke-v1`; alterações e documentação concentradas nesta worktree. PR autorizado pelo responsável após a revisão de 28/09/2026; sem merge ou deploy.                                                                                              |
 | Iniciar ao adicionar na fila vazia; scroll sem parar; pular só uma                     | Implementado. Início após autorização/seleção do PLAYER, mesma instância durante scroll e avanço protegido pelo ID da faixa; testes de autostart, layout e playback.                                                                                               |
 | Três telas; admin isolado; PIN em popup; sair no topo e expirar para busca             | Implementado em `/busca`, `/host` e `/player`. PIN e lease exclusiva configuráveis no `.env`, disputa simultânea e logout/expiração testados.                                                                                                                      |
 | Busca por Enter; fila acima, quatro cards e slider; botão de busca na fila vazia       | Implementado na tela de busca, com setas, arrasto horizontal e adaptação ao celular; testes de layout, navegação e karaokê.                                                                                                                                        |
@@ -65,9 +65,9 @@ Revisão dos pedidos de 28/09/2026:
 | Transição preenchendo a tela             | Em `/player`, a preparação do karaokê cobre a janela, mantém QR e cabeçalho acessíveis e reserva espaço para eles. Contagem grande com traçado animado, título revelado por palavras e participantes em destaque. A saída da camada não cobre o vídeo já iniciado.                                                       |
 | Música e participantes evidentes         | Nome da faixa em destaque e caixa **Quem canta** com todas as pessoas selecionadas. Contagem usa o prazo configurado pelo anfitrião (padrão de cinco segundos), sem alterar a sincronização nem a vinheta. Movimento reduzido desativa os efeitos.                                                                       |
 | Grupo laranja de karaokê                 | Todas as faixas marcadas como karaokê aparecem no grupo **Karaokê**, usando o laranja do tema, quantidade e indicação de prioridade. Playlists mantêm subgrupos e autoria; faixas avulsas mantêm identidade e participantes.                                                                                             |
-| Sequência preferencial de karaokê        | Enquanto a faixa atual é karaokê, os pedidos de karaokê vêm antes dos pedidos comuns; a escolha vale também ao terminar, pular ou ignorar uma faixa indisponível. Ao acabar o grupo, a fila retoma as músicas comuns. A faixa que já toca nunca é interrompida por uma inclusão.                                         |
+| Sequência preferencial de karaokê        | Os pedidos de karaokê vêm antes dos pedidos comuns, inclusive durante uma playlist normal; a escolha vale também ao terminar, pular ou ignorar uma faixa indisponível. Ao acabar o grupo, a fila retoma as músicas comuns. A faixa que já toca nunca é interrompida por uma inclusão.                                    |
 
-A prioridade é calculada no **servidor** e salva com a fila. Dentro de cada categoria continuam ordem manual, votos e rodízio; pedidos humanos continuam antes da continuação automática. Durante o karaokê, reordenar não pode colocar uma faixa comum antes de uma de karaokê: o servidor explica a restrição e os botões de mover respeitam a separação. Fora de uma sequência de karaokê, vale a ordenação normal. Os números nas músicas indicam a posição real de reprodução, inclusive nos grupos recolhidos.
+A prioridade é calculada no **servidor** e salva com a fila. Dentro de cada categoria continuam ordem manual, votos e rodízio; pedidos humanos continuam antes da continuação automática. Reordenar não pode colocar um pedido comum antes de um pedido de karaokê: o servidor explica a restrição e os botões de mover respeitam a separação. Sem pedidos de karaokê, vale a ordenação normal. Os números nas músicas indicam a posição real de reprodução, inclusive nos grupos recolhidos.
 
 O status **Som ativo** confirma autorização do navegador e seleção deste dispositivo; não mede volume da caixa, mute do sistema ou se o vídeo está pausado. Para ajustar o volume e escolher aparelhos, usar `/host`. Não é necessário instalar PWA para esse botão funcionar.
 
@@ -313,7 +313,7 @@ A identificação usa User-Agent e, quando disponível, [User-Agent Client Hints
 
 ## Player, votos, playlists e karaokê — atualização de 28/09/2026
 
-A rota principal de reprodução agora é **`/player`**. `/tv` e `/qr` redirecionam para ela. Atualize as abas já abertas com **Ctrl+F5** depois desta atualização; no aparelho que emite o som, pressione **Ativar som** se o navegador solicitar. O código continua na worktree `qroke-v1`, branch `codex/qroke-v1`, sem push ou PR.
+A rota principal de reprodução agora é **`/player`**. `/tv` e `/qr` redirecionam para ela. Atualize as abas já abertas com **Ctrl+F5** depois desta atualização; no aparelho que emite o som, pressione **Ativar som** se o navegador solicitar. O código continua na worktree `qroke-v1`, branch `codex/qroke-v1`; a abertura de PR foi autorizada após a revisão registrada abaixo.
 
 ### Tela e controles
 
@@ -358,7 +358,7 @@ Teste isolado com o iframe real e o aplicativo verificou o elemento de vídeo em
 
 Cada participante tem uma reação por pedido: **👍 +1** ou **👎 −1**. Clicar novamente no mesmo gesto remove o voto; clicar no outro troca a reação. A interface mostra as duas contagens e o saldo, que ordena a fila antes dos critérios de rodízio. É possível dar dislike na próxima faixa para fazê-la descer; um novo like na que já é a próxima permanece desabilitado.
 
-A ordem manual do anfitrião prevalece. Enquanto ativa, não entram novas reações/trocas, mas o participante pode retirar a sua. Reações são transacionais, únicas por pessoa/pedido e persistem após restart; saem com a música. Isso não é votação para pular a música em reprodução.
+A ordem manual do anfitrião prevalece dentro de cada categoria (karaokê/comum e pedidos/rádio). Enquanto ativa, não entram novas reações/trocas, mas o participante pode retirar a sua. Reações são transacionais, únicas por pessoa/pedido e persistem após restart; saem com a música. Isso não é votação para pular a música em reprodução.
 
 ### Playlists na própria lista e no PLAYER
 
@@ -557,11 +557,21 @@ Para configurar a API key: habilite YouTube Data API v3 em um projeto Google Clo
 
 ### Continuação automática
 
-Quando a fila fica vazia e o rádio está ligado: recomendações `getUpNexts(videoId)`, depois busca dos artistas mais frequentes, depois biblioteca local e histórico elegível. A ordenação favorece artistas com maior peso; cada faixa concluída soma 1 e cada skip subtrai 3. É uma escolha determinística pelo peso, não um sorteio.
+Ative **Rádio ligado** em **Anfitrião → Fila e continuação**. O rádio só escolhe uma nova faixa quando **não existe música atual nem pedido pendente**. O botão para desligá-lo continua sendo respeitado, inclusive durante uma consulta em andamento.
 
-A seleção exclui faixas tocadas na última hora, já pendentes e faixas puladas ou com erro na festa. A janela está fixada em uma hora nesta v1. A chegada de um pedido humano durante uma consulta assíncrona é conferida novamente antes de inserir uma automática. A atual não é interrompida pela chegada de um pedido; o pedido ganha prioridade entre as pendentes.
+A referência é sempre a **última faixa tocada**, inclusive quando ela já veio do rádio: primeiro recomendações `getUpNexts(videoId)`; se nenhuma for elegível, busca pelo artista e depois pelo título dessa mesma faixa. A ordem retornada pelo catálogo é preservada; artistas antigos da festa não substituem essa referência. O fallback local/histórico procura o mesmo artista e modo, sem escolher uma gravação comum para preencher uma sequência de karaokê.
 
-Desligar rádio remove automáticas pendentes, preserva a atual e as humanas. Se não houver candidata elegível, a festa espera um pedido, sem repetir uma faixa proibida pelo dedupe.
+- Última faixa de **karaokê** → rádio procura outra versão de karaokê e mantém vídeo, preparação configurada e grupo laranja.
+- Última faixa **normal** → rádio segue com música normal. A apresentação Música/Vídeo continua sendo a escolhida no host.
+- Se um participante pedir uma música normal enquanto o rádio de karaokê toca, a faixa atual termina e o pedido toca em seguida. Quando esse pedido terminar e a fila estiver vazia, ele passa a ser a referência do rádio.
+- Se houver vários pedidos, todos são atendidos conforme a prioridade de karaokê/ordenação antes de buscar outra automática.
+- As recomendações e buscas automáticas de karaokê precisam ter identificação de karaokê no título; uma gravação comum não recebe esse rótulo apenas por ser relacionada. Isso usa metadados do catálogo, não análise/separação de voz.
+- Faixas automáticas não herdam playlist ou cantores do histórico. Karaokê automático indica **Microfone aberto**; os participantes dos pedidos continuam preservados.
+- A seleção exclui faixas tocadas na última hora, já pendentes e faixas puladas ou com erro na festa. Se faltar conteúdo elegível, mostra aviso e espera um pedido, sem repetir a faixa proibida nem trocar silenciosamente de modo.
+
+A consulta é compartilhada entre eventos simultâneos. Após o I/O, o servidor reconfere rádio ligado, PLAYER, fila, erros e última faixa. Se um pedido entrou, ele prevalece; se outra música chegou a terminar, a resposta antiga é descartada e a busca é refeita a partir da nova referência. Não há inserção duplicada nem substituição da música em andamento.
+
+Desligar rádio remove automáticas pendentes, preserva a atual e os pedidos humanos. Os testes do rádio usam estado isolado; nenhum teste adiciona recomendações à festa real.
 
 ### Credenciais: API key para o catálogo e OAuth para playlists pessoais
 
@@ -599,12 +609,12 @@ npm run test:integration
 npm run test:browser
 npm run format:check
 npm run spike:catalog
-# Opt-in: usa a chave do .env; busca oficial de reserva e leitura de playlist pública.
+# Opt-in: usa a chave do .env; busca oficial, playlist pública e rádio de karaokê.
 npm run test:youtube
 ```
 
 - **Playlists e QR:** `tests/youtube-playlists.test.ts`, `tests/network-invite.test.ts`, `tests/playlists-integration.mjs` e `scripts/browser-playlists-check.mjs`. O provedor Google falso é injetado somente no processo de teste via preload Node; não existe bypass de OAuth na aplicação de produção.
-- **Unitários:** rodízio durante inclusão e consumo, camada automática, ordem manual, nomes, normalização, dedupe, sinal negativo do skip, cache, fallback, quota, sessões, persistência, caminhos e intervalos de bytes.
+- **Unitários:** rodízio, prioridade de karaokê, ordem manual, dedupe, votos, rádio pela última faixa/modo, concorrência das recomendações, cache, fallback, quota, sessões, persistência, caminhos e intervalos de bytes.
 - **Integração:** processos reais do build de produção com portas/bancos temporários. Cobrem cookies, autorização, WS, concorrência, persistência, reordenação, eventos atrasados, rádio, rate limit, votos negativos, dispositivos, volume, preparação de karaokê e playlists.
 - **Navegador:** `scripts/browser-suite.mjs` executa os dez scripts em sequência, continua depois de uma falha e retorna erro se qualquer cenário falhar. Cada script usa servidor/porta e contextos independentes. Capturas ficam em `test-results/`. Cobre as páginas de 320 a 1440 px, pedidos, áudio local, player, controles, D-pad, temas, QR, polling, playlists, participantes, votos, falhas de reprodução e karaokê.
 - **Spike real:** consulta o YouTube Music sem credenciais. Requer internet; não valida Premium.
@@ -620,7 +630,28 @@ Para diagnosticar a saída nativa no Linux/WSL: `QROKE_TEST_NATIVE_AUDIO=1 node 
 
 O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Chromium headless correspondente à versão instalada do Playwright. Evite forçar uma versão antiga do cache. Em outra máquina, execute `npx playwright install chromium --only-shell` antes. Os testes usam dados próprios e removem apenas seus diretórios temporários ao encerrar; não alteram sua festa.
 
-### Validação atual — conferência completa, janela e karaokê, 28/09/2026
+### Revisão da branch e validação atual — 28/09/2026
+
+A revisão considera a branch completa em relação a `origin/main`, com foco em autorização/PIN, isolamento de OAuth, credenciais do PLAYER, ordenação/concorrência, rádio, ciclo do iframe/áudio, importação/deduplicação, rede/QR e documentação. Os limites de ambiente LAN e aceite em dispositivos físicos continuam explícitos; não há certificação de acesso público/comercial.
+
+Achados corrigidos:
+
+| Achado                                                                              | Correção e regressão                                                                                                                                                                                                                                                                                               |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Karaokê só ganhava prioridade se a atual já fosse karaokê                           | A ordenação de pedidos passou a priorizar karaokê também durante playlist comum. Os dois testes de importação (avulsa/lote) reproduziram a falha antes da correção e passaram depois. Preservam atual/posição, reinício, avanço único e retomada da playlist. O navegador exige posição **01** e reproduz a troca. |
+| Rádio perdia o modo e podia buscar artistas antigos em vez da última faixa          | Continuação centralizada em `server/core/radio.ts`, com referência à última faixa, prioridade da ordem recomendada e busca/fallback no mesmo modo. `Catalog.related` filtra versões normais/karaokê pelos metadados.                                                                                               |
+| Resposta antiga do rádio podia chegar após outro pedido terminar ou perder o PLAYER | Rechecagem transacional das condições e do identificador da última faixa; resposta obsoleta é descartada e a referência atual é consultada. Testes cobrem pedido novo, término durante consulta, chamadas simultâneas, desligamento e remoção do PLAYER.                                                           |
+| Fallback do rádio podia carregar playlist/cantores do histórico                     | A automática recebe somente os metadados da faixa e identidade própria. Karaokê automático usa **Microfone aberto**, sem convocar pessoas de pedidos anteriores.                                                                                                                                                   |
+
+Resultados finais desta revisão:
+
+- **83 testes unitários**, **22 verificações de integração**, **10/10 scripts de navegador** e **3 testes opt-in com YouTube real** aprovados.
+- TypeScript, build de produção e formatação aprovados. `npm audit --omit=dev`: **zero vulnerabilidades conhecidas** na execução.
+- YouTube real: 24 resultados do catálogo validados, 20 da reserva com cache e uma chamada `search.list`, 200 faixas de playlist pública e seleção de outro karaokê pelo rádio. Estado do rádio somente em memória; nenhuma inclusão na festa real.
+- O teste real valida catálogo/metadados e elegibilidade; não confirma execução integral do vídeo no iframe nem som físico. Os testes de UI continuam usando iframe simulado e áudio local com saída virtual, conforme explicado acima.
+- Preparação da entrega: mesma branch `codex/qroke-v1`; PR autorizado pelo responsável. Não houve merge nem deploy na VPS.
+
+### Validação anterior — conferência completa, janela e karaokê, 28/09/2026
 
 - **70 testes unitários, 20 verificações de integração e 10/10 scripts de navegador aprovados.** TypeScript, build de produção, formatação e `git diff --check` aprovados. A execução completa final de navegador inclui a correção da fila móvel.
 - Prioridade de karaokê verificada no servidor ao terminar, pular e tratar recusa, preservando votos/rodízio dentro do grupo, pedidos humanos antes da continuação, proteção da ordem manual, retomada de músicas comuns e persistência após restart. O teste de reordenação envia a revisão válida e exige o erro específico de prioridade; pulo repetido não avança outra faixa.
@@ -724,7 +755,7 @@ O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Ch
 | 15    | Biblioteca e seleção de saída                   | Indexação, bytes e WAV testados; MP3/Bluetooth/setSinkId físicos pendentes              |
 | 16    | Identidade visual, mobile, temas e estados      | Chromium; teste de festa real pendente                                                  |
 
-### Roteiro de teste do responsável antes de aprovar PR
+### Roteiro de aceite em dispositivos físicos
 
 - [ ] Abrir a URL em dois ou três celulares pelo Wi-Fi e escanear o QR.
 - [ ] Entrar com nomes inválidos/repetidos; enviar várias músicas de cada pessoa e conferir a alternância durante a reprodução inteira.
@@ -744,7 +775,7 @@ O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Ch
 - [x] Conectar a conta Google — login confirmado pelo responsável em 26/09/2026.
 - [ ] Escolher uma playlist própria e testar importação. Conferir que outro navegador admin não herda a conexão.
 - [ ] Alterar a URL pública da worktree para um endereço válido, conferir QR atualizado sem restart e testar novamente com o celular. Confirmar recuperação após reiniciar roteador/WSL e reaplicar encaminhamento se necessário.
-- [ ] Só após esses testes, aprovar a abertura de PR.
+- [x] Abertura de PR autorizada pelo responsável em 28/09/2026, com testes e revisão da branch. O aceite físico e eventual merge permanecem separados.
 
 ## Plano de acesso pela internet — proposta, não implementada
 

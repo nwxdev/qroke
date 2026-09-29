@@ -144,7 +144,7 @@ test('karaokê: prioridade publicada, reordenação protegida e sequência após
     revision: read().revision,
   })
   assert.equal(rejected.status, 409)
-  assert.match(rejected.data.statusMessage, /Durante o karaok/)
+  assert.match(rejected.data.statusMessage, /Os pedidos de karaok/)
   assert.deepEqual(
     read().queue.map((item) => item.id),
     [next.id, regular.id],
@@ -162,3 +162,108 @@ test('karaokê: prioridade publicada, reordenação protegida e sequência após
   assert.equal(read().current.id, regular.id)
   assert.equal(read().queue.length, 0)
 })
+
+for (const wholePlaylist of [false, true])
+  test(
+    'karaokê adicionado como ' +
+      (wholePlaylist ? 'playlist' : 'faixa avulsa') +
+      ' é próximo durante playlist comum',
+    async (t) => {
+      const fixture = await startFixture(3186, {
+        NODE_OPTIONS:
+          '--import=' + new URL('./helpers/youtube-fetch.mjs', import.meta.url).pathname,
+        NUXT_YOUTUBE_API_KEY: 'fixture-key',
+      })
+      const db = new Database(join(fixture.dir, 'party.sqlite'))
+      t.after(async () => {
+        db.close()
+        await fixture.close()
+      })
+      const host = client(fixture.base),
+        guest = client(fixture.base)
+      const person = (await guest.request('/api/guest', { name: 'Ana' })).data
+      await host.request('/api/auth', { action: 'login', pin: '4321' })
+      const device = (await host.request('/api/device', { label: 'PLAYER' })).data
+      const read = () => JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+      const regular = (n) => ({
+        id: String(n).padStart(11, '0'),
+        source: 'youtube',
+        title: 'Playlist comum ' + n,
+        artist: 'Teste',
+        duration: 180,
+        thumbnail: '',
+        karaoke: false,
+        queueId: randomUUID(),
+        guestId: person.id,
+        guestName: person.name,
+        origin: 'human',
+        enqueuedAt: n,
+        round: 0,
+        manualOrder: n,
+        playlist: { id: 'PLbackground', title: 'Playlist de fundo' },
+      })
+      const current = regular(1),
+        next = regular(2),
+        last = regular(3)
+      const state = read()
+      Object.assign(state, {
+        current,
+        queue: [next, last],
+        playerId: device.id,
+        position: 42,
+        duration: 180,
+        mode: 'music',
+        karaokeDelaySeconds: 0,
+        revision: state.revision + 1,
+      })
+      db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(state))
+      const preview = (
+        await guest.request('/api/youtube/preview', {
+          input: 'PLabcdefghijk',
+          karaoke: true,
+        })
+      ).data
+      const imported = await guest.request('/api/youtube/import', {
+        ticket: preview.ticket,
+        ...(wholePlaylist ? {} : { videoId: preview.tracks[0].id }),
+      })
+      assert.equal(imported.status, 200)
+      assert.equal(imported.data.added, wholePlaylist ? 2 : 1)
+      const published = (await guest.request('/api/state')).data
+      assert.equal(published.current.queueId, current.queueId)
+      assert.equal(published.position, 42)
+      assert.equal(read().history.length, 0)
+      assert.equal(
+        published.queue[0].karaoke,
+        true,
+        'karaokê precisa ser o próximo antes da playlist comum',
+      )
+      const requests = published.queue.filter((track) => track.karaoke)
+      assert.equal(requests.length, wholePlaylist ? 2 : 1)
+      assert.equal(!!requests[0].playlist, wholePlaylist)
+      assert.deepEqual(
+        published.queue.map((track) => track.queueId),
+        [...requests.map((track) => track.queueId), next.queueId, last.queueId],
+      )
+      await fixture.restart()
+      assert.deepEqual((await guest.request('/api/state')).data.queue, published.queue)
+      const reportEnd = (queueId) =>
+        host.request('/api/player', { action: 'ended', queueId }, 'POST', {
+          'x-qroke-device-key': device.token,
+        })
+      assert.equal((await reportEnd(current.queueId)).status, 200)
+      assert.equal(read().current.queueId, requests[0].queueId)
+      await reportEnd(current.queueId)
+      assert.equal(read().current.queueId, requests[0].queueId)
+      for (const request of requests) {
+        assert.equal(read().current.queueId, request.queueId)
+        await reportEnd(request.queueId)
+      }
+      assert.equal(read().current.queueId, next.queueId)
+      assert.equal(read().current.playlist.title, 'Playlist de fundo')
+      assert.deepEqual(
+        read().queue.map((track) => track.queueId),
+        [last.queueId],
+      )
+    },
+  )

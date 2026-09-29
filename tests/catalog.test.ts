@@ -186,3 +186,23 @@ it('mantém a busca por vídeos se o catálogo de músicas falha', async () => {
   expect(await new Catalog(p, '', reserve, () => {}).search('teste')).toHaveLength(1)
   expect(reserve).not.toHaveBeenCalled()
 })
+
+it('recomenda karaokê sem rotular gravações comuns como karaokê', async () => {
+  const p = provider()
+  vi.mocked(p.getUpNexts).mockResolvedValue([
+    { ...raw, videoId: 'aaaaaaaaaaa', name: 'Evidências - Karaokê' },
+    { ...raw, videoId: 'bbbbbbbbbbb', name: 'Evidências - ao vivo' },
+  ])
+  const c = new Catalog(
+    p,
+    '',
+    () => true,
+    () => {},
+  )
+  expect(await c.related(raw.videoId, true)).toEqual([
+    expect.objectContaining({ id: 'aaaaaaaaaaa', karaoke: true }),
+  ])
+  expect(await c.related(raw.videoId, false)).toEqual([
+    expect.objectContaining({ id: 'bbbbbbbbbbb', karaoke: false }),
+  ])
+})

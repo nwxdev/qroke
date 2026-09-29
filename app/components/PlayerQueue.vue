@@ -22,7 +22,7 @@ const groups = computed(() => {
             <h3>Karaokê</h3>
             <small
               >{{ group.tracks.length }} na fila{{
-                state?.current?.karaoke ? ' · prioridade agora' : ''
+                queue[0]?.karaoke ? ' · prioridade agora' : ''
               }}</small
             >
           </div>

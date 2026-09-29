@@ -1,9 +1,5 @@
 import type { HistoryItem, QueueItem, Track } from '../../shared/types'
-export function orderQueue(
-  items: QueueItem[],
-  served: QueueItem[] = [],
-  preferKaraoke = false,
-): QueueItem[] {
+export function orderQueue(items: QueueItem[], served: QueueItem[] = []): QueueItem[] {
   const rounds = new Map<string, number>()
   const humans = served.filter((item) => item.origin === 'human')
   const base = humans.at(-1)?.round || 0
@@ -19,7 +15,7 @@ export function orderQueue(
   return annotated.sort(
     (a, b) =>
       Number(a.origin === 'auto') - Number(b.origin === 'auto') ||
-      (preferKaraoke ? Number(b.karaoke) - Number(a.karaoke) : 0) ||
+      Number(b.karaoke) - Number(a.karaoke) ||
       (a.manualOrder ?? Infinity) - (b.manualOrder ?? Infinity) ||
       (b.votes || 0) - (a.votes || 0) ||
       a.round - b.round ||
@@ -27,11 +23,7 @@ export function orderQueue(
       a.queueId.localeCompare(b.queueId),
   )
 }
-export function reorderQueue(
-  items: QueueItem[],
-  ids: string[],
-  preferKaraoke = false,
-): QueueItem[] {
+export function reorderQueue(items: QueueItem[], ids: string[]): QueueItem[] {
   if (
     ids.length !== items.length ||
     new Set(ids).size !== items.length ||
@@ -44,13 +36,12 @@ export function reorderQueue(
     if (item.origin === 'auto') auto = true
     else if (auto) throw new Error('Escolhas humanas devem ficar antes da continuação.')
   }
-  if (preferKaraoke)
-    for (let index = 1; index < ordered.length; index++) {
-      const previous = ordered[index - 1]!,
-        current = ordered[index]!
-      if (previous.origin === current.origin && !previous.karaoke && current.karaoke)
-        throw new Error('Durante o karaokê, as músicas de karaokê vêm antes das demais.')
-    }
+  for (let index = 1; index < ordered.length; index++) {
+    const previous = ordered[index - 1]!,
+      current = ordered[index]!
+    if (previous.origin === current.origin && !previous.karaoke && current.karaoke)
+      throw new Error('Os pedidos de karaokê vêm antes das músicas comuns.')
+  }
   return ordered.map((item, index) => ({ ...item, manualOrder: index }))
 }
 export function normalizeName(value: string) {
@@ -81,15 +72,6 @@ export function normalizeQuery(query: string) {
 export function karaokeQueries(query: string) {
   return ['karaoke ' + normalizeQuery(query), 'karaokê ' + normalizeQuery(query)]
 }
-export function artistWeights(history: HistoryItem[]) {
-  const weights = new Map<string, number>()
-  for (const item of history)
-    weights.set(
-      item.artist,
-      (weights.get(item.artist) || 0) + (item.outcome === 'skipped' ? -3 : 1),
-    )
-  return weights
-}
 export function recommendation(
   candidates: Track[],
   history: HistoryItem[],
@@ -102,8 +84,6 @@ export function recommendation(
       .filter((h) => h.outcome !== 'ended' || now - h.playedAt < 3600000)
       .map((t) => t.source + ':' + t.id),
   ])
-  const weights = artistWeights(history)
-  return candidates
-    .filter((t) => !excluded.has(t.source + ':' + t.id))
-    .sort((a, b) => (weights.get(b.artist) || 0) - (weights.get(a.artist) || 0))[0]
+  // A ordem do catálogo já reflete a última faixa usada como referência do rádio.
+  return candidates.find((track) => !excluded.has(track.source + ':' + track.id))
 }

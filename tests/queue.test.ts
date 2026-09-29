@@ -102,7 +102,7 @@ describe('entrada e busca', () => {
   })
 })
 describe('continuação', () => {
-  it('deduplica uma hora, nunca repete skip e reduz peso do artista', () => {
+  it('deduplica uma hora e recusas sem alterar a ordem das recomendações', () => {
     const now = 10_000_000
     const history: HistoryItem[] = [
       { ...item('a', 'Ana', 1), playedAt: now - 1000, outcome: 'ended' },
@@ -115,12 +115,12 @@ describe('continuação', () => {
         [],
         now,
       )?.id,
-    ).toBe('d')
+    ).toBe('c')
     expect(recommendation([item('a', 'Ana', 1)], history, [], now)).toBeUndefined()
   })
 })
 
-describe('prioridade durante karaokê', () => {
+describe('prioridade dos pedidos de karaokê', () => {
   it('prioriza karaokê sobre músicas comuns, preservando votos dentro do grupo', () => {
     const queue = [
       item('music', 'Ana', 1, { manualOrder: 0, votes: 20 }),
@@ -128,13 +128,7 @@ describe('prioridade durante karaokê', () => {
       item('k2', 'Bia', 3, { karaoke: true, votes: 2 }),
       item('auto', 'radio', 0, { karaoke: true, origin: 'auto' }),
     ]
-    expect(orderQueue(queue, [], true).map((item) => item.id)).toEqual([
-      'k2',
-      'k1',
-      'music',
-      'auto',
-    ])
-    expect(orderQueue(queue).map((item) => item.id)).toEqual(['music', 'k2', 'k1', 'auto'])
+    expect(orderQueue(queue).map((item) => item.id)).toEqual(['k2', 'k1', 'music', 'auto'])
   })
   it('mantém o rodízio entre participantes do grupo prioritário', () => {
     const queue = [
@@ -143,7 +137,7 @@ describe('prioridade durante karaokê', () => {
       item('a2', 'Ana', 2, { karaoke: true }),
       item('b1', 'Bia', 3, { karaoke: true }),
     ]
-    expect(orderQueue(queue, [], true).map((item) => item.id)).toEqual(['a1', 'b1', 'a2', 'm'])
+    expect(orderQueue(queue).map((item) => item.id)).toEqual(['a1', 'b1', 'a2', 'm'])
   })
   it('permite reordenar dentro do grupo e recusa inverter a prioridade', () => {
     const queue = [
@@ -151,12 +145,7 @@ describe('prioridade durante karaokê', () => {
       item('k1', 'Ana', 2, { karaoke: true }),
       item('k2', 'Bia', 3, { karaoke: true }),
     ]
-    expect(() => reorderQueue(queue, ['m', 'k1', 'k2'], true)).toThrow('Durante o karaokê')
-    expect(reorderQueue(queue, ['k2', 'k1', 'm'], true).map((item) => item.id)).toEqual([
-      'k2',
-      'k1',
-      'm',
-    ])
-    expect(reorderQueue(queue, ['m', 'k1', 'k2']).map((item) => item.id)).toEqual(['m', 'k1', 'k2'])
+    expect(() => reorderQueue(queue, ['m', 'k1', 'k2'])).toThrow('Os pedidos de karaokê')
+    expect(reorderQueue(queue, ['k2', 'k1', 'm']).map((item) => item.id)).toEqual(['k2', 'k1', 'm'])
   })
 })

@@ -63,6 +63,10 @@ const { state, device, control, pending, playHere } = useParty()
             Liberar rodízio e votos
           </button>
         </div>
+        <small
+          >Com a fila vazia, o rádio segue a última música. Karaokê continua com karaokê; pedidos
+          entram antes do rádio.</small
+        >
       </section>
     </div>
     <section class="control-group" aria-label="Configuração do karaokê">

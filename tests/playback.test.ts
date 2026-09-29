@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { initialState } from '../server/core/database'
 import {
+  startNext,
   skipTrack,
   finishTrack,
   playerFailure,
@@ -102,10 +103,28 @@ describe('sequência de karaokê', () => {
       expect(s.karaokeLeadSeconds).toBe(0)
     },
   )
-  it('não antecipa karaokê quando a faixa atual é comum', () => {
-    const s = setup()
+  it.each(['ended', 'skipped', 'error'] as const)(
+    'entra no karaokê após %s de uma playlist comum, depois retoma a playlist',
+    (outcome) => {
+      const s = setup()
+      for (const item of [s.current, ...s.queue])
+        Object.assign(item, { playlist: { id: 'PLbackground', title: 'Playlist de fundo' } })
+      s.queue[1]!.karaoke = true
+      Object.assign(s.queue[0]!, { manualOrder: 0 })
+      finishTrack(s, outcome)
+      expect(s.current?.title).toBe('Faixa 3')
+      expect(s.karaokeLeadSeconds).toBe(5)
+      expect(s.queue.map((item) => item.title)).toEqual(['Faixa 2', 'Faixa 4'])
+      finishTrack(s, 'ended')
+      expect(s.current?.title).toBe('Faixa 2')
+      expect(s.karaokeLeadSeconds).toBe(0)
+    },
+  )
+  it('seleciona karaokê pendente ao ativar um player sem música atual', () => {
+    const s = { ...initialState(), playerId: randomUUID(), queue: [track(1), track(2)] }
     s.queue[1]!.karaoke = true
-    finishTrack(s, 'ended')
+    startNext(s)
     expect(s.current?.title).toBe('Faixa 2')
+    expect(s.queue[0]?.title).toBe('Faixa 1')
   })
 })

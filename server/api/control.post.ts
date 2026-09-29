@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
         if (s.revision !== cmd.revision)
           throw createError({ statusCode: 409, statusMessage: 'A fila mudou; tente novamente.' })
         try {
-          s.queue = reorderQueue(s.queue, cmd.ids, !!s.current?.karaoke)
+          s.queue = reorderQueue(s.queue, cmd.ids)
         } catch (error) {
           throw createError({ statusCode: 409, statusMessage: (error as Error).message })
         }

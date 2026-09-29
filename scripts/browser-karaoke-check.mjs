@@ -1,4 +1,7 @@
 import { chromium, expect } from '@playwright/test'
+import Database from 'better-sqlite3'
+import { join } from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { startFixture, client } from '../tests/helpers/server.mjs'
 const fixture = await startFixture(3185, {
   NODE_OPTIONS:
@@ -10,6 +13,7 @@ const browser = await chromium.launch({
   args: ['--no-sandbox'],
   ...(process.env.QROKE_CHROMIUM ? { executablePath: process.env.QROKE_CHROMIUM } : {}),
 })
+const db = new Database(join(fixture.dir, 'party.sqlite'))
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const errors = []
@@ -161,11 +165,65 @@ try {
   await expect(
     page.getByRole('button', { name: /Controles|Liberar controles|Sair do admin/ }),
   ).toHaveCount(0)
+  // Regressão: um pedido de karaokê durante playlist comum já aparece como próximo.
+  const background = await state()
+  const regular = {
+    ...background.current,
+    id: 'yyyyyyyyyyy',
+    queueId: randomUUID(),
+    title: 'Playlist comum em execução',
+    karaoke: false,
+    singers: undefined,
+    manualOrder: null,
+    playlist: { id: 'PLbackground', title: 'Playlist de fundo' },
+  }
+  const following = {
+    ...regular,
+    id: 'zzzzzzzzzzz',
+    queueId: randomUUID(),
+    title: 'Depois do karaokê',
+  }
+  const saved = JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+  Object.assign(saved, {
+    current: regular,
+    queue: [following],
+    mode: 'music',
+    position: 0,
+    karaokeLeadSeconds: 0,
+    karaokeStartsAt: null,
+    revision: saved.revision + 1,
+  })
+  db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(saved))
+  await expect(page.locator('.tv-screen')).toHaveClass(/music-mode/)
+  const preview = await (
+    await context.request.post(fixture.base + '/api/youtube/preview', {
+      data: { input: 'PLabcdefghijk', karaoke: true },
+    })
+  ).json()
+  const imported = await context.request.post(fixture.base + '/api/youtube/import', {
+    data: { ticket: preview.ticket, videoId: preview.tracks[0].id },
+  })
+  expect(imported.status()).toBe(200)
+  expect((await state()).current.queueId).toBe(regular.queueId)
+  await expect(page.locator('.player-queue-cards > :first-child')).toHaveClass(
+    /player-karaoke-group/,
+  )
+  await expect(page.locator('.karaoke-queue-heading')).toContainText('prioridade agora')
+  await expect(page.locator('.player-karaoke-group .queue-number')).toHaveText('01')
+  await expect.poll(() => page.evaluate(() => !!window.fake.playing)).toBe(true)
+  await page.evaluate(() => window.fake.events.onStateChange({ data: 0 }))
+  await expect(page.locator('.countdown-number')).toHaveText('2')
+  await expect.poll(async () => (await state()).current.id).toBe(preview.tracks[0].id)
+  await expect.poll(() => page.evaluate(() => !!window.fake.playing), { timeout: 7000 }).toBe(true)
+  await page.evaluate(() => window.fake.events.onStateChange({ data: 0 }))
+  await expect.poll(async () => (await state()).current.queueId).toBe(following.queueId)
+  expect((await state()).current.playlist.title).toBe('Playlist de fundo')
   expect(errors).toEqual([])
   console.log(
-    'Karaokê: 3 cantores via playlist, entrada /tv→/player, contagem padrão/configurável, vinheta interrompida ao iniciar, QR 320–1440px, busca por alvo e administração restrita ao host OK',
+    'Karaokê: 3 cantores via playlist, entrada /tv→/player, contagem padrão/configurável, vinheta interrompida ao iniciar, QR 320–1440px, busca por alvo e administração restrita ao host e pedido de karaokê como próximo durante playlist comum OK',
   )
 } finally {
   await browser.close()
+  db.close()
   await fixture.close()
 }
