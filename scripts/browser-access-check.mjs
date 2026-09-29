@@ -2,12 +2,12 @@ import { chromium, expect } from '@playwright/test'
 import { startFixture } from '../tests/helpers/server.mjs'
 const fixture = await startFixture(3182, {
   NUXT_ACCESS_REQUIRED: 'true',
-  NUXT_HOST_PIN: '58492177',
+  NUXT_HOST_PIN: '4321',
   NUXT_PUBLIC_PARTY_URL: 'http://127.0.0.1:3182',
 })
 const second = await startFixture(3185, {
   NUXT_ACCESS_REQUIRED: 'true',
-  NUXT_HOST_PIN: '58492177',
+  NUXT_HOST_PIN: '4321',
   NUXT_PUBLIC_PARTY_URL: fixture.base,
   NUXT_MONGODB_DATABASE: fixture.databaseName,
 })
@@ -23,7 +23,7 @@ try {
   await expect(page).toHaveURL(/\/entrar/)
   await expect(page.getByRole('heading', { name: 'Entre na festa' })).toBeVisible()
   await page.screenshot({ path: 'test-results/production-entry-mobile.png', fullPage: true })
-  await page.getByLabel('Acesso do anfitrião').fill('58492177')
+  await page.getByLabel('Acesso do anfitrião').fill('4321')
   await page.getByRole('button', { name: 'Entrar como anfitrião' }).click()
   await expect(page).toHaveURL(/\/host/)
   await expect(page.getByRole('button', { name: 'Gerar novo convite da festa' })).toBeVisible()
