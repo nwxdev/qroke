@@ -6,7 +6,11 @@ const occupied = computed(() => !admin.value && remaining.value > 0)
 const pin = ref('')
 async function submit() {
   if (occupied.value) return
-  await act(() => api('/api/auth', { action: 'login', pin: pin.value }))
+  await act(async () => {
+    const access = await $fetch<{ role: 'owner' | 'guest' | null }>('/api/access')
+    if (access.role === 'guest') await api('/api/access', { pin: pin.value })
+    await api('/api/auth', { action: 'login', pin: pin.value })
+  })
   pin.value = ''
 }
 function digit(key: string) {
