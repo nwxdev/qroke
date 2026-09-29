@@ -19,6 +19,13 @@ const browser = await chromium.launch({
 try {
   const hostContext = await browser.newContext({ viewport: { width: 360, height: 800 } })
   const page = await hostContext.newPage()
+  const home = await page.goto(fixture.base + '/')
+  expect(home.status()).toBe(200)
+  await expect(page).toHaveURL(fixture.base + '/')
+  await expect(page.getByRole('heading', { name: 'Entre na festa' })).toBeVisible()
+  await expect(page).toHaveTitle('QRokê — Música e karaokê para sua festa')
+  expect((await hostContext.request.get(fixture.base + '/api/state')).status()).toBe(401)
+  await page.screenshot({ path: 'test-results/public-home-mobile.png', fullPage: true })
   await page.goto(fixture.base + '/host')
   await expect(page).toHaveURL(/\/entrar/)
   await expect(page.getByRole('heading', { name: 'Entre na festa' })).toBeVisible()
@@ -27,6 +34,9 @@ try {
   await page.getByRole('button', { name: 'Entrar como anfitrião' }).click()
   await expect(page).toHaveURL(/\/host/)
   await expect(page.getByRole('button', { name: 'Gerar novo convite da festa' })).toBeVisible()
+  const returningHome = await hostContext.request.get(fixture.base + '/', { maxRedirects: 0 })
+  expect(returningHome.status()).toBe(302)
+  expect(returningHome.headers().location).toBe('/busca')
   // Connect to the other process; mutations below are handled by the first process.
   await page.evaluate(async (base) => {
     window.qrokeSocket = new WebSocket(base.replace('http:', 'ws:') + '/ws')
@@ -117,7 +127,7 @@ try {
   await expect(guest).toHaveURL(/\/entrar/, { timeout: 10000 })
   await guest.screenshot({ path: 'test-results/production-invite-expired.png', fullPage: true })
   console.log(
-    'Acesso público: entrada protegida, PIN, promoção a anfitrião pelo QR, controle exclusivo, convite, remoção do segredo da URL, revogação e WebSocket entre instâncias aprovados.',
+    'Acesso público: página inicial pública, retorno com sessão, entrada protegida, PIN, promoção a anfitrião pelo QR, controle exclusivo, convite, remoção do segredo da URL, revogação e WebSocket entre instâncias aprovados.',
   )
 } finally {
   await browser.close()

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+useSiteSeo()
 usePartyConnection()
 const route = useRoute()
 const theme = useTheme()

@@ -21,9 +21,17 @@ Executar npm ci, npm run typecheck, npm test, npm run test:storage, npm run buil
 - QROKE_RUNTIME_CONFIG_FILE: arquivo JSON montado por Docker Secret. Valores nunca entram na imagem.
 - QROKE_MUSIC_DIR: opcional; múltiplas instâncias exigem a mesma biblioteca acessível em todas.
 
-Acesso inicial: /entrar com PIN do anfitrião. A entrada gera um convite válido por 24 horas para a festa. Gerar novo convite revoga as entradas anteriores dos convidados; o anfitrião mantém seu acesso. A reserva de controles continua com duração configurável.
+Acesso inicial: / ou /entrar com PIN do anfitrião. A entrada gera um convite válido por 24 horas para a festa. Gerar novo convite revoga as entradas anteriores dos convidados; o anfitrião mantém seu acesso. A reserva de controles continua com duração configurável.
 
 O retorno Google deve ser cadastrado exatamente como https://qroke.com.br/api/youtube/callback. Autorização Google dá acesso às playlists pessoais, sem conceder administração.
+
+## Apresentação pública e SEO
+
+A página inicial apresenta o QRokê sem exigir convite; quem já tem acesso à festa segue para a busca. As APIs continuam protegidas. Título, descrição, canonical, Open Graph, Twitter Card e dados estruturados WebSite usam https://qroke.com.br. URLs de convite e parâmetros da festa não entram nos metadados.
+
+A indexação só é habilitada quando QROKE_PUBLIC_URL corresponde ao domínio de produção. robots.txt aponta para sitemap.xml, que contém apenas a página inicial. Busca, anfitrião, player, QR, TV e APIs recebem noindex; a entrada alternativa /entrar aponta o canonical para /. Ambientes locais bloqueiam rastreamento.
+
+Os ícones para navegador e celular e a imagem de compartilhamento ficam em public/. O manifesto usa os ícones de 192 e 512 pixels; não há funcionamento offline.
 
 ## Concorrência e limites
 
