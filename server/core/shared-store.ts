@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
-import type { Db } from 'mongodb'
+import type { ClientSession, Db } from 'mongodb'
 import { hashToken } from './mongo-database'
 
 export interface AsyncStore<T> {
@@ -76,10 +76,12 @@ export class EncryptedStore<T extends { expires: number }> implements AsyncStore
       Buffer.concat([decipher.update(data.subarray(12, -16)), decipher.final()]).toString(),
     ) as T
   }
-  async get(key: string) {
-    return this.decrypt(await this.db.collection<SecretRow>('oauth').findOne({ _id: this.id(key) }))
+  async get(key: string, session?: ClientSession) {
+    return this.decrypt(
+      await this.db.collection<SecretRow>('oauth').findOne({ _id: this.id(key) }, { session }),
+    )
   }
-  async set(key: string, value: T) {
+  async set(key: string, value: T, session?: ClientSession) {
     await this.db.collection<SecretRow>('oauth').replaceOne(
       { _id: this.id(key) },
       {
@@ -88,7 +90,7 @@ export class EncryptedStore<T extends { expires: number }> implements AsyncStore
         data: this.encrypt(value),
         expiresAt: new Date(value.expires),
       },
-      { upsert: true },
+      { upsert: true, session },
     )
   }
   async delete(key: string) {

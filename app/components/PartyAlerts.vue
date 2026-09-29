@@ -1,8 +1,9 @@
 <script setup lang="ts">
+const { storageKey, id: activePartyId } = usePartyRoute()
 const { failure, connected, state, refresh, session, adminDialogOpen } = useParty()
-const warning = useState('player-warning', () => '')
+const warning = useState(storageKey('player-warning'), () => '')
 const warningKind = useState<'network' | 'activate' | 'load' | 'other'>(
-  'player-warning-kind',
+  storageKey('player-warning-kind'),
   () => 'other',
 )
 const retrying = ref(false)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
 import type { QueueItem } from '../../shared/types'
+const { href } = usePartyRoute()
 const { state, admin, pending, reorder, isPlayer } = useParty()
 const dragged = ref<QueueItem[]>([])
 const dragging = ref(false)
@@ -24,7 +25,7 @@ watch(admin, (value, previous) => {
   if (value) unlock.value = false
   else if (previous) {
     unlock.value = false
-    void navigateTo('/busca', { replace: true })
+    void navigateTo(href('/busca'), { replace: true })
   }
 })
 </script>
@@ -58,7 +59,7 @@ watch(admin, (value, previous) => {
               que vai emitir o som. Depois disso, os pedidos começam automaticamente quando a fila
               está vazia.
             </p>
-            <HostInvitation />
+            <HostInvitation /><EndParty />
             <HostControls />
             <p v-if="state?.catalogWarning" class="notice">{{ state.catalogWarning }}</p>
           </div>

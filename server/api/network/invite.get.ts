@@ -1,15 +1,8 @@
-import { EncryptedStore } from '../../core/shared-store'
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  if (!config.accessRequired) return networkInvite().check()
-  const database = party(event)
-  const store = new EncryptedStore<{ token: string; expires: number }>(
-    database.db,
-    database.scope,
-    'invite',
-    config.encryptionKey,
-  )
-  const saved = await store.get('current')
+  if (!config.accessRequired && !event.context.qrokeScoped) return networkInvite().check()
+  const database = party(event),
+    saved = await partyInviteStore(event).get('current')
   if (!saved || !(await database.acceptInvite(saved.token)))
     return {
       url: '',
@@ -19,11 +12,10 @@ export default defineEventHandler(async (event) => {
     }
   return {
     url:
-      config.public.partyUrl +
-      '/entrar#festa=' +
-      encodeURIComponent(database.partyId) +
-      '&convite=' +
-      saved.token,
+      String(config.public.partyUrl).replace(/\/$/, '') +
+      (event.context.qrokeScoped
+        ? '/f/' + encodeURIComponent(database.partyId) + '#convite=' + saved.token
+        : '/entrar#festa=' + encodeURIComponent(database.partyId) + '&convite=' + saved.token),
     status: 'ok',
     checkedAt: Date.now(),
     message: 'Convite disponível para esta festa.',

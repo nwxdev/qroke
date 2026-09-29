@@ -1,7 +1,8 @@
 <script setup lang="ts">
+const partyRoute = usePartyRoute()
 const route = useRoute()
 function focusSearch() {
-  if (route.path !== '/busca') return
+  if (partyRoute.page.value !== '/busca') return
   requestAnimationFrame(() => {
     const target = document.getElementById('busca')
     target?.scrollIntoView({
@@ -13,8 +14,8 @@ function focusSearch() {
 }
 </script>
 <template>
-  <NuxtLink to="/busca#busca" class="primary-button queue-search-target" @click="focusSearch"
-    ><AppIcon name="search" /> Buscar músicas</NuxtLink
+  <PartyLink to="/busca#busca" class="primary-button queue-search-target" @click="focusSearch"
+    ><AppIcon name="search" /> Buscar músicas</PartyLink
   >
 </template>
 <style scoped>

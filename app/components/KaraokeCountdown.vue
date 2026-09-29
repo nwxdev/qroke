@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const partyRoute = usePartyRoute()
 const { state } = useParty()
 const route = useRoute()
 const { waiting, remaining } = useKaraokeCountdown()
@@ -9,7 +10,10 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
     <section
       v-if="waiting && state?.current"
       class="karaoke-countdown"
-      :class="{ 'countdown-fullscreen': route.path === '/player', 'is-paused': state.paused }"
+      :class="{
+        'countdown-fullscreen': partyRoute.page.value === '/player',
+        'is-paused': state.paused,
+      }"
       aria-label="Preparação do karaokê"
     >
       <div class="countdown-content">

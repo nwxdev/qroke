@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const $fetch = usePartyFetch()
 import QRCode from 'qrcode'
 import type { InviteStatus } from '../../shared/network'
 import { partyUrl } from '../utils/party-url'
@@ -10,13 +11,30 @@ const url = ref(''),
   warning = ref(''),
   message = ref('')
 const copied = ref(false)
+async function shareLink() {
+  if (!url.value) return
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Convite para a festa no QRokê', url: url.value })
+      return
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') return
+    }
+  }
+  await copyLink()
+}
 let copiedTimer: ReturnType<typeof setTimeout>
 async function copyLink() {
   if (!url.value) return
   try {
-    if (navigator.clipboard && window.isSecureContext)
-      await navigator.clipboard.writeText(url.value)
-    else {
+    let written = false
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(url.value)
+        written = true
+      } catch {}
+    }
+    if (!written) {
       const field = document.createElement('textarea')
       field.value = url.value
       field.style.position = 'fixed'
@@ -135,6 +153,7 @@ onBeforeUnmount(() => {
           <AppIcon v-if="presentation" :name="copied ? 'check' : 'link'" />
           {{ copied ? 'Copiado' : presentation ? 'Copiar link' : 'Copiar link da festa' }}
         </button>
+        <button v-if="svg" class="share-invite" @click="shareLink">Compartilhar convite</button>
         <button
           :disabled="checking"
           :aria-label="checking ? 'Verificando rede…' : 'Verificar acesso'"

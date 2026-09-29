@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
+import { openFixtureDatabase } from './database.mjs'
 export async function startFixture(port = 3197, extraEnv = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'qroke-test-')),
     music = join(dir, 'music')
@@ -90,6 +91,15 @@ export async function startFixture(port = 3197, extraEnv = {}) {
     },
     close: async () => {
       await stop()
+      // Only the creator owns this isolated database; a second replica must not drop it.
+      if (!extraEnv.NUXT_MONGODB_DATABASE) {
+        const temporary = await openFixtureDatabase(dir)
+        try {
+          await temporary.db.dropDatabase()
+        } finally {
+          await temporary.close()
+        }
+      }
       if (!dir.startsWith(join(tmpdir(), 'qroke-test-'))) throw new Error('Invalid temporary path')
       await rm(dir, { recursive: true, force: true })
     },

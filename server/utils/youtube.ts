@@ -39,7 +39,7 @@ export async function youtube(event: H3Event): Promise<YoutubePlaylists> {
 }
 export async function youtubeAccount(event: H3Event) {
   return (await youtube(event)).ownedAccount(
-    getCookie(event, 'qroke_youtube'),
+    partyCredential(event, 'qroke_youtube'),
     (await playlistAccess(event)).owner,
   )
 }

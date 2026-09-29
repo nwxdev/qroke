@@ -1,8 +1,8 @@
 <template>
   <header class="brand-header">
-    <NuxtLink to="/busca" class="brand" aria-label="QRokê, início"
+    <PartyLink to="/busca" class="brand" aria-label="QRokê, início"
       ><BrandLogo decorative
-    /></NuxtLink>
+    /></PartyLink>
     <HeaderMenu
       ><template v-if="$slots.default" #default><slot /></template
     ></HeaderMenu>

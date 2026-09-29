@@ -54,6 +54,8 @@ jobs:
         run: npm run test:integration
       - name: Testes com duas instâncias
         run: npm run test:distributed
+      - name: Dez festas e duzentos participantes simultâneos
+        run: npm run test:load
       - name: Instalar Chromium e bibliotecas do sistema
         run: npx playwright install --with-deps chromium --only-shell
       - name: Testes de navegador

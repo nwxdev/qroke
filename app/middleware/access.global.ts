@@ -1,9 +1,19 @@
+import { partyIdFromPath, partyPage } from '#shared/parties'
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (import.meta.server || to.path === '/' || to.path === '/entrar') return
+  if (to.path === '/') return
+  const id = partyIdFromPath(to.path),
+    page = partyPage(to.path)
+  if (['/entrar', '/encerrada'].includes(page)) return
+  const prefix = id ? '/f/' + id : ''
   try {
-    const access = await $fetch<{ authorized: boolean }>('/api/access')
-    if (!access.authorized) return navigateTo('/entrar' + (import.meta.client ? location.hash : ''))
-  } catch {
-    return navigateTo('/entrar')
+    const request = import.meta.server ? useRequestFetch() : $fetch
+    const access = await request<{ authorized: boolean }>(
+      (id ? '/api/f/' + id : '/api') + '/access',
+    )
+    if (!access.authorized) return navigateTo(prefix + '/entrar' + location.hash)
+  } catch (error) {
+    if (id && (error as { statusCode?: number }).statusCode === 410)
+      return navigateTo(prefix + '/encerrada')
+    return navigateTo(prefix + '/entrar' + location.hash)
   }
 })

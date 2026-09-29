@@ -3,8 +3,11 @@ export default defineEventHandler(async (event) => {
     s = await party(event).state(),
     item = s.queue.find((t) => t.queueId === id)
   if (!item) throw createError({ statusCode: 404, statusMessage: 'A faixa já saiu da fila.' })
-  const isAdmin = await party(event).admin(getCookie(event, 'qroke_admin'), true)
-  if (!isAdmin && (await party(event).guest(getCookie(event, 'qroke_guest')))?.id !== item.guestId)
+  const isAdmin = await party(event).admin(partyCredential(event, 'qroke_admin'), true)
+  if (
+    !isAdmin &&
+    (await party(event).guest(partyCredential(event, 'qroke_guest')))?.id !== item.guestId
+  )
     throw createError({
       statusCode: 403,
       statusMessage: 'Você só pode remover suas próprias músicas.',

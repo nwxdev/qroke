@@ -1,10 +1,10 @@
 import type { H3Event } from 'h3'
 import { rateLimit } from '../core/connections'
 export async function playlistAccess(event: H3Event) {
-  const guest = await party(event).guest(getCookie(event, 'qroke_guest'))
+  const guest = await party(event).guest(partyCredential(event, 'qroke_guest'))
   if (guest) return { owner: 'guest:' + guest.id, guest }
   await requireAdmin(event)
-  return { owner: getCookie(event, 'qroke_admin')!, guest: undefined }
+  return { owner: partyCredential(event, 'qroke_admin')!, guest: undefined }
 }
 export async function recheckPlaylistAccess(event: H3Event, owner: string, account?: string) {
   if (

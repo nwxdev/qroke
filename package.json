@@ -20,7 +20,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:storage": "vitest run --config vitest.storage.config.ts",
-    "test:distributed": "node --test tests/distributed-integration.mjs"
+    "test:distributed": "node --test tests/distributed-integration.mjs tests/multisession-integration.mjs",
+    "test:load": "node --test tests/multisession-load.mjs"
   },
   "dependencies": {
     "@quasar/extras": "^1.17.0",

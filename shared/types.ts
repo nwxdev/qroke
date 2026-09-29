@@ -81,6 +81,7 @@ export interface PartyState {
   catalogWarning: string | null
 }
 export interface PublicState extends Omit<PartyState, 'history'> {
+  party?: import('./parties').PartyInfo
   serverTime?: number
   devices: Device[]
   guests: Guest[]

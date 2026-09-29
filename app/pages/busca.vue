@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const $fetch = usePartyFetch()
 import type { Track } from '../../shared/types'
 const { state, guest, queue, pending, act, api, add, isPlayer } = useParty()
 const route = useRoute()
@@ -256,14 +257,14 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
         <PartyPeople />
         <MediaPlayer v-if="isPlayer" />
         <div class="sidebar-footer">
-          Uma festa, muitas vozes.<br /><NuxtLink to="/player">Abrir player ↗</NuxtLink>
+          Uma festa, muitas vozes.<br /><PartyLink to="/player">Abrir player ↗</PartyLink>
         </div>
       </aside>
     </main>
     <footer class="site-footer">
       <span class="footer-signature"
         ><BrandLogo decorative /><span>Feito para cantar junto.</span></span
-      ><NuxtLink to="/player">Player e convite QR ↗</NuxtLink>
+      ><PartyLink to="/player">Player e convite QR ↗</PartyLink>
     </footer>
   </div>
 </template>

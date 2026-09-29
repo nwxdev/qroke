@@ -1,4 +1,7 @@
 <script setup lang="ts">
+const $fetch = usePartyFetch()
+const { id: activePartyId } = usePartyRoute()
+const pinLength = computed(() => (activePartyId.value.startsWith('f1.') ? 6 : 4))
 const props = defineProps<{ tv?: boolean }>()
 const { api, act, pending, admin, adminLeaseSeconds, failure } = useParty()
 const { remaining, remainingLabel } = useAdminLease()
@@ -45,7 +48,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
         type="password"
         inputmode="numeric"
         autocomplete="off"
-        minlength="4"
+        :minlength="pinLength"
         maxlength="8"
         :readonly="tv"
         required
@@ -63,7 +66,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
           @click="digit(digitKey)"
         >
           {{ digitKey }}</button
-        ><button type="submit" :disabled="pending || occupied || pin.length < 4">OK</button>
+        ><button type="submit" :disabled="pending || occupied || pin.length < pinLength">OK</button>
       </div>
       <QBtn
         v-else
@@ -71,7 +74,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
         color="primary"
         no-caps
         :loading="pending"
-        :disable="occupied || pin.length < 4"
+        :disable="occupied || pin.length < pinLength"
         label="Liberar controles"
         icon="lock_open"
       />

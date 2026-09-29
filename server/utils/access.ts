@@ -47,13 +47,17 @@ export function requestIp(event: H3Event) {
   return getRequestIP(event, { xForwardedFor: useRuntimeConfig().trustProxy }) || 'unknown'
 }
 export function requireOwner(event: H3Event) {
-  if (useRuntimeConfig().accessRequired && event.context.qrokeAccess?.role !== 'owner')
+  if (
+    (useRuntimeConfig().accessRequired || event.context.qrokeScoped) &&
+    event.context.qrokeAccess?.role !== 'owner'
+  )
     throw createError({ statusCode: 403, statusMessage: 'Entre com o acesso do anfitrião.' })
 }
 export async function validateAccess(token: string | undefined) {
   const access = readAccess(token)
   if (!access) return undefined
   const database = await openParty(access.organizationId, access.partyId)
+  await database.assertActive()
   if (access.role === 'guest') {
     const invite = await database.inviteVersion()
     if (!invite || invite.version !== access.version || invite.expiresAt <= Date.now())

@@ -1,16 +1,14 @@
-import { timingSafeEqual } from 'node:crypto'
-import { createError, getCookie, getHeader, setCookie, type H3Event } from 'h3'
-import { rateLimit } from '../core/connections'
+import { createError, getHeader, type H3Event } from 'h3'
 export function cookieOptions() {
   return { httpOnly: true, sameSite: 'strict' as const, secure: secureCookie(), path: '/' }
 }
 export async function requireAdmin(event: H3Event, touch = true) {
   requireOwner(event)
-  if (!(await party(event).admin(getCookie(event, 'qroke_admin'), touch)))
+  if (!(await party(event).admin(partyCredential(event, 'qroke_admin'), touch)))
     throw createError({ statusCode: 401, statusMessage: 'Destrave com o PIN do anfitrião.' })
 }
 export async function requireGuest(event: H3Event) {
-  const guest = await party(event).guest(getCookie(event, 'qroke_guest'))
+  const guest = await party(event).guest(partyCredential(event, 'qroke_guest'))
   if (!guest) throw createError({ statusCode: 401, statusMessage: 'Informe seu nome para entrar.' })
   return guest
 }
@@ -30,22 +28,11 @@ export async function requirePlayer(event: H3Event) {
 }
 export async function login(event: H3Event, pin: string) {
   requireOwner(event)
-  if (!(await rateLimit(useRuntimeConfig().dragonflyUrl, 'pin:' + requestIp(event), 5)))
-    throw createError({
-      statusCode: 429,
-      statusMessage: 'Aguarde um minuto antes de tentar novamente.',
-    })
-  const expected = String(useRuntimeConfig().hostPin)
-  if (!/^\d{4,8}$/.test(expected))
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'Configure QROKE_HOST_PIN com 4 a 8 dígitos no servidor.',
-    })
-  const a = Buffer.from(pin),
-    b = Buffer.from(expected)
-  if (a.length !== b.length || !timingSafeEqual(a, b))
-    throw createError({ statusCode: 401, statusMessage: 'PIN incorreto.' })
-  const lease = await party(event).claimAdmin(getCookie(event, 'qroke_admin'), adminLeaseSeconds())
+  await verifyPartyPin(event, pin)
+  const lease = await party(event).claimAdmin(
+    partyCredential(event, 'qroke_admin'),
+    adminLeaseSeconds(),
+  )
   if (!lease.granted)
     throw createError({
       statusCode: 409,
@@ -53,7 +40,7 @@ export async function login(event: H3Event, pin: string) {
         'Outro anfitrião está no controle. Aguarde o tempo restante ou peça para ele sair.',
       data: { expiresAt: lease.expiresAt },
     })
-  setCookie(event, 'qroke_admin', lease.token, cookieOptions())
+  await setPartyCredential(event, 'qroke_admin', lease.token)
 }
 export function adminLeaseSeconds() {
   const value = Number(useRuntimeConfig().adminLeaseSeconds)

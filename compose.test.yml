@@ -3,6 +3,10 @@ services:
     image: mongo:8.2.12
     command: ['mongod', '--replSet', 'rs0', '--bind_ip_all', '--port', '37017']
     ports: ['127.0.0.1:37017:37017']
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     healthcheck:
       test:
         [

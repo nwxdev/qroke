@@ -1,7 +1,8 @@
 <script setup lang="ts">
+const partyRoute = usePartyRoute()
 const { state, admin, control, pending } = useParty()
 const route = useRoute()
-const canManage = computed(() => admin.value && route.path === '/host')
+const canManage = computed(() => admin.value && partyRoute.page.value === '/host')
 </script>
 <template>
   <div v-if="state?.playbackIssue" class="notice playback-notice" role="status">

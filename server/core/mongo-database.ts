@@ -2,11 +2,13 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import type { ClientSession, Db, MongoClient } from 'mongodb'
 import { normalizeName, uniqueName, orderQueue } from './rules'
+import type { EncryptedStore } from './shared-store'
 import { initialState } from './initial-state'
+import { assertPartyActive, partyInfo, type PartyDetails } from './party-lifecycle'
 import type { PartyState, Guest, Device, PublicState } from '../../shared/types'
 
 export const hashToken = (value: string) => createHash('sha256').update(value).digest('hex')
-type PartyRow = {
+export type PartyRow = PartyDetails & {
   _id: string
   organizationId: string
   partyId: string
@@ -36,6 +38,12 @@ const contexts = new AsyncLocalStorage<{ scope: string; session: ClientSession; 
 
 export async function initializeDatabase(db: Db) {
   await Promise.all([
+    db.collection('parties').createIndex({ creationKey: 1 }, { unique: true, sparse: true }),
+    db.collection('parties').createIndex({ purgeAt: 1 }),
+    db.collection('memberships').createIndex({ browserHash: 1, expiresAt: 1 }),
+    db.collection('memberships').createIndex({ scope: 1 }),
+    db.collection('memberships').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+
     db.collection('guests').createIndex({ scope: 1, tokenHash: 1 }, { unique: true }),
     db.collection('guests').createIndex({ scope: 1, name: 1 }, { unique: true }),
     db.collection('guests').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
@@ -79,7 +87,52 @@ export class MongoPartyDatabase {
     )
     return this
   }
-  private async write<T>(change: (row: PartyRow) => Promise<T>): Promise<T> {
+  async details() {
+    const row = await this.db.collection<PartyRow>('parties').findOne({ _id: this.scope })
+    if (!row)
+      throw Object.assign(new Error('Festa não encontrada.'), {
+        statusCode: 404,
+        statusMessage: 'Festa não encontrada.',
+      })
+    return row
+  }
+  async info() {
+    return partyInfo(await this.details())
+  }
+  async assertActive() {
+    assertPartyActive(await this.details())
+  }
+  async create(
+    details: Required<
+      Pick<
+        PartyDetails,
+        'name' | 'pinHash' | 'createdAt' | 'expiresAt' | 'purgeAt' | 'creationKey' | 'createdBy'
+      >
+    >,
+  ) {
+    await this.db.collection<PartyRow>('parties').insertOne({
+      _id: this.scope,
+      organizationId: this.organizationId,
+      partyId: this.partyId,
+      version: 0,
+      state: initialState(),
+      ...details,
+    })
+  }
+  async close() {
+    return this.write(async (row) => {
+      if (!row.closedAt) row.closedAt = new Date()
+      row.purgeAt = new Date(row.closedAt.getTime() + 86400000)
+      row.state.paused = true
+      row.state.current = null
+      row.state.playerId = null
+      row.state.revision++
+      delete row.admin
+      delete row.invite
+      return partyInfo(row)
+    }, true)
+  }
+  private async write<T>(change: (row: PartyRow) => Promise<T>, allowEnded = false): Promise<T> {
     if (this.context) return change(this.context.row)
     const session = this.client.startSession()
     try {
@@ -93,8 +146,10 @@ export class MongoPartyDatabase {
               { session, returnDocument: 'after' },
             )
           if (!row) throw new Error('Festa não encontrada.')
+          if (!allowEnded) assertPartyActive(row)
           return contexts.run({ scope: this.scope, session, row }, async () => {
             const value = await change(row)
+            if (!allowEnded) assertPartyActive(row)
             await this.db
               .collection<PartyRow>('parties')
               .replaceOne({ _id: this.scope }, row, { session })
@@ -117,8 +172,12 @@ export class MongoPartyDatabase {
     if (this.context) return this.context.row.state
     const row = await this.db
       .collection<PartyRow>('parties')
-      .findOne({ _id: this.scope }, { projection: { state: 1 } })
+      .findOne(
+        { _id: this.scope },
+        { projection: { state: 1, partyId: 1, expiresAt: 1, closedAt: 1 } },
+      )
     if (!row) throw new Error('Festa não encontrada.')
+    assertPartyActive(row)
     return row.state
   }
   async mutate(change: (state: PartyState) => void | Promise<void>) {
@@ -178,6 +237,7 @@ export class MongoPartyDatabase {
     ])
     return {
       ...state,
+      party: await this.info(),
       serverTime: Date.now(),
       canGoBack: history.some((item) => item.outcome !== 'error'),
       guests: guests.map((g) => ({ id: g._id, name: g.name })),
@@ -308,7 +368,11 @@ export class MongoPartyDatabase {
       this.context?.row ||
       (await this.db
         .collection<PartyRow>('parties')
-        .findOne({ _id: this.scope }, { projection: { admin: 1 } }))
+        .findOne(
+          { _id: this.scope },
+          { projection: { admin: 1, partyId: 1, expiresAt: 1, closedAt: 1 } },
+        ))
+    if (row) assertPartyActive(row as PartyRow)
     return !!row?.admin && now < row.admin.expiresAt && row.admin.tokenHash === hashToken(token)
   }
   async adminExpiresAt(now = Date.now()) {
@@ -316,7 +380,10 @@ export class MongoPartyDatabase {
       this.context?.row ||
       (await this.db
         .collection<PartyRow>('parties')
-        .findOne({ _id: this.scope }, { projection: { admin: 1 } }))
+        .findOne(
+          { _id: this.scope },
+          { projection: { admin: 1, partyId: 1, expiresAt: 1, closedAt: 1 } },
+        ))
     return row?.admin && now < row.admin.expiresAt ? row.admin.expiresAt : 0
   }
   async claimAdmin(existing: string | undefined, seconds: number, now = Date.now()) {
@@ -447,12 +514,34 @@ export class MongoPartyDatabase {
         .modifiedCount === 1
     )
   }
+  async currentInvite(store: EncryptedStore<{ token: string; expires: number }>, rotate = false) {
+    return this.write(async (row) => {
+      const session = this.context!.session
+      const saved = rotate ? undefined : await store.get('current', session)
+      if (
+        saved &&
+        row.invite?.tokenHash === hashToken(saved.token) &&
+        row.invite.expiresAt > Date.now()
+      )
+        return saved
+      const token = randomBytes(32).toString('base64url')
+      const expires = Math.min(Date.now() + 86400000, row.expiresAt?.getTime() || Infinity)
+      row.invite = {
+        tokenHash: hashToken(token),
+        expiresAt: expires,
+        version: (row.invite?.version || 0) + 1,
+      }
+      const value = { token, expires }
+      await store.set('current', value, session)
+      return value
+    })
+  }
   async rotateInvite(seconds = 86400) {
     const token = randomBytes(32).toString('base64url')
     await this.write(async (row) => {
       row.invite = {
         tokenHash: hashToken(token),
-        expiresAt: Date.now() + seconds * 1000,
+        expiresAt: Math.min(Date.now() + seconds * 1000, row.expiresAt?.getTime() || Infinity),
         version: (row.invite?.version || 0) + 1,
       }
     })
@@ -464,6 +553,7 @@ export class MongoPartyDatabase {
       'invite.tokenHash': hashToken(token),
       'invite.expiresAt': { $gt: Date.now() },
     })
+    if (row) assertPartyActive(row)
     return row?.invite
   }
   async inviteVersion() {

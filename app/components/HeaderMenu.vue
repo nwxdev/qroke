@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const partyRoute = usePartyRoute()
 const { connected } = useParty()
 const route = useRoute()
 const id = useId()
@@ -97,13 +98,13 @@ onBeforeUnmount(() => {
     <Teleport :to="menuContent || 'body'" :disabled="!isOpen">
       <div ref="navigation" class="header-navigation">
         <nav aria-label="Páginas da festa" @click="select">
-          <NuxtLink
+          <PartyLink
             v-for="link in links"
             :key="link.to"
             :to="link.to"
             class="menu-link"
             :aria-label="link.label"
-            :aria-current="route.path === link.to ? 'page' : undefined"
+            :aria-current="partyRoute.page.value === link.to ? 'page' : undefined"
           >
             <AppIcon :name="link.icon" />
             <span
@@ -111,7 +112,7 @@ onBeforeUnmount(() => {
               ><small>{{ link.hint }}</small></span
             >
             <AppIcon name="arrow-right" class="menu-arrow" />
-          </NuxtLink>
+          </PartyLink>
         </nav>
         <section
           v-if="$slots.default"
