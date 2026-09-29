@@ -46,7 +46,7 @@ watch(admin, (value, previous) => {
         <section>
           <div v-if="!admin" class="panel">
             <h2>O controle é seu por alguns minutos.</h2>
-            <p>Abra o menu e escolha Liberar controles para entrar com o PIN.</p>
+            <p>Use Liberar controles no cabeçalho ou no menu para entrar com o PIN.</p>
           </div>
           <div v-if="admin" class="panel">
             <div class="section-heading">

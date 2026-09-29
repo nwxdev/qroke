@@ -20,11 +20,11 @@ try {
     [320, 720],
     [390, 844],
     [768, 900],
-    [1280, 900],
     [568, 320],
   ]) {
     await page.setViewportSize({ width, height })
-    await expect(page.locator('.header-menu > button')).toHaveCount(2)
+    await expect(trigger).toBeVisible()
+    await expect(page.locator('.header-menu > .header-navigation')).toBeHidden()
     await expect(page.locator('.header-persistent .screen-sound-button')).toBeVisible()
     const soundBefore = await page.locator('.header-persistent .screen-sound-button').boundingBox()
     const logo = await page.locator('.player-brand').boundingBox()
@@ -85,6 +85,58 @@ try {
     )
     expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('')
   }
+  // Desktop e tablets com espaço usam botões em linha; os limites consideram
+  // as ações adicionais do host/player e a largura útil, sem duplicar controles.
+  for (const path of ['/player', '/busca', '/host']) {
+    await page.goto(fixture.base + path)
+    if (path === '/host')
+      await page.getByRole('button', { name: 'Fechar PIN', exact: true }).click()
+    for (const width of [320, 390, 768, 820, 910, 912, 1024, 1280, 1920]) {
+      await page.setViewportSize({ width, height: 900 })
+      const horizontal = path === '/busca' ? width >= 768 : width >= 912
+      const nav = page.locator('header .header-navigation')
+      await expect(trigger)[horizontal ? 'toBeHidden' : 'toBeVisible']()
+      await expect(nav)[horizontal ? 'toBeVisible' : 'toBeHidden']()
+      if (!horizontal) continue
+      await expect(nav.getByRole('link')).toHaveCount(3)
+      await expect(nav.locator('[aria-current="page"]')).toHaveAttribute('href', path)
+      const header = await page.locator('header').boundingBox()
+      const brand = await page.locator('header .brand-logo').boundingBox()
+      const navigation = await nav.boundingBox()
+      const theme = await page.locator('header .theme-toggle').boundingBox()
+      expect(brand.x + brand.width + 4).toBeLessThanOrEqual(navigation.x)
+      expect(navigation.x + navigation.width).toBeLessThanOrEqual(theme.x)
+      expect(theme.x + theme.width).toBeLessThanOrEqual(header.x + header.width)
+      for (const link of await nav.getByRole('link').all()) {
+        const box = await link.boundingBox()
+        expect(Math.abs(box.y + box.height / 2 - (theme.y + theme.height / 2))).toBeLessThan(1)
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      )
+      for (const themeName of ['dark', 'light']) {
+        if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== themeName)
+          await page.locator('header .theme-toggle').click()
+        await expect(nav.locator('a:not([aria-current])').first()).toHaveCSS(
+          'background-color',
+          themeName === 'light' ? 'rgb(255, 255, 255)' : 'rgb(25, 28, 31)',
+        )
+        if (width === 1024 || width === 1280)
+          await page.screenshot({
+            path: 'test-results/header-' + path.slice(1) + '-' + width + '-' + themeName + '.png',
+          })
+      }
+    }
+  }
+  await page.goto(fixture.base + '/player')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await trigger.click()
+  await expect(menu).toBeVisible()
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await expect(menu).toBeHidden()
+  await expect(page.locator('header [aria-current="page"]')).toBeFocused()
+  expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('')
+  await expect(page.locator('.header-persistent .screen-sound-button')).toBeVisible()
   await page.setViewportSize({ width: 390, height: 844 })
   await trigger.click()
   await menu.getByRole('link', { name: 'Player', exact: true }).click()
@@ -119,15 +171,18 @@ try {
   await pin.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
   await pin.getByRole('button', { name: 'Liberar controles', exact: true }).click()
   await expect(pin).toBeHidden()
-  await trigger.click()
-  await expect(menu.getByRole('button', { name: 'Sair do admin', exact: true })).toBeVisible()
-  await menu.getByRole('button', { name: 'Sair do admin', exact: true }).click()
+  await page.setViewportSize({ width: 1024, height: 900 })
+  await expect(trigger).toBeHidden()
+  await expect(
+    page.locator('header').getByRole('button', { name: 'Sair do admin', exact: true }),
+  ).toBeVisible()
+  await page.locator('header').getByRole('button', { name: 'Sair do admin', exact: true }).click()
   await expect(page).toHaveURL(fixture.base + '/busca')
   await expect(menu).toBeHidden()
   expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('')
   expect(errors).toEqual([])
   console.log(
-    'Menu: tela inteira 320–1280px e paisagem, temas, foco/Tab/setas/Escape, movimento reduzido, rotas e PIN/logout OK',
+    'Menu: compacto em celulares, botões em linha no desktop/tablet, 320–1920px, temas, foco/Tab/setas/Escape, rotação, rotas e PIN/logout OK',
   )
 } finally {
   await browser.close()

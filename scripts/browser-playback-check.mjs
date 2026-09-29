@@ -103,6 +103,7 @@ try {
   await player.evaluate(() => {
     window.frameBeforeMenu = document.querySelector('iframe')
   })
+  await player.setViewportSize({ width: 390, height: 844 })
   await player.getByRole('button', { name: 'Abrir menu', exact: true }).click()
   await expect(player.getByRole('dialog', { name: 'Menu da festa' })).toBeVisible()
   expect(
@@ -110,7 +111,10 @@ try {
       () => window.frameBeforeMenu === document.querySelector('iframe') && window.fake.playing,
     ),
   ).toBe(true)
-  await player.getByRole('button', { name: 'Fechar menu', exact: true }).click()
+  // Expandir para desktop fecha o menu e preserva o mesmo player em reprodução.
+  await player.setViewportSize({ width: 1440, height: 1000 })
+  await expect(player.getByRole('dialog', { name: 'Menu da festa' })).toBeHidden()
+  await expect(player.locator('.player-header .screen-sound-button')).toContainText('Som ativo')
   expect(
     await player.evaluate(
       () =>

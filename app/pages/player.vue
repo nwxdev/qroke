@@ -17,7 +17,12 @@ const closing = computed(
 )
 const expanded = computed(() => karaoke.value && !closing.value)
 function back() {
-  root.value?.querySelector<HTMLButtonElement>('.menu-toggle')?.focus()
+  const header = root.value?.querySelector('header')
+  const trigger = header?.querySelector<HTMLButtonElement>('.menu-toggle')
+  const target = trigger?.getClientRects().length
+    ? trigger
+    : header?.querySelector<HTMLElement>('[aria-current="page"]')
+  target?.focus()
 }
 // Teclas de mídia não administram a festa pela tela de exibição.
 useSpatialNav(root, back, () => {})
@@ -208,6 +213,7 @@ useSpatialNav(root, back, () => {})
   padding-bottom: var(--player-footer-space);
 }
 .player-header {
+  container: party-header / inline-size;
   position: fixed;
   inset: 0 0 auto;
   z-index: 30;

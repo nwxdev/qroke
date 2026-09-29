@@ -83,12 +83,10 @@ try {
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.getByRole('button', { name: 'Fechar PIN' }).click()
   await expect(page.getByRole('dialog')).not.toBeVisible()
-  await page.getByRole('button', { name: 'Abrir menu', exact: true }).click()
   await page.getByRole('button', { name: 'Liberar controles', exact: true }).click()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).not.toBeVisible()
   await page.getByRole('button', { name: 'Usar tema claro' }).click()
-  await page.getByRole('button', { name: 'Abrir menu', exact: true }).click()
   await page.getByRole('button', { name: 'Liberar controles', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   for (let i = 0; i < 8; i++) {

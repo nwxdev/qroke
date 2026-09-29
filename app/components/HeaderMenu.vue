@@ -4,6 +4,9 @@ const route = useRoute()
 const id = useId()
 const dialog = ref<HTMLDialogElement | null>(null)
 const trigger = ref<HTMLButtonElement | null>(null)
+const navigation = ref<HTMLElement | null>(null)
+const menuContent = ref<HTMLElement | null>(null)
+let resizeObserver: ResizeObserver | undefined
 const isOpen = ref(false)
 let previousOverflow = ''
 const links = [
@@ -33,7 +36,13 @@ function close(restoreFocus = true) {
   isOpen.value = false
   dialog.value?.close()
   document.documentElement.style.overflow = previousOverflow
-  if (restoreFocus) trigger.value?.focus({ preventScroll: true })
+  if (restoreFocus)
+    void nextTick(() => {
+      const target = trigger.value?.getClientRects().length
+        ? trigger.value
+        : navigation.value?.querySelector<HTMLElement>('[aria-current="page"]')
+      target?.focus({ preventScroll: true })
+    })
 }
 function select(event: MouseEvent) {
   if (event.target instanceof Element && event.target.closest('a[href],button:not([disabled])'))
@@ -68,10 +77,53 @@ watch(
   () => route.fullPath,
   () => close(),
 )
-onBeforeUnmount(() => close(false))
+onMounted(() => {
+  // A largura útil do cabeçalho define o menu, incluindo rotação e zoom.
+  const header = trigger.value?.closest('header')
+  if (header) {
+    resizeObserver = new ResizeObserver(() => {
+      if (isOpen.value && !trigger.value?.getClientRects().length) close()
+    })
+    resizeObserver.observe(header)
+  }
+})
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  close(false)
+})
 </script>
 <template>
-  <div class="header-menu">
+  <div class="header-menu" :class="{ 'has-actions': !!$slots.default }">
+    <Teleport :to="menuContent || 'body'" :disabled="!isOpen">
+      <div ref="navigation" class="header-navigation">
+        <nav aria-label="Páginas da festa" @click="select">
+          <NuxtLink
+            v-for="link in links"
+            :key="link.to"
+            :to="link.to"
+            class="menu-link"
+            :aria-label="link.label"
+            :aria-current="route.path === link.to ? 'page' : undefined"
+          >
+            <AppIcon :name="link.icon" />
+            <span
+              ><strong>{{ link.label }}</strong
+              ><small>{{ link.hint }}</small></span
+            >
+            <AppIcon name="arrow-right" class="menu-arrow" />
+          </NuxtLink>
+        </nav>
+        <section
+          v-if="$slots.default"
+          class="menu-actions"
+          aria-label="Ações desta tela"
+          @click="select"
+        >
+          <span class="eyebrow">NESTA TELA</span>
+          <slot />
+        </section>
+      </div>
+    </Teleport>
     <ThemeToggle />
     <button
       ref="trigger"
@@ -112,35 +164,9 @@ onBeforeUnmount(() => close(false))
           </div>
         </div>
         <div class="menu-body">
-          <div class="menu-content">
+          <div ref="menuContent" class="menu-content">
             <span class="eyebrow">SUA FESTA, SEU RITMO</span>
             <h2>Para onde vamos?</h2>
-            <nav aria-label="Páginas da festa" @click="select">
-              <NuxtLink
-                v-for="link in links"
-                :key="link.to"
-                :to="link.to"
-                class="menu-link"
-                :aria-label="link.label"
-                :aria-current="route.path === link.to ? 'page' : undefined"
-              >
-                <AppIcon :name="link.icon" />
-                <span
-                  ><strong>{{ link.label }}</strong
-                  ><small>{{ link.hint }}</small></span
-                >
-                <AppIcon name="arrow-right" class="menu-arrow" />
-              </NuxtLink>
-            </nav>
-            <section
-              v-if="$slots.default"
-              class="menu-actions"
-              aria-label="Ações desta tela"
-              @click="select"
-            >
-              <span class="eyebrow">NESTA TELA</span>
-              <slot />
-            </section>
           </div>
           <p class="menu-connection" :class="{ offline: !connected }" role="status">
             <i aria-hidden="true" />{{ connected ? 'A festa está online' : 'Reconectando…' }}
@@ -168,7 +194,8 @@ onBeforeUnmount(() => close(false))
   width: 44px;
   height: 44px;
 }
-.menu-toggle:focus {
+.menu-toggle:focus,
+.header-menu > .header-navigation .menu-link:focus {
   transform: none;
 }
 .fullscreen-menu {
@@ -335,6 +362,71 @@ onBeforeUnmount(() => close(false))
     transform: none;
   }
 }
+
+/* Uma única navegação muda de lugar sem duplicar ações ou remontar o player. */
+.header-menu > .header-navigation {
+  display: none;
+}
+@container party-header (min-width: 40rem) {
+  .header-menu:not(.has-actions) > .header-navigation {
+    display: flex;
+  }
+  .header-menu:not(.has-actions) > .menu-toggle {
+    display: none;
+  }
+}
+@container party-header (min-width: 51.25rem) {
+  .header-menu.has-actions > .header-navigation {
+    display: flex;
+  }
+  .header-menu.has-actions > .menu-toggle {
+    display: none;
+  }
+}
+.header-menu > .header-navigation,
+.header-menu > .header-navigation nav,
+.header-menu > .header-navigation .menu-actions {
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.header-menu > .header-navigation nav,
+.header-menu > .header-navigation .menu-actions {
+  display: flex;
+}
+.header-menu > .header-navigation .menu-link {
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+.header-menu > .header-navigation .menu-link strong {
+  font-size: 13px;
+}
+.header-menu > .header-navigation .menu-link > .app-icon {
+  width: 18px;
+  height: 18px;
+}
+.header-menu > .header-navigation .menu-link small,
+.header-menu > .header-navigation .menu-arrow,
+.header-menu > .header-navigation .menu-actions > .eyebrow {
+  display: none;
+}
+.header-menu > .header-navigation .menu-actions {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.header-menu > .header-navigation .menu-actions :deep(button) {
+  width: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  gap: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 @media (max-width: 380px) {
   .menu-brand {
     --brand-logo-width: 146px;

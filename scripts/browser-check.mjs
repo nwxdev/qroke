@@ -77,7 +77,6 @@ try {
   expiryDb.close()
   await expect(host).toHaveURL(server.base + '/busca')
   await expect(host.getByRole('button', { name: 'Pular', exact: true })).toHaveCount(0)
-  await host.getByRole('button', { name: 'Abrir menu', exact: true }).click()
   await host.getByRole('link', { name: 'Anfitrião', exact: true }).click()
   await expect(host.getByLabel('PIN do anfitrião', { exact: true })).toBeVisible()
   await host.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
@@ -201,7 +200,7 @@ try {
   )
   await tv.screenshot({ path: 'test-results/tv.png', fullPage: true })
   await tv.keyboard.press('Backspace')
-  await expect(tv.locator('.menu-toggle')).toBeFocused()
+  await expect(tv.locator('.player-header [aria-current="page"]')).toBeFocused()
   const original = await tv.evaluate(() => document.documentElement.dataset.theme)
   await tv.getByRole('button', { name: 'Usar tema claro' }).click()
   await tv.reload()
@@ -212,7 +211,6 @@ try {
 
   await tvContext.request.post(server.base + '/api/auth', { data: { action: 'logout' } })
   await expect(host).toHaveURL(server.base + '/busca')
-  await host.getByRole('button', { name: 'Abrir menu', exact: true }).click()
   await host.getByRole('link', { name: 'Anfitrião', exact: true }).click()
   await host.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
   await expect(

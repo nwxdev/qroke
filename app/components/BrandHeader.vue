@@ -10,6 +10,7 @@
 </template>
 <style scoped>
 .brand-header {
+  container: party-header / inline-size;
   flex-wrap: nowrap;
   gap: 12px;
 }
