@@ -630,6 +630,12 @@ Para diagnosticar a saída nativa no Linux/WSL: `QROKE_TEST_NATIVE_AUDIO=1 node 
 
 O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Chromium headless correspondente à versão instalada do Playwright. Evite forçar uma versão antiga do cache. Em outra máquina, execute `npx playwright install chromium --only-shell` antes. Os testes usam dados próprios e removem apenas seus diretórios temporários ao encerrar; não alteram sua festa.
 
+### Ajuste visual — botão Buscar músicas, 29/09/2026
+
+O atalho **Buscar músicas** da fila vazia compartilha agora a base visual dos botões: espaçamento interno, bordas arredondadas, tipografia, altura mínima de 44 px e efeito ao passar o mouse. Mantém as cores de destaque e o foco visível dos temas claro/escuro, além da navegação para `/busca#busca` com foco no campo de pesquisa. A correção vale para a fila do player e os demais locais que usam esse atalho.
+
+Validação: build de produção e scripts existentes de temas/responsividade (320–1280 px nas três telas) e karaokê/navegação aprovados. Capturas do player claro no celular e escuro no desktop conferidas; atalho continua focando a busca.
+
 ### Revisão da branch e validação atual — 28/09/2026
 
 A revisão considera a branch completa em relação a `origin/main`, com foco em autorização/PIN, isolamento de OAuth, credenciais do PLAYER, ordenação/concorrência, rádio, ciclo do iframe/áudio, importação/deduplicação, rede/QR e documentação. Os limites de ambiente LAN e aceite em dispositivos físicos continuam explícitos; não há certificação de acesso público/comercial.

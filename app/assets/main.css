@@ -83,11 +83,13 @@ a {
   text-decoration: none;
 }
 button,
+:where(a.primary-button),
 input,
 select {
   font: inherit;
 }
-button {
+button,
+:where(a.primary-button) {
   cursor: pointer;
   min-height: 44px;
   min-width: 44px;
@@ -100,7 +102,8 @@ button {
     background 0.15s,
     transform 0.15s;
 }
-button:hover:not(:disabled) {
+button:hover:not(:disabled),
+a.primary-button:hover {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 }
