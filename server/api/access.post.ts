@@ -20,7 +20,8 @@ export default defineEventHandler(async (event) => {
         .optional(),
     }).parse,
   )
-  const partyId = input.partyId || config.partyId
+  const partyId =
+    input.partyId || (input.pin ? event.context.qrokeAccess?.partyId : undefined) || config.partyId
   const database = await openParty(config.organizationId, partyId)
   let access: Access
   if (input.pin) {

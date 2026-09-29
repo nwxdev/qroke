@@ -82,6 +82,29 @@ test(
     )
     assert.equal((await isolated.request('/api/state')).data.queue.length, 0)
     assert.equal((await isolated.request('/api/session')).data.guest, null)
+    const otherInvite = (await isolated.request('/api/network/invite')).data
+    const otherHash = new URLSearchParams(new URL(otherInvite.url).hash.slice(1))
+    const invitedHost = client(first.base)
+    assert.equal(
+      (
+        await invitedHost.request('/api/access', {
+          token: otherHash.get('convite'),
+          partyId: otherHash.get('festa'),
+        })
+      ).status,
+      200,
+    )
+    const elevated = await invitedHost.request('/api/access', { pin: '58492177' })
+    assert.equal(elevated.status, 200)
+    assert.equal(elevated.data.partyId, newParty.data.partyId)
+    assert.equal(
+      (await invitedHost.request('/api/auth', { action: 'login', pin: '58492177' })).status,
+      200,
+    )
+    const invitedHost2 = client(second.base, invitedHost.cookies())
+    assert.equal((await invitedHost2.request('/api/session')).data.admin, true)
+    assert.equal((await invitedHost2.request('/api/state')).data.queue.length, 0)
+    assert.equal((await host2.request('/api/state')).data.queue.length, 2)
     assert.equal((await host2.request('/api/invite', {})).status, 200)
     assert.equal((await stranger.request('/api/state')).status, 401)
     assert.equal((await guest1.request('/api/state')).status, 401)
