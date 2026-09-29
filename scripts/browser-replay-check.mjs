@@ -96,8 +96,9 @@ try {
     )
     await page.screenshot({ path: 'test-results/notice-retry-' + theme + '.png' })
   }
-  blocked = false
+  // Mantenha a falha até o clique; a recuperação automática pode remover o botão.
   await notice.getByRole('button', { name: 'Tentar novamente', exact: true }).click()
+  blocked = false
   await expect.poll(async () => (await state()).current, { timeout: 6000 }).toBe(null)
   expect((await state()).history.filter((t) => t.queueId === track.queueId)).toHaveLength(1)
   await expect(
@@ -135,9 +136,9 @@ try {
   })
   const offlineNotice = page.locator('.connection-alert')
   await expect(offlineNotice).toBeVisible({ timeout: 7000 })
-  stateOffline = false
   await offlineNotice.getByRole('button', { name: 'Tentar novamente', exact: true }).click()
-  await expect(offlineNotice).toBeHidden()
+  stateOffline = false
+  await expect(offlineNotice).toBeHidden({ timeout: 7000 })
   console.log(
     'Música concluída pode ser adicionada novamente pelos mesmos resultados; histórico não bloqueia pedido humano OK',
   )

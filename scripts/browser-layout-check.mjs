@@ -124,7 +124,8 @@ try {
   state.paused = true
   state.revision++
   await db.writeState(state)
-  await expect(currentCard).toContainText('Música da festa 9', { timeout: 10000 })
+  // A troca mantém o cartão anterior no DOM até terminar a animação de saída.
+  await expect(currentCard).toHaveText([/Música da festa 9/], { timeout: 10000 })
   await expect(currentCard).toContainText('Em pausa')
   await expect(page.locator('.queue-card')).toHaveCount(0)
   await expect(page.locator('.queue-card-empty')).toBeVisible()
