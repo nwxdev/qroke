@@ -1,7 +1,7 @@
 import { z } from 'zod'
 export default defineEventHandler(async (event) => {
-  const access = playlistAccess(event)
-  playlistLimit(event, access.owner)
+  const access = await playlistAccess(event)
+  await playlistLimit(event, access.owner)
   const input = await readValidatedBody(
     event,
     z.object({
@@ -11,12 +11,18 @@ export default defineEventHandler(async (event) => {
       karaoke: z.boolean().default(false),
     }).parse,
   )
-  const account = input.personal ? youtubeAccount(event) : undefined
+  const account = input.personal ? await youtubeAccount(event) : undefined
   if (input.personal && !account)
     throw createError({ statusCode: 409, statusMessage: 'Conecte sua conta do YouTube.' })
-  const result = await youtubeResult(() =>
-    youtube().preview(access.owner, input.input, account, input.pageToken, input.karaoke),
+  const result = await youtubeResult(async () =>
+    (await youtube(event)).preview(
+      access.owner,
+      input.input,
+      account,
+      input.pageToken,
+      input.karaoke,
+    ),
   )
-  recheckPlaylistAccess(event, access.owner, account)
+  await recheckPlaylistAccess(event, access.owner, account)
   return result
 })

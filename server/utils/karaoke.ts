@@ -1,8 +1,8 @@
+import type { H3Event } from 'h3'
 import type { Guest } from '../../shared/types'
-export function karaokeParticipants(ids: string[], requester?: Guest) {
-  const guests = party().publicState().guests
-  const unique = [...new Set(ids)]
-  const people = unique.map((id) => guests.find((guest) => guest.id === id))
+export async function karaokeParticipants(event: H3Event, ids: string[], requester?: Guest) {
+  const guests = (await party(event).publicState()).guests
+  const people = [...new Set(ids)].map((id) => guests.find((guest) => guest.id === id))
   if (people.some((person) => !person))
     throw createError({
       statusCode: 409,

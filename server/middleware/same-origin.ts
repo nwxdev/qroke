@@ -3,9 +3,16 @@ export default defineEventHandler((event) => {
   if (!event.path.startsWith('/api/')) return
   setHeader(event, 'Cache-Control', 'no-store')
   setHeader(event, 'X-Content-Type-Options', 'nosniff')
+  setHeader(event, 'Referrer-Policy', 'no-referrer')
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.method)) {
     const origin = getHeader(event, 'origin')
-    if (origin && origin !== getRequestURL(event).origin)
+    const expected = useRuntimeConfig().accessRequired
+      ? requestOrigin()
+      : getRequestURL(event).origin
+    if (
+      (origin && origin !== expected) ||
+      (useRuntimeConfig().accessRequired && getHeader(event, 'sec-fetch-site') === 'cross-site')
+    )
       throw createError({ statusCode: 403, statusMessage: 'Origem não permitida.' })
     if (!getHeader(event, 'content-type')?.startsWith('application/json'))
       throw createError({ statusCode: 415, statusMessage: 'Envie JSON.' })

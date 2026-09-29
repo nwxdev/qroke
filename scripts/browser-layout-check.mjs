@@ -1,5 +1,5 @@
 import { chromium, expect } from '@playwright/test'
-import Database from 'better-sqlite3'
+import { openFixtureDatabase } from '../tests/helpers/database.mjs'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { startFixture } from '../tests/helpers/server.mjs'
@@ -9,7 +9,7 @@ const browser = await chromium.launch({
   args: ['--no-sandbox'],
   ...(process.env.QROKE_CHROMIUM ? { executablePath: process.env.QROKE_CHROMIUM } : {}),
 })
-const db = new Database(join(fixture.dir, 'party.sqlite'))
+const db = await openFixtureDatabase(fixture.dir)
 try {
   const make = (index) => ({
     id: String(index).padStart(11, 'a'),
@@ -27,14 +27,14 @@ try {
     round: index,
     manualOrder: null,
   })
-  const state = JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+  const state = await db.readState()
   Object.assign(state, {
     current: make(0),
     mode: 'music',
     queue: Array.from({ length: 8 }, (_, i) => make(i + 1)),
     revision: state.revision + 1,
   })
-  db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(state))
+  await db.writeState(JSON.stringify(state))
   const guestContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   await guestContext.request.post(fixture.base + '/api/guest', { data: { name: 'Visitante' } })
   const page = await guestContext.newPage()
@@ -60,7 +60,7 @@ try {
   ).toBe(true)
   await page.getByRole('button', { name: 'Ver próximas músicas' }).click()
   await expect
-    .poll(() => page.locator('.queue-rail').evaluate((el) => el.scrollLeft))
+    .poll(async () => page.locator('.queue-rail').evaluate((el) => el.scrollLeft))
     .toBeGreaterThan(0)
   await page.screenshot({ path: 'test-results/queue-desktop.png', fullPage: true })
   await page.goto(fixture.base + '/qr')
@@ -77,7 +77,7 @@ try {
     await page.setViewportSize({ width, height: 900 })
     await expect(page.locator('.qr-plate svg')).toBeVisible()
     await expect
-      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      .poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
       .toBe(true)
     if (width <= 760)
       expect(
@@ -95,7 +95,7 @@ try {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.locator('.queue-rail').evaluate((el) => el.scrollTo({ left: el.scrollWidth }))
   await expect
-    .poll(() => page.locator('.queue-rail').evaluate((el) => el.scrollLeft))
+    .poll(async () => page.locator('.queue-rail').evaluate((el) => el.scrollLeft))
     .toBeGreaterThan(0)
   await page.screenshot({ path: 'test-results/queue-mobile.png', fullPage: true })
   console.log(
@@ -122,7 +122,7 @@ try {
   host.on('pageerror', (e) => errors.push(e.message))
   await host.goto(fixture.base + '/host')
   await host.getByRole('button', { name: 'Tocar neste dispositivo', exact: true }).click()
-  await expect.poll(() => host.evaluate(() => window.qrokePlaying)).toBe(true)
+  await expect.poll(async () => host.evaluate(() => window.qrokePlaying)).toBe(true)
   await host.locator('.media-slot').scrollIntoViewIfNeeded()
   await expect(host.locator('.player-floating')).toHaveCount(0)
   await host.evaluate(() => {
@@ -164,17 +164,17 @@ try {
       ),
     ).toBe(true)
   }
-  db.prepare('UPDATE admins SET expires_at=0').run()
+  await db.expireAdmin()
   await expect(host.getByText('Admin liberado', { exact: true })).not.toBeVisible()
   await expect(host.getByRole('dialog')).not.toBeVisible()
   await expect(host).toHaveURL(fixture.base + '/busca')
-  await expect.poll(() => host.evaluate(() => window.qrokePlaying)).toBe(true)
+  await expect.poll(async () => host.evaluate(() => window.qrokePlaying)).toBe(true)
   expect(errors).toEqual([])
   console.log(
     'Scroll mantém iframe/reprodução e mini player desktop/mobile; expiração redireciona o host para busca OK',
   )
 } finally {
-  db.close()
+  await db.close()
   await browser.close()
   await fixture.close()
 }

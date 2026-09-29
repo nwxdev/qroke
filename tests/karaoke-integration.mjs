@@ -1,14 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import Database from 'better-sqlite3'
+import { openFixtureDatabase } from './helpers/database.mjs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { startFixture, client } from './helpers/server.mjs'
 test('karaokê: cantores, configuração, preparação confirmada e votos negativos', async (t) => {
   const fixture = await startFixture(3186),
-    db = new Database(join(fixture.dir, 'party.sqlite'))
+    db = await openFixtureDatabase(fixture.dir)
   t.after(async () => {
-    db.close()
+    await db.close()
     await fixture.close()
   })
   const a = client(fixture.base),
@@ -29,14 +29,14 @@ test('karaokê: cantores, configuração, preparação confirmada e votos negati
       .status,
     400,
   )
-  const read = () => JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
-  assert.equal(read().karaokeDelaySeconds, 5)
+  const read = () => db.readState()
+  assert.equal((await read()).karaokeDelaySeconds, 5)
   await host.request('/api/control', { action: 'karaoke-settings', seconds: 2, music: false })
   const tracks = (await a.request('/api/search?q=Faixa&source=local')).data.tracks
   // Biblioteca não muda metadados confiáveis: não é possível forjar karaoke no corpo.
   await a.request('/api/queue', tracks[0])
-  assert.equal(read().queue[0].karaoke, false)
-  const s = read()
+  assert.equal((await read()).queue[0].karaoke, false)
+  const s = await read()
   s.queue[0].karaoke = true
   s.queue[0].singers = [ana, bia, caio].map(({ id, name }) => ({ id, name }))
   for (const [n, track] of tracks.slice(1, 3).entries())
@@ -51,61 +51,61 @@ test('karaokê: cantores, configuração, preparação confirmada e votos negati
       round: 0,
       manualOrder: null,
     })
-  db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(s))
+  await db.writeState(JSON.stringify(s))
   const device = (await host.request('/api/device', { label: 'PLAYER' })).data
   await host.request('/api/control', { action: 'assign', deviceId: device.id })
-  const id = read().current.queueId
-  assert.equal(read().karaokeStartsAt, null)
-  assert.equal(read().karaokeLeadSeconds, 2)
+  const id = (await read()).current.queueId
+  assert.equal((await read()).karaokeStartsAt, null)
+  assert.equal((await read()).karaokeLeadSeconds, 2)
   const report = (action, extra = {}) =>
     host.request('/api/player', { action, queueId: id, ...extra }, 'POST', {
       'x-qroke-device-key': device.token,
     })
   assert.equal((await report('ended')).data.waiting, true)
   assert.equal((await report('ready')).status, 200)
-  const starts = read().karaokeStartsAt
+  const starts = (await read()).karaokeStartsAt
   assert.ok(starts > Date.now() + 1000)
   await report('ready')
-  assert.equal(read().karaokeStartsAt, starts)
+  assert.equal((await read()).karaokeStartsAt, starts)
   await host.request('/api/control', { action: 'karaoke-settings', seconds: 10, music: true })
-  assert.equal(read().karaokeStartsAt, starts)
-  assert.equal(read().karaokeLeadSeconds, 2)
+  assert.equal((await read()).karaokeStartsAt, starts)
+  assert.equal((await read()).karaokeLeadSeconds, 2)
   await a.request('/api/guest/name', { name: 'Ana Maria' })
-  assert.equal(read().current.singers[0].name, 'Ana Maria')
+  assert.equal((await read()).current.singers[0].name, 'Ana Maria')
   assert.equal((await report('error', { errorCode: 150 })).data.waiting, true)
-  assert.equal(read().history.length, 0)
-  const first = read().queue[0].queueId
+  assert.equal((await read()).history.length, 0)
+  const first = (await read()).queue[0].queueId
   await Promise.all([
     a.request('/api/queue/' + first + '/vote', { value: -1 }),
     b.request('/api/queue/' + first + '/vote', { value: -1 }),
   ])
-  assert.equal(read().queue.at(-1).queueId, first)
-  assert.equal(read().queue.at(-1).votes, -2)
+  assert.equal((await read()).queue.at(-1).queueId, first)
+  assert.equal((await read()).queue.at(-1).votes, -2)
   assert.equal((await a.request('/api/session')).data.queueReactions[first], -1)
   await a.request('/api/queue/' + first + '/vote', { value: 0 })
-  assert.equal(read().queue.at(-1).votes, -1)
+  assert.equal((await read()).queue.at(-1).votes, -1)
   await fixture.restart()
-  assert.equal(read().karaokeDelaySeconds, 10)
+  assert.equal((await read()).karaokeDelaySeconds, 10)
   assert.equal((await b.request('/api/session')).data.queueReactions[first], -1)
   await b.request('/api/queue/' + first + '/vote', { value: 0 })
-  assert.equal(read().queue[0].queueId, first)
+  assert.equal((await read()).queue[0].queueId, first)
   await new Promise((resolve) => setTimeout(resolve, Math.max(0, starts - Date.now() + 30)))
   assert.equal((await report('ended')).status, 200)
-  assert.equal(read().current.queueId, first)
-  assert.equal(read().karaokeLeadSeconds, 0)
+  assert.equal((await read()).current.queueId, first)
+  assert.equal((await read()).karaokeLeadSeconds, 0)
 })
 
 test('karaokê: prioridade publicada, reordenação protegida e sequência após restart', async (t) => {
   const fixture = await startFixture(3186)
-  const db = new Database(join(fixture.dir, 'party.sqlite'))
+  const db = await openFixtureDatabase(fixture.dir)
   t.after(async () => {
-    db.close()
+    await db.close()
     await fixture.close()
   })
   const host = client(fixture.base)
   await host.request('/api/auth', { action: 'login', pin: '4321' })
   const device = (await host.request('/api/device', { label: 'Karaokê' })).data
-  const read = () => JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+  const read = () => db.readState()
   const make = (index, karaoke) => ({
     id: String(index).padStart(11, '0'),
     source: 'youtube',
@@ -125,14 +125,14 @@ test('karaokê: prioridade publicada, reordenação protegida e sequência após
   const first = make(1, true),
     regular = make(2, false),
     next = make(3, true)
-  const state = read()
+  const state = await read()
   Object.assign(state, {
     current: first,
     queue: [regular, next],
     playerId: device.id,
     revision: state.revision + 1,
   })
-  db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(state))
+  await db.writeState(JSON.stringify(state))
   await host.request('/api/control', { action: 'karaoke-settings', seconds: 0, music: false })
   assert.deepEqual(
     (await host.request('/api/state')).data.queue.map((item) => item.id),
@@ -141,12 +141,12 @@ test('karaokê: prioridade publicada, reordenação protegida e sequência após
   const rejected = await host.request('/api/control', {
     action: 'reorder',
     ids: [regular.queueId, next.queueId],
-    revision: read().revision,
+    revision: (await read()).revision,
   })
   assert.equal(rejected.status, 409)
   assert.match(rejected.data.statusMessage, /Os pedidos de karaok/)
   assert.deepEqual(
-    read().queue.map((item) => item.id),
+    (await read()).queue.map((item) => item.id),
     [next.id, regular.id],
   )
   await fixture.restart()
@@ -155,12 +155,12 @@ test('karaokê: prioridade publicada, reordenação protegida e sequência após
     [next.id, regular.id],
   )
   await host.request('/api/control', { action: 'skip', queueId: first.queueId })
-  assert.equal(read().current.id, next.id)
+  assert.equal((await read()).current.id, next.id)
   await host.request('/api/control', { action: 'skip', queueId: first.queueId })
-  assert.equal(read().current.id, next.id)
+  assert.equal((await read()).current.id, next.id)
   await host.request('/api/control', { action: 'skip', queueId: next.queueId })
-  assert.equal(read().current.id, regular.id)
-  assert.equal(read().queue.length, 0)
+  assert.equal((await read()).current.id, regular.id)
+  assert.equal((await read()).queue.length, 0)
 })
 
 for (const wholePlaylist of [false, true])
@@ -174,9 +174,9 @@ for (const wholePlaylist of [false, true])
           '--import=' + new URL('./helpers/youtube-fetch.mjs', import.meta.url).pathname,
         NUXT_YOUTUBE_API_KEY: 'fixture-key',
       })
-      const db = new Database(join(fixture.dir, 'party.sqlite'))
+      const db = await openFixtureDatabase(fixture.dir)
       t.after(async () => {
-        db.close()
+        await db.close()
         await fixture.close()
       })
       const host = client(fixture.base),
@@ -184,7 +184,7 @@ for (const wholePlaylist of [false, true])
       const person = (await guest.request('/api/guest', { name: 'Ana' })).data
       await host.request('/api/auth', { action: 'login', pin: '4321' })
       const device = (await host.request('/api/device', { label: 'PLAYER' })).data
-      const read = () => JSON.parse(db.prepare('SELECT state FROM party WHERE id=1').get().state)
+      const read = () => db.readState()
       const regular = (n) => ({
         id: String(n).padStart(11, '0'),
         source: 'youtube',
@@ -205,7 +205,7 @@ for (const wholePlaylist of [false, true])
       const current = regular(1),
         next = regular(2),
         last = regular(3)
-      const state = read()
+      const state = await read()
       Object.assign(state, {
         current,
         queue: [next, last],
@@ -216,7 +216,7 @@ for (const wholePlaylist of [false, true])
         karaokeDelaySeconds: 0,
         revision: state.revision + 1,
       })
-      db.prepare('UPDATE party SET state=? WHERE id=1').run(JSON.stringify(state))
+      await db.writeState(JSON.stringify(state))
       const preview = (
         await guest.request('/api/youtube/preview', {
           input: 'PLabcdefghijk',
@@ -232,7 +232,7 @@ for (const wholePlaylist of [false, true])
       const published = (await guest.request('/api/state')).data
       assert.equal(published.current.queueId, current.queueId)
       assert.equal(published.position, 42)
-      assert.equal(read().history.length, 0)
+      assert.equal((await read()).history.length, 0)
       assert.equal(
         published.queue[0].karaoke,
         true,
@@ -252,17 +252,17 @@ for (const wholePlaylist of [false, true])
           'x-qroke-device-key': device.token,
         })
       assert.equal((await reportEnd(current.queueId)).status, 200)
-      assert.equal(read().current.queueId, requests[0].queueId)
+      assert.equal((await read()).current.queueId, requests[0].queueId)
       await reportEnd(current.queueId)
-      assert.equal(read().current.queueId, requests[0].queueId)
+      assert.equal((await read()).current.queueId, requests[0].queueId)
       for (const request of requests) {
-        assert.equal(read().current.queueId, request.queueId)
+        assert.equal((await read()).current.queueId, request.queueId)
         await reportEnd(request.queueId)
       }
-      assert.equal(read().current.queueId, next.queueId)
-      assert.equal(read().current.playlist.title, 'Playlist de fundo')
+      assert.equal((await read()).current.queueId, next.queueId)
+      assert.equal((await read()).current.playlist.title, 'Playlist de fundo')
       assert.deepEqual(
-        read().queue.map((track) => track.queueId),
+        (await read()).queue.map((track) => track.queueId),
         [last.queueId],
       )
     },

@@ -1,12 +1,14 @@
-export default defineEventHandler((event) => {
-  playlistAccess(event)
-  const service = youtube()
+export default defineEventHandler(async (event) => {
+  await playlistAccess(event)
+  const service = await youtube(event)
   const connectOrigin = service.configured ? new URL(service.config.redirect).origin : ''
   return {
     publicConfigured: !!service.config.key,
     oauthConfigured: service.configured,
-    connected: service.connected(youtubeAccount(event)),
-    connectHere: connectOrigin === getRequestURL(event).origin,
+    connected: await service.connected(await youtubeAccount(event)),
+    connectHere:
+      connectOrigin ===
+      (useRuntimeConfig().accessRequired ? requestOrigin() : getRequestURL(event).origin),
     connectOrigin,
   }
 })

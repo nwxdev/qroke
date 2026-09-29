@@ -5,12 +5,10 @@ export default defineEventHandler(async (event) => {
     z.object({ action: z.enum(['login', 'logout', 'touch']), pin: z.string().max(8).optional() })
       .parse,
   )
-  if (input.action === 'login') login(event, input.pin || '')
-  if (input.action === 'touch') requireAdmin(event)
+  if (input.action === 'login') await login(event, input.pin || '')
+  if (input.action === 'touch') await requireAdmin(event)
   if (input.action === 'logout') {
-    party()
-      .db.prepare('DELETE FROM admins WHERE token=?')
-      .run(getCookie(event, 'qroke_admin') || '')
+    await party(event).logout(getCookie(event, 'qroke_admin'))
     deleteCookie(event, 'qroke_admin', { path: '/' })
   }
   return { admin: input.action !== 'logout' }

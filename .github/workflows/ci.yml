@@ -5,13 +5,18 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publicar imagem após testes
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   checks:
@@ -37,12 +42,18 @@ jobs:
         run: npm run format:check
       - name: Conferir TypeScript
         run: npm run typecheck
+      - name: Iniciar MongoDB e Dragonfly de teste
+        run: docker compose -p qroke-tests -f compose.test.yml up -d --wait
+      - name: Testes de persistência e concorrência
+        run: npm run test:storage
       - name: Testes unitários
         run: npm test
       - name: Build de produção
         run: npm run build
       - name: Testes de integração
         run: npm run test:integration
+      - name: Testes com duas instâncias
+        run: npm run test:distributed
       - name: Instalar Chromium e bibliotecas do sistema
         run: npx playwright install --with-deps chromium --only-shell
       - name: Testes de navegador
@@ -55,3 +66,46 @@ jobs:
           path: test-results/*.png
           if-no-files-found: ignore
           retention-days: 7
+
+  publish:
+    needs: checks
+    if: github.ref == 'refs/heads/main' || github.event.inputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Publicar imagem por commit
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build --label org.opencontainers.image.source=https://github.com/nwxdev/qroke --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "ghcr.io/nwxdev/qroke:$GITHUB_SHA" .
+          docker push "ghcr.io/nwxdev/qroke:$GITHUB_SHA"
+
+  deploy:
+    needs: publish
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    environment: prod
+    concurrency:
+      group: qroke-production
+      cancel-in-progress: false
+    steps:
+      - name: Atualizar QRoke em produção
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/qroke-ci
+          chmod 600 ~/.ssh/qroke-ci
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/qroke-ci -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "release $GITHUB_SHA $GITHUB_ACTOR"
+          curl --fail --silent --show-error --retry 6 --retry-delay 5 https://qroke.nwx.ag/api/health

@@ -1,6 +1,6 @@
 import { chromium, expect } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
-import Database from 'better-sqlite3'
+import { openFixtureDatabase } from '../tests/helpers/database.mjs'
 import { join } from 'node:path'
 import { startFixture } from '../tests/helpers/server.mjs'
 const server = await startFixture(3198)
@@ -58,7 +58,7 @@ try {
   await expect(host.getByText('Admin liberado', { exact: true })).toBeVisible()
   await host.getByRole('button', { name: 'Tocar neste dispositivo', exact: true }).click()
   await expect(host.locator('audio')).toBeVisible()
-  await expect.poll(() => host.locator('audio').evaluate((a) => !a.paused)).toBe(true)
+  await expect.poll(async () => host.locator('audio').evaluate((a) => !a.paused)).toBe(true)
   const first = (await (await host.request.get(server.base + '/api/state')).json()).current.queueId
   await expect
     .poll(
@@ -68,13 +68,13 @@ try {
     )
     .not.toBe(first)
   await host.getByRole('button', { name: 'Pausar', exact: false }).click()
-  await expect.poll(() => host.locator('audio').evaluate((a) => a.paused)).toBe(true)
+  await expect.poll(async () => host.locator('audio').evaluate((a) => a.paused)).toBe(true)
   await host.evaluate(() => {
     window.originalAudio = document.querySelector('audio')
   })
-  const expiryDb = new Database(join(server.dir, 'party.sqlite'))
-  expiryDb.prepare('UPDATE admins SET expires_at=0').run()
-  expiryDb.close()
+  const expiryDb = await openFixtureDatabase(server.dir)
+  await expiryDb.expireAdmin()
+  await expiryDb.close()
   await expect(host).toHaveURL(server.base + '/busca')
   await expect(host.getByRole('button', { name: 'Pular', exact: true })).toHaveCount(0)
   await host.getByRole('link', { name: 'Anfitrião', exact: true }).click()
@@ -122,12 +122,12 @@ try {
   const popup = await popupPromise
   watch(popup)
   await expect
-    .poll(() =>
+    .poll(async () =>
       popup.evaluate(() => JSON.parse(sessionStorage.getItem('qroke:device') || 'null')?.id),
     )
     .toMatch(/^[0-9a-f-]{36}$/)
   await expect
-    .poll(() =>
+    .poll(async () =>
       popup.evaluate(() => JSON.parse(sessionStorage.getItem('qroke:device') || 'null')?.id),
     )
     .not.toBe(originalId)
@@ -204,7 +204,9 @@ try {
   const original = await tv.evaluate(() => document.documentElement.dataset.theme)
   await tv.getByRole('button', { name: 'Usar tema claro' }).click()
   await tv.reload()
-  await expect.poll(() => tv.evaluate(() => document.documentElement.dataset.theme)).toBe('light')
+  await expect
+    .poll(async () => tv.evaluate(() => document.documentElement.dataset.theme))
+    .toBe('light')
   expect(await host.evaluate(() => document.documentElement.dataset.theme)).toBe('dark')
   expect(original).toBe('dark')
   console.log('Temas persistidos por rota e Back do controle OK')

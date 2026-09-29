@@ -137,7 +137,14 @@ try {
   await host.request('/api/auth', { action: 'logout' })
   await context.request.post(fixture.base + '/api/auth', { data: { action: 'login', pin: '4321' } })
   await page.goto(fixture.base + '/host')
-  await page.getByRole('button', { name: 'Música anterior', exact: true }).click()
+  const [previousResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/control') && response.request().method() === 'POST',
+    ),
+    page.getByRole('button', { name: 'Música anterior', exact: true }).click(),
+  ])
+  expect(previousResponse.ok()).toBe(true)
   const after = (await host.request('/api/state')).data
   expect(after.current.id).not.toBe(before)
   expect(after.queue[0].id).toBe(before)

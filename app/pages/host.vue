@@ -58,6 +58,7 @@ watch(admin, (value, previous) => {
               que vai emitir o som. Depois disso, os pedidos começam automaticamente quando a fila
               está vazia.
             </p>
+            <HostInvitation />
             <HostControls />
             <p v-if="state?.catalogWarning" class="notice">{{ state.catalogWarning }}</p>
           </div>

@@ -1,9 +1,18 @@
 import type { H3Event } from 'h3'
-import { YoutubePlaylists, PlaylistError } from '../core/youtube-playlists'
-let service: YoutubePlaylists | undefined
-export function youtube() {
-  const c = useRuntimeConfig()
-  return (service ||= new YoutubePlaylists(
+import {
+  YoutubePlaylists,
+  PlaylistError,
+  type Pending,
+  type Account,
+  type Ticket,
+} from '../core/youtube-playlists'
+import { EncryptedStore } from '../core/shared-store'
+export async function youtube(event: H3Event): Promise<YoutubePlaylists> {
+  if (event.context.qrokeYoutube) return event.context.qrokeYoutube
+  const c = useRuntimeConfig(),
+    database = party(event),
+    blocked = await database.blockedIds()
+  const service = new YoutubePlaylists(
     {
       key: c.youtubeApiKey,
       region: c.youtubeRegion,
@@ -13,11 +22,27 @@ export function youtube() {
     },
     undefined,
     undefined,
-    (id) => party().youtubeBlocked(id),
-  ))
+    (id) => blocked.has(id),
+    {
+      pending: new EncryptedStore<Pending>(database.db, database.scope, 'pending', c.encryptionKey),
+      accounts: new EncryptedStore<Account>(
+        database.db,
+        database.scope,
+        'account',
+        c.encryptionKey,
+      ),
+      tickets: new EncryptedStore<Ticket>(database.db, database.scope, 'ticket', c.encryptionKey),
+    },
+  )
+  event.context.qrokeYoutube = service
+  return service
 }
-export const youtubeAccount = (event: H3Event) =>
-  youtube().ownedAccount(getCookie(event, 'qroke_youtube'), playlistAccess(event).owner)
+export async function youtubeAccount(event: H3Event) {
+  return (await youtube(event)).ownedAccount(
+    getCookie(event, 'qroke_youtube'),
+    (await playlistAccess(event)).owner,
+  )
+}
 export async function youtubeResult<T>(action: () => Promise<T> | T): Promise<T> {
   try {
     return await action()

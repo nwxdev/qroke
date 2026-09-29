@@ -1,5 +1,7 @@
 # QRokê
 
+> A implantação com MongoDB, Dragonfly, convites e múltiplas instâncias está documentada em [docs/production.md](docs/production.md). As seções históricas abaixo descrevem a v1 LAN e SQLite.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="public/brand/qroke-dark.png">
   <img src="public/brand/qroke-light.png" alt="QRokê" width="320">

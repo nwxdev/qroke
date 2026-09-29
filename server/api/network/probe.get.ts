@@ -1,1 +1,1 @@
-export default defineEventHandler(() => ({ instance: networkInstance }))
+export default defineEventHandler(async (event) => ({ instance: networkInstance }))

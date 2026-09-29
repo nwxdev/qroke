@@ -1,6 +1,6 @@
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 export async function startFixture(port = 3197, extraEnv = {}) {
@@ -36,7 +36,10 @@ export async function startFixture(port = 3197, extraEnv = {}) {
         NITRO_HOST: '127.0.0.1',
         NITRO_PORT: String(port),
         NUXT_HOST_PIN: '4321',
-        NUXT_DATABASE: join(dir, 'party.sqlite'),
+        NUXT_MONGODB_DATABASE: 'qroke_test_' + basename(dir).replace(/[^a-zA-Z0-9]/g, ''),
+        NUXT_ENCRYPTION_KEY: 'ab'.repeat(32),
+        NUXT_SESSION_SECRET: 'test-only-session-secret-with-32-characters',
+        NUXT_ACCESS_REQUIRED: 'false',
         NUXT_MUSIC_DIR: music,
         NUXT_YOUTUBE_API_KEY: '',
         NUXT_YOUTUBE_CLIENT_ID: '',
@@ -48,7 +51,7 @@ export async function startFixture(port = 3197, extraEnv = {}) {
           extraEnv.NODE_OPTIONS || '',
           '--import=' + new URL('./network-fetch.mjs', import.meta.url).pathname,
         ].join(' '),
-        NUXT_PUBLIC_PARTY_URL: 'http://192.0.2.10:' + port,
+        NUXT_PUBLIC_PARTY_URL: extraEnv.NUXT_PUBLIC_PARTY_URL || 'http://192.0.2.10:' + port,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
@@ -60,7 +63,7 @@ export async function startFixture(port = 3197, extraEnv = {}) {
     })
     for (let i = 0; i < 100; i++) {
       try {
-        const r = await fetch(base + '/api/state')
+        const r = await fetch(base + '/api/health', { signal: AbortSignal.timeout(2000) })
         if (r.ok) return
       } catch {}
       if (server.exitCode !== null) throw new Error(logs)
@@ -78,6 +81,8 @@ export async function startFixture(port = 3197, extraEnv = {}) {
   return {
     base,
     dir,
+    databaseName:
+      extraEnv.NUXT_MONGODB_DATABASE || 'qroke_test_' + basename(dir).replace(/[^a-zA-Z0-9]/g, ''),
     logs: () => logs,
     restart: async () => {
       await stop()
@@ -90,9 +95,10 @@ export async function startFixture(port = 3197, extraEnv = {}) {
     },
   }
 }
-export function client(base) {
-  let cookie = ''
+export function client(base, initialCookie = '') {
+  let cookie = initialCookie
   return {
+    cookies: () => cookie,
     async request(path, body, method = body === undefined ? 'GET' : 'POST', headers = {}) {
       const response = await fetch(base + path, {
         method,
