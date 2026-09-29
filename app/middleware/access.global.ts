@@ -10,10 +10,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
     const access = await request<{ authorized: boolean }>(
       (id ? '/api/f/' + id : '/api') + '/access',
     )
-    if (!access.authorized) return navigateTo(prefix + '/entrar' + location.hash)
+    if (!access.authorized) return navigateTo(prefix + '/entrar' + to.hash)
   } catch (error) {
     if (id && (error as { statusCode?: number }).statusCode === 410)
       return navigateTo(prefix + '/encerrada')
-    return navigateTo(prefix + '/entrar' + location.hash)
+    return navigateTo(prefix + '/entrar' + to.hash)
   }
 })
