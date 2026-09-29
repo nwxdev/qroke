@@ -8,7 +8,7 @@
 Uma jukebox para festas na rede local. Cada convidado escolhe músicas e playlists pelo celular; a fila combina rodízio, votos e controle do anfitrião, e um único dispositivo reproduz o som. Música, vídeo e karaokê compartilham a mesma fila.
 
 > Implementação da [issue #1 — execução da v1](https://github.com/nwxdev/qroke/issues/1), baseada em [docs/plano.md](docs/plano.md).
-> Trabalho concentrado em **`codex/qroke-v1`**, na worktree **`/home/rpolan/projects/nwx/qroke-v1`**. O responsável autorizou a abertura do PR em 28/09/2026, após testes, revisão da branch e correção dos achados. Merge e deploy não estão autorizados.
+> Trabalho concentrado em **`codex/qroke-v1`**, na worktree **`/home/rpolan/projects/nwx/qroke-v1`**. O responsável autorizou a abertura do PR em 28/09/2026, após testes, revisão da branch e correção dos achados. **[PR #2 — implementação da v1](https://github.com/nwxdev/qroke/pull/2)** aberto contra `main`. Merge e deploy não estão autorizados.
 
 ## Identidade visual
 
