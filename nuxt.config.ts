@@ -56,6 +56,7 @@ export default defineNuxtConfig({
     },
   },
   routeRules: {
+    '/f/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' } },
     '/busca': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/host': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/player': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
