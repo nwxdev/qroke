@@ -1201,7 +1201,8 @@ summary {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
-.queue-card {
+.queue-card,
+.queue-current-card {
   flex: 0 0 calc((100% - (var(--cards) - 1) * 14px) / var(--cards));
   min-width: 0;
   scroll-snap-align: start;
@@ -1209,6 +1210,22 @@ summary {
   border-radius: 16px;
   background: var(--surface);
   padding: 16px;
+}
+.queue-current-card {
+  border-color: var(--accent);
+  background: linear-gradient(
+    120deg,
+    var(--surface),
+    color-mix(in srgb, var(--accent) 10%, var(--surface))
+  );
+}
+.queue-current-card .queue-card-top {
+  flex-wrap: wrap;
+}
+.queue-current-status {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
 }
 .queue-card-top {
   display: flex;
@@ -1235,18 +1252,21 @@ summary {
   object-fit: cover;
   border-radius: 8px;
 }
-.queue-card .track-info strong {
+.queue-card .track-info strong,
+.queue-current-card .track-info strong {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.queue-card .track-info small {
+.queue-card .track-info small,
+.queue-current-card .track-info small {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.queue-card-guest {
+.queue-card-guest,
+.queue-current-guest {
   font-size: 11px;
   margin-top: 16px;
   overflow-wrap: anywhere;

@@ -1,5 +1,14 @@
 <script setup lang="ts">
-const { queue, guest, pending, remove } = useParty()
+const { state, queue, guest, pending, remove } = useParty()
+const currentStatus = computed(() =>
+  state.value?.playbackIssue?.halted
+    ? 'Reprodução interrompida'
+    : !state.value?.playerId
+      ? 'Aguardando reprodução'
+      : state.value?.paused
+        ? 'Em pausa'
+        : 'Tocando agora',
+)
 const rail = ref<HTMLOListElement | null>(null)
 const atStart = ref(true),
   atEnd = ref(true)
@@ -17,7 +26,7 @@ function slide(direction: number) {
   el.scrollBy({ left: direction * el.clientWidth, behavior: reduced ? 'instant' : 'smooth' })
 }
 watch(
-  () => queue.value.map((item) => item.queueId).join('|'),
+  () => [state.value?.current?.queueId, ...queue.value.map((item) => item.queueId)].join('|'),
   async () => {
     await nextTick()
     position()
@@ -36,7 +45,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <div>
         <span class="eyebrow">AS ESCOLHAS DA GALERA</span>
         <h2 id="request-queue-title">
-          A seguir <span class="count-badge">{{ queue.length }}</span>
+          Na fila <span class="count-badge">{{ queue.length }} a seguir</span>
         </h2>
       </div>
       <div class="carousel-controls">
@@ -58,6 +67,41 @@ onBeforeUnmount(() => observer?.disconnect())
       @scroll.passive="position"
     >
       <TransitionGroup name="queue">
+        <li
+          v-if="state?.current"
+          :key="'current-' + state.current.queueId"
+          class="queue-current-card"
+          aria-current="true"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <div class="queue-card-top">
+            <span class="queue-current-status">{{ currentStatus }}</span>
+            <span v-if="state.current.karaoke" class="tag">Karaokê</span>
+          </div>
+          <div class="queue-card-track">
+            <img
+              v-if="state.current.thumbnail"
+              :src="state.current.thumbnail"
+              alt=""
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            /><span v-else class="track-art">♫</span>
+            <div class="track-info">
+              <strong>{{ state.current.title }}</strong>
+              <small>{{ state.current.artist }}</small>
+            </div>
+          </div>
+          <p v-if="!state.current.playlist" class="queue-current-guest">
+            Pedido de <strong>{{ state.current.guestName }}</strong>
+          </p>
+          <PlaylistBadge :playlist="state.current.playlist" />
+          <KaraokeSingers
+            v-if="state.current.karaoke"
+            :people="state.current.singers"
+            :fallback="state.current.guestName"
+          />
+        </li>
         <li v-for="(item, index) in queue" :key="item.queueId" class="queue-card">
           <div class="queue-card-top">
             <span class="queue-number">{{ String(index + 1).padStart(2, '0') }}</span>
