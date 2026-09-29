@@ -45,7 +45,7 @@ useSpatialNav(root, back, () => {})
       :style="{ backgroundImage: 'url(' + state.current.thumbnail + ')' }"
     />
     <header class="tv-header player-header">
-      <span class="brand"><span class="brand-mark">q</span> QRokê</span>
+      <BrandLogo class="player-brand" />
       <div class="screen-sound">
         <button
           class="primary-button screen-sound-button"
@@ -70,8 +70,9 @@ useSpatialNav(root, back, () => {})
         <KaraokeCountdown />
         <MediaPlayer ref="mediaPlayer" />
         <div v-if="!isPlayer && !karaokeWaiting" class="tv-placeholder">
-          <span class="vinyl">♫</span
-          ><span class="eyebrow">{{
+          <span v-if="state?.current" class="vinyl">♫</span>
+          <BrandLogo v-else class="standby-brand" />
+          <span class="eyebrow">{{
             state?.current ? 'TOCANDO NA FESTA' : 'A NOITE COMEÇA AQUI'
           }}</span>
           <h1>{{ state?.current?.title || 'Toda festa tem uma trilha.' }}</h1>
@@ -127,6 +128,21 @@ useSpatialNav(root, back, () => {})
 </template>
 
 <style scoped>
+.player-brand {
+  --brand-logo-width: 210px;
+  justify-self: start;
+}
+@media (max-width: 1100px) {
+  .player-brand {
+    --brand-logo-width: 168px;
+  }
+}
+@media (max-width: 380px) {
+  .player-brand {
+    --brand-logo-width: 158px;
+  }
+}
+
 .tv-screen .player-invite :deep(.qr-card) {
   display: block;
 }

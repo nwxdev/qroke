@@ -1,9 +1,27 @@
 # QRokê
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/brand/qroke-dark.png">
+  <img src="public/brand/qroke-light.png" alt="QRokê" width="320">
+</picture>
+
 Uma jukebox para festas na rede local. Cada convidado escolhe músicas e playlists pelo celular; a fila combina rodízio, votos e controle do anfitrião, e um único dispositivo reproduz o som. Música, vídeo e karaokê compartilham a mesma fila.
 
 > Implementação da [issue #1 — execução da v1](https://github.com/nwxdev/qroke/issues/1), baseada em [docs/plano.md](docs/plano.md).
 > Trabalho concentrado em **`codex/qroke-v1`**, na worktree **`/home/rpolan/projects/nwx/qroke-v1`**. Nenhum PR ou push realizado. Abrir PR somente depois dos testes e da aprovação do responsável.
+
+## Identidade visual
+
+A marca aplicada é a [referência compartilhada pelo responsável](https://chatgpt.com/s/m_6abafc8390448191b356f57c08889c5f): mascote com microfone, lettering QRokê, verde-lima e detalhes laranja. Os três PNGs originais transparentes (2172 × 724) estão em `public/brand/`, sem redesenho, filtros ou alteração de proporções.
+
+- `qroke-dark.png`: letras claras para fundos escuros.
+- `qroke-light.png`: letras pretas para fundos claros.
+- `qroke-lime.png`: alternativa original com detalhes em lima, preservada para aplicações futuras.
+- `BrandLogo.vue`: componente único com versão automática pelo tema; `tone="dark"` mantém a versão clara nas superfícies permanentemente escuras do player. A troca usa CSS, inclusive antes da hidratação, sem depender de uma chamada externa.
+- Aplicações: cabeçalhos de busca, anfitrião e player; entrada por PIN; convite junto ao QR; espera do player; rodapé da busca e este README. Logo em um link usa o nome acessível do link, evitando leitura duplicada.
+- Cores de marca: lima `#c4f332` e laranja `#ff5a24`. Textos/ações usam variações com contraste: verde `#48651c` e laranja `#b13c17` no claro; lima e coral `#ff784a` no escuro. Não aplicar verde-lima como texto pequeno sobre branco.
+- O QR permanece preto sobre branco, com margem de quatro módulos e marca **fora** do código. Nenhuma marca cobre o iframe do YouTube, legendas ou controles; o botão de ativar som mantém sua posição.
+- Os logos são servidos pelo próprio aplicativo; o link compartilhado é apenas a referência de origem, não uma dependência da interface. Ao atualizar os arquivos, preservar transparência, proporção 3:1, contraste e nome acessível. No celular, os cabeçalhos acomodam os comandos em linhas separadas quando necessário.
 
 ## Começar
 
@@ -552,7 +570,15 @@ Para diagnosticar a saída nativa no Linux/WSL: `QROKE_TEST_NATIVE_AUDIO=1 node 
 
 O teste de navegador usa `QROKE_CHROMIUM` quando informado; por padrão usa o Chromium headless correspondente à versão instalada do Playwright. Evite forçar uma versão antiga do cache. Em outra máquina, execute `npx playwright install chromium --only-shell` antes. Os testes usam dados próprios e removem apenas seus diretórios temporários ao encerrar; não alteram sua festa.
 
-### Validação atual — navegação e aparelhos, 28/09/2026
+### Validação atual — identidade visual, 28/09/2026
+
+- **63 testes unitários, 19 verificações de integração e 10/10 scripts de navegador aprovados na execução final.** TypeScript, build e formatação também aprovados.
+- `browser-theme-check.mjs` verifica carregamento dos PNGs locais, seleção da versão escura/clara, proporção 3:1, ausência de overflow e separação entre logo, QR e botão de ativar som. Matriz: `/busca`, `/host` e `/player`, nos dois temas, em 320, 390, 768 e 1280 px. A suíte geral também cobre 1440 px e os modos música/vídeo/karaokê.
+- Contraste de pelo menos **4,5:1** nas amostras de texto/botões verificadas, incluindo o destaque da busca; movimento reduzido preservado. Capturas `test-results/brand-*.png` e inspeção visual confirmaram marca e espaçamento. O componente usa a versão de letras claras mesmo no tema claro quando o fundo do player permanece escuro.
+- Uma execução inicial da suíte falhou na asserção de continuidade durante scroll. O teste passou em três repetições isoladas e na execução completa final; a falha não foi reproduzida. A asserção agora discrimina instância, iframe, reprodução e quantidade de pausas para facilitar diagnóstico se voltar a ocorrer. Nenhuma tolerância foi adicionada.
+- Arquivos da marca conferidos contra os downloads originais. Verificação privada: nenhuma ocorrência de API key ou credenciais OAuth em 145 arquivos de código/documentação ou 30 arquivos públicos. Prévia reconstruída e iniciada na porta 3100; nenhuma publicação ou PR.
+
+### Validação da navegação e aparelhos — 28/09/2026
 
 - **63 testes unitários e 19 verificações de integração aprovados.** Novos casos cobrem Android com Client Hints, fallback sem modelo, Edge, Safari/iPhone, Samsung Internet/tablet, TV, migração do schema 5, metadados privados, credencial do heartbeat e preservação do nome após renomear/reiniciar.
 - **10/10 scripts de navegador aprovados na execução completa.** Verificados `/` → `/busca`, expiração/logout do host → busca, reentrada com PIN, ausência de administração no player mesmo com cookie admin, setas/Back, botão fixo antes/depois de selecionar o aparelho e ao rolar/mudar de modo, volume e pulo remoto, identificação Android, playlists, temas e QR de 320 a 1440 px. A configuração do karaokê permanece editada durante o polling e o player dedicado continua aberto após sair do admin.

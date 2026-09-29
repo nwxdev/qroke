@@ -260,7 +260,8 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
       </aside>
     </main>
     <footer class="site-footer">
-      <span>QRokê · Feito para cantar junto.</span
+      <span class="footer-signature"
+        ><BrandLogo decorative /><span>Feito para cantar junto.</span></span
       ><NuxtLink to="/player">Player e convite QR ↗</NuxtLink>
     </footer>
   </div>

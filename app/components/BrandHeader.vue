@@ -4,8 +4,8 @@ const { connected } = useParty()
 <template>
   <header class="brand-header">
     <NuxtLink to="/busca" class="brand" aria-label="QRokê, início"
-      ><span class="brand-mark">q</span> QRokê<span class="brand-dot">●</span></NuxtLink
-    >
+      ><BrandLogo decorative
+    /></NuxtLink>
     <div class="header-links">
       <span class="connection" :class="{ offline: !connected }"
         ><i />{{ connected ? 'A festa está online' : 'Reconectando…' }}</span

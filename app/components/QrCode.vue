@@ -113,6 +113,7 @@ onBeforeUnmount(() => {
   <div class="qr-card" :class="{ large }">
     <template v-if="svg">
       <div class="qr-plate" role="img" :aria-label="'QR para ' + url" v-html="svg" />
+      <BrandLogo class="invite-brand" />
       <p>Conecte-se ao mesmo Wi-Fi. Escaneie. Escolha. Cante.</p>
       <a :href="url" class="invite-link">{{ url }}</a>
       <button class="copy-invite" @click="copyLink">
@@ -138,6 +139,14 @@ onBeforeUnmount(() => {
   </div>
 </template>
 <style scoped>
+.invite-brand {
+  --brand-logo-width: 164px;
+  margin: 0 auto 8px;
+}
+.large .invite-brand {
+  --brand-logo-width: 210px;
+}
+
 .copy-invite {
   display: block;
   margin: 10px auto 0;

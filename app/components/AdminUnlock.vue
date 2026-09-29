@@ -25,6 +25,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
 </script>
 <template>
   <section class="unlock panel">
+    <BrandLogo class="unlock-brand" />
     <span class="eyebrow">CONTROLE DA FESTA</span>
     <h2>Você comanda o som.</h2>
     <p>Digite o PIN do anfitrião para liberar os controles.</p>

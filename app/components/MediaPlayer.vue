@@ -399,7 +399,7 @@ defineExpose({ activate })
             />
           </div>
           <div v-else class="empty-player">
-            <span>♫</span>
+            <BrandLogo tone="dark" class="standby-brand" />
             <h2>Esperando a próxima música</h2>
             <p>A fila começa assim que alguém fizer um pedido.</p>
           </div>

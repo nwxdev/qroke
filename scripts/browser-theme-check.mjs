@@ -42,6 +42,25 @@ async function contrast(page, selector, backdrop = false) {
       return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
     }, backdrop)
 }
+async function checkBrand(page, theme) {
+  const logos = page.locator('.brand-logo')
+  expect(await logos.count()).toBeGreaterThan(0)
+  for (const logo of await logos.all()) {
+    if (!(await logo.isVisible())) continue
+    const tone = await logo.getAttribute('class')
+    const selected = tone.includes('brand-logo--dark') ? 'dark' : theme
+    const visible = logo.locator('.brand-logo-' + selected)
+    await expect(visible).toBeVisible()
+    await expect
+      .poll(() => visible.evaluate((img) => img.complete && img.naturalWidth === 2172))
+      .toBe(true)
+    await expect(
+      logo.locator('.brand-logo-' + (selected === 'dark' ? 'light' : 'dark')),
+    ).toBeHidden()
+    const box = await visible.boundingBox()
+    expect(Math.abs(box.width / box.height - 3)).toBeLessThan(0.03)
+  }
+}
 try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   const page = await context.newPage(),
@@ -54,8 +73,10 @@ try {
       await page
         .getByRole('button', { name: theme === 'light' ? 'Usar tema claro' : 'Usar tema escuro' })
         .click()
+    await checkBrand(page, theme)
     await expect.poll(() => contrast(page, '.join-card .q-btn')).toBeGreaterThanOrEqual(4.5)
     expect(await contrast(page, '.hero p')).toBeGreaterThanOrEqual(4.5)
+    expect(await contrast(page, '.hero .eyebrow')).toBeGreaterThanOrEqual(4.5)
     await page.screenshot({ path: 'test-results/theme-guest-' + theme + '.png', fullPage: true })
   }
   await page.goto(fixture.base + '/host')
@@ -78,6 +99,7 @@ try {
   }
   await page.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
   expect(await contrast(page, '.admin-dialog .q-btn')).toBeGreaterThanOrEqual(4.5)
+  await checkBrand(page, 'light')
   await page.screenshot({ path: 'test-results/pin-modal-light.png', fullPage: true })
   await page
     .getByRole('dialog')
@@ -87,6 +109,7 @@ try {
   await page.getByRole('button', { name: 'Tocar neste dispositivo', exact: true }).click()
   await expect(page.locator('.empty-player')).toBeVisible()
   expect(await contrast(page, '.empty-player p')).toBeGreaterThanOrEqual(4.5)
+  await checkBrand(page, 'light')
 
   const waitingContext = await browser.newContext()
   const waiting = await waitingContext.newPage()
@@ -144,6 +167,44 @@ try {
   expect(
     await page.locator('.tv-stage').evaluate((el) => getComputedStyle(el).transitionDuration),
   ).toBe('0s')
+  // Brand lockups must stay readable without displacing the fixed sound button.
+  for (const path of ['/busca', '/host', '/player']) {
+    await page.goto(fixture.base + path)
+    if (path === '/host') await page.getByRole('button', { name: 'Fechar PIN' }).click()
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 })
+      for (const theme of ['dark', 'light']) {
+        if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== theme)
+          await page
+            .getByRole('button', {
+              name: theme === 'light' ? 'Usar tema claro' : 'Usar tema escuro',
+            })
+            .click()
+        await checkBrand(page, theme)
+        await expect
+          .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+          .toBe(true)
+        if (path === '/player') {
+          const logo = await page.locator('.player-brand').boundingBox()
+          const sound = await page.locator('.screen-sound-button').boundingBox()
+          const menu = await page.locator('.screen-theme').boundingBox()
+          expect(logo.x + logo.width).toBeLessThanOrEqual(menu.x)
+          expect(logo.y + logo.height <= sound.y || logo.x + logo.width <= sound.x).toBe(true)
+          const qr = await page.locator('.qr-plate').boundingBox()
+          const signature = await page.locator('.invite-brand').boundingBox()
+          expect(signature.y).toBeGreaterThanOrEqual(qr.y + qr.height)
+        }
+        if (width === 390 || width === 1280)
+          await page.screenshot({
+            path: 'test-results/brand-' + path.slice(1) + '-' + theme + '-' + width + '.png',
+            fullPage: true,
+          })
+      }
+    }
+  }
+  console.log(
+    'Marca: originais carregados, versão por tema, proporção preservada e sem sobreposição/overflow entre 320 e 1280px nas três telas OK',
+  )
   expect(errors).toEqual([])
   console.log('Contraste >=4.5 em botões, textos da TV e player; temas e movimento reduzido OK')
 } finally {

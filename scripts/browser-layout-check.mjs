@@ -135,14 +135,14 @@ try {
     await host.evaluate(() => window.scrollTo(0, 0))
     await expect(host.locator('.player-floating')).toBeVisible()
     expect(
-      await host.evaluate(
-        () =>
-          window.originalFrame === document.querySelector('iframe') &&
-          window.originalPlayer === window.qrokeFake &&
-          window.qrokePlaying &&
-          window.originalPauses === window.qrokePauses,
-      ),
-    ).toBe(true)
+      await host.evaluate(() => ({
+        sameFrame: window.originalFrame === document.querySelector('iframe'),
+        samePlayer: window.originalPlayer === window.qrokeFake,
+        playing: window.qrokePlaying,
+        pausesAfterScroll: window.qrokePauses - window.originalPauses,
+      })),
+      'Reprodução durante scroll em ' + width + 'px',
+    ).toEqual({ sameFrame: true, samePlayer: true, playing: true, pausesAfterScroll: 0 })
     const rect = await host.locator('iframe').boundingBox()
     expect(rect.width).toBeGreaterThanOrEqual(200)
     expect(rect.height).toBeGreaterThanOrEqual(200)
