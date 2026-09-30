@@ -36,7 +36,17 @@ export default defineNuxtConfig({
     head: {
       title: 'QRokê · A festa é de todo mundo',
       htmlAttrs: { lang: 'pt-BR' },
-      meta: [{ name: 'theme-color', content: '#101214' }],
+      meta: [
+        { name: 'theme-color', content: '#101214' },
+        { name: 'application-name', content: 'QRokê' },
+        { name: 'apple-mobile-web-app-title', content: 'QRokê' },
+      ],
+      link: [
+        { rel: 'icon', href: '/favicon.ico', type: 'image/x-icon', sizes: '16x16 32x32 48x48' },
+        { rel: 'icon', href: '/favicon-96.png', type: 'image/png', sizes: '96x96' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' },
+        { rel: 'manifest', href: '/site.webmanifest' },
+      ],
       script: [
         {
           innerHTML:
@@ -45,5 +55,14 @@ export default defineNuxtConfig({
       ],
     },
   },
-  quasar: { plugins: ['Dark'] },
+  routeRules: {
+    '/busca': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/host': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/player': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/qr': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/tv': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/api/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/ws': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+  },
+  quasar: { plugins: ['Dark'], lang: 'pt-BR' },
 })
