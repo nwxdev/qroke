@@ -17,6 +17,7 @@ export function useParty() {
   const scopedKey = (key: string) => (scope ? key + ':' + scope : key)
   const clockOffset = useState(scopedKey('server-clock-offset'), () => 0)
   const state = useState<PublicState | null>(scopedKey('party'), () => null)
+  const sessionReady = useState(scopedKey('session-ready'), () => false)
   const guest = useState<Guest | null>(scopedKey('guest'), () => null),
     admin = useState(scopedKey('admin'), () => false)
   const adminExpiresAt = useState(scopedKey('admin-expires-at'), () => 0),
@@ -59,6 +60,7 @@ export function useParty() {
       timeout: 4000,
     })
     guest.value = result.guest
+    sessionReady.value = true
     votedQueueIds.value = result.votedQueueIds || []
     queueReactions.value = result.queueReactions || {}
     admin.value = result.admin
@@ -132,7 +134,13 @@ export function useParty() {
     }
     optimistic.value = [temp]
     await act(() =>
-      api('/api/queue', { id: track.id, source: track.source, karaoke: track.karaoke, singers }),
+      api('/api/queue', {
+        id: track.id,
+        source: track.source,
+        channel: track.media?.channel,
+        karaoke: track.karaoke,
+        singers,
+      }),
     )
     optimistic.value = []
   }
@@ -156,6 +164,7 @@ export function useParty() {
   }
   return {
     clockOffset,
+    sessionReady,
     state,
     guest,
     admin,

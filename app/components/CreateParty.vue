@@ -85,19 +85,13 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <main class="party-home">
-    <header><BrandLogo /><span class="home-label">A FESTA É DE TODO MUNDO</span></header>
+    <header><BrandLogo /></header>
     <div class="home-grid">
       <section class="home-intro">
-        <span class="eyebrow">MÚSICA, KARAOKÊ E A SUA GALERA</span>
-        <h1>Sua próxima festa começa aqui.</h1>
-        <p>Crie uma festa, compartilhe o QR Code e deixe todo mundo escolher a próxima música.</p>
-        <div class="home-features">
-          <span>24 horas para curtir</span><span>Sem cadastro</span
-          ><span>Uma fila, toda a galera</span>
-        </div>
+        <h1>Sua festa.<br />Sua música.</h1>
+        <p>Crie, compartilhe e dê o play.</p>
         <section v-if="active.length" class="my-parties" aria-labelledby="my-parties-title">
           <h2 id="my-parties-title">Suas festas</h2>
-          <p>Continue nas festas que você já acessou neste navegador.</p>
           <ul>
             <li v-for="party in active" :key="party.id">
               <div>
@@ -114,9 +108,8 @@ onBeforeUnmount(() => {
         </section>
       </section>
       <section class="create-party-card" aria-labelledby="create-title">
-        <span class="eyebrow">É SÓ COMEÇAR</span>
         <h2 id="create-title">Criar festa</h2>
-        <p>Sua festa fica disponível por 24 horas. Você pode encerrá-la antes, quando quiser.</p>
+        <p>Disponível por 24 horas ou até você encerrar.</p>
         <form @submit.prevent="create">
           <label for="party-name">Nome da festa</label>
           <input
@@ -154,18 +147,13 @@ onBeforeUnmount(() => {
             autocomplete="new-password"
             placeholder="Repita o PIN"
           />
-          <small
-            >Guarde esse PIN: ele libera os controles da festa. Seus convidados entram pelo
-            convite.</small
-          >
+          <small>Guarde o PIN para administrar a festa.</small>
           <p v-if="failure" class="notice" role="alert">{{ failure }}</p>
           <button class="create-party-button" :disabled="busy">
             {{ busy ? 'Criando sua festa…' : 'Criar festa' }}
           </button>
         </form>
-        <p class="invite-hint">
-          Recebeu um convite? Abra o link ou escaneie o QR Code para entrar na festa certa.
-        </p>
+        <p class="invite-hint">Tem um convite? Abra o link ou escaneie o QR.</p>
       </section>
     </div>
   </main>
@@ -298,7 +286,7 @@ onBeforeUnmount(() => {
 @media (max-width: 760px) {
   .home-grid {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 24px;
     padding-top: 32px;
   }
   .home-label {
@@ -308,7 +296,15 @@ onBeforeUnmount(() => {
     padding-bottom: 20px;
   }
   .home-intro h1 {
-    max-width: 450px;
+    font-size: 32px;
+    margin: 0 0 8px;
+  }
+  .home-intro > p {
+    margin: 0;
+    font-size: 14px;
+  }
+  .my-parties {
+    margin-top: 20px;
   }
   .create-party-card {
     padding: 22px;

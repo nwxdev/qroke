@@ -60,8 +60,8 @@ onBeforeUnmount(() => {
         remotamente.
       </p>
       <p>
-        Uma PWA segue as permissões do navegador e precisa manter o player visível para o YouTube. A
-        instalação como aplicativo ainda não está disponível. Use o Chrome por enquanto.
+        Instale o QRokê pelo link no topo da página ou pelo menu do navegador. Para YouTube,
+        mantenha o player visível.
       </p>
     </details>
     <p v-if="notice" class="hint">{{ notice }}</p>
@@ -147,7 +147,8 @@ onBeforeUnmount(() => {
     </p>
     <small
       >Remover revoga o acesso deste aparelho e interrompe seu som se ele for o PLAYER. Reabrir a
-      página faz um novo registro. Trocas aguardam até 9 segundos para evitar som duplicado.</small
+      página faz um novo registro. A troca acontece quando o player anterior confirma a parada. Sem
+      confirmação, aguarda até 9 segundos.</small
     >
   </section>
 </template>

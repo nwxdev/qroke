@@ -112,6 +112,62 @@ describe('MongoDB real: isolamento e concorrência', () => {
   })
 })
 
+describe('Migração de mídia', () => {
+  it('converte o documento antigo entre instâncias preservando fila, convidados e OAuth', async () => {
+    const legacy = new MongoPartyDatabase(client, db, 'nwx', 'legacy-media')
+    const replica = new MongoPartyDatabase(client, db, 'nwx', 'legacy-media')
+    await legacy.ensure()
+    const guest = await legacy.createGuest('Dona da festa')
+    const state = await legacy.state()
+    delete state.schemaVersion
+    state.position = 37
+    state.current = {
+      id: 'abcdefghijk',
+      source: 'youtube',
+      title: 'Música antiga',
+      artist: 'Artista',
+      duration: 120,
+      thumbnail: '',
+      karaoke: true,
+      queueId: randomUUID(),
+      guestId: guest.id,
+      guestName: guest.name,
+      origin: 'human',
+      enqueuedAt: Date.now(),
+      round: 0,
+      manualOrder: null,
+    }
+    state.queue = [
+      { ...state.current, id: 'local-id', source: 'local', karaoke: false, queueId: randomUUID() },
+    ]
+    await db.collection('parties').updateOne({ _id: legacy.scope }, { $set: { state } })
+    const oauth = new EncryptedStore<{ expires: number; access: string }>(
+      db,
+      legacy.scope,
+      'youtube',
+      'ab'.repeat(32),
+    )
+    await oauth.set('account', { expires: Date.now() + 60000, access: 'migration-secret' })
+    const oauthBefore = await db.collection('oauth').findOne({ scope: legacy.scope })
+    expect((await replica.state()).current?.media?.channel).toBe('karaoke')
+    await replica.mutate((next) => {
+      next.volume = 65
+    })
+    const saved = await db.collection('parties').findOne({ _id: legacy.scope })
+    expect(saved?.state.schemaVersion).toBe(2)
+    expect(saved?.state.position).toBe(37)
+    expect(saved?.state.current.queueId).toBe(state.current.queueId)
+    expect(saved?.state.queue[0].media).toMatchObject({
+      provider: 'local',
+      channel: 'music',
+      playback: { kind: 'audio-file' },
+    })
+    expect(await replica.guest(guest.token)).toEqual({ id: guest.id, name: guest.name })
+    expect(await db.collection('oauth').findOne({ scope: legacy.scope })).toEqual(oauthBefore)
+    expect((await oauth.get('account'))?.access).toBe('migration-secret')
+  })
+})
+
 describe('Ciclo de vida das festas', () => {
   async function modern(id: string, milliseconds = 86400000) {
     const database = new MongoPartyDatabase(client, db, 'nwx', id)

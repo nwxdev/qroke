@@ -19,8 +19,9 @@ const allQueued = computed(
     <h3>{{ preview.playlist.title }}</h3>
     <p>{{ preview.playlist.channel }} · {{ preview.playlist.count }} itens na playlist</p>
     <p class="hint">
-      {{ preview.tracks.length }} faixas disponíveis neste lote de {{ preview.inspected }} itens.
-      {{ preview.skipped }} indisponíveis ou repetidas foram ignoradas.
+      {{ preview.tracks.length }} músicas disponíveis<span v-if="preview.skipped">
+        · {{ preview.skipped }} indisponíveis ou repetidas</span
+      >.
     </p>
     <ol v-if="preview.tracks.length" class="playlist-tracks" aria-label="Faixas da playlist">
       <li v-for="track in preview.tracks" :key="track.id">
@@ -115,5 +116,15 @@ const allQueued = computed(
 .playlist-add {
   background: var(--accent);
   color: var(--on-accent);
+}
+@media (max-width: 600px) {
+  .playlist-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .playlist-actions button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

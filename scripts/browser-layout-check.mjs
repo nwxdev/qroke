@@ -62,8 +62,8 @@ try {
   expect(
     await page.evaluate(
       () =>
-        document.querySelector('.queue-carousel').getBoundingClientRect().bottom <
-        document.querySelector('.search-section').getBoundingClientRect().top,
+        document.querySelector('.search-section').getBoundingClientRect().bottom <
+        document.querySelector('.queue-carousel').getBoundingClientRect().top,
     ),
   ).toBe(true)
   await page.screenshot({
@@ -167,8 +167,8 @@ try {
   await host.goto(fixture.base + '/host')
   await host.getByRole('button', { name: 'Tocar neste dispositivo', exact: true }).click()
   await expect.poll(async () => host.evaluate(() => window.qrokePlaying)).toBe(true)
-  await host.locator('.media-slot').scrollIntoViewIfNeeded()
-  await expect(host.locator('.player-floating')).toHaveCount(0)
+  await host.locator('[data-player-stage]').scrollIntoViewIfNeeded()
+  await expect(host.locator('.persistent-player.is-docked')).toHaveCount(0)
   await host.evaluate(() => {
     window.originalFrame = document.querySelector('iframe')
     window.originalPlayer = window.qrokeFake
@@ -177,7 +177,7 @@ try {
   for (const width of [1440, 360]) {
     await host.setViewportSize({ width, height: 800 })
     await host.evaluate(() => window.scrollTo(0, 0))
-    await expect(host.locator('.player-floating')).toBeVisible()
+    await expect(host.locator('.persistent-player.is-docked')).toBeVisible()
     expect(
       await host.evaluate(() => ({
         sameFrame: window.originalFrame === document.querySelector('iframe'),
@@ -194,14 +194,14 @@ try {
     expect(rect.y).toBeGreaterThanOrEqual(0)
     expect(rect.x + rect.width).toBeLessThanOrEqual(width)
     expect(rect.y + rect.height).toBeLessThanOrEqual(800)
-    const controls = await host.locator('.floating-controls').boundingBox()
+    const controls = await host.locator('.persistent-controls').boundingBox()
     expect(controls.y).toBeGreaterThanOrEqual(rect.y + rect.height)
     await host.screenshot({
       path: 'test-results/player-floating-' + width + '.png',
       fullPage: false,
     })
     await host.getByRole('button', { name: 'Voltar ao player na página' }).click()
-    await expect(host.locator('.player-floating')).toHaveCount(0)
+    await expect(host.locator('.persistent-player.is-docked')).toHaveCount(0)
     expect(
       await host.evaluate(
         () => window.qrokePlaying && window.originalFrame === document.querySelector('iframe'),

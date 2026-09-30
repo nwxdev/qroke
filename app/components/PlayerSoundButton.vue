@@ -2,6 +2,10 @@
 const emit = defineEmits<{ activate: [] }>()
 const { armed, active, connected, device, soundStatus, soundLabel, soundHint } = usePlayerSound()
 const statusId = useId()
+function activate() {
+  window.dispatchEvent(new Event('qroke:activate-media'))
+  emit('activate')
+}
 </script>
 <template>
   <div class="sound-control">
@@ -12,7 +16,7 @@ const statusId = useId()
       :title="soundStatus"
       :disabled="!device"
       :aria-describedby="statusId"
-      @click.stop="emit('activate')"
+      @click.stop="activate"
     >
       <AppIcon :name="armed && connected ? 'check' : 'volume'" />
       <span class="sound-button-copy"

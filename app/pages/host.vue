@@ -2,7 +2,7 @@
 import { VueDraggable } from 'vue-draggable-plus'
 import type { QueueItem } from '../../shared/types'
 const { href } = usePartyRoute()
-const { state, admin, pending, reorder, isPlayer } = useParty()
+const { state, admin, pending, reorder, isPlayer, sessionReady } = useParty()
 const dragged = ref<QueueItem[]>([])
 const dragging = ref(false)
 watch(
@@ -18,9 +18,13 @@ async function endDrag() {
   dragged.value = [...(state.value?.queue || [])]
 }
 const unlock = ref(false)
-onMounted(() => {
-  unlock.value = !admin.value
-})
+watch(
+  sessionReady,
+  (ready) => {
+    if (ready) unlock.value = !admin.value
+  },
+  { immediate: true },
+)
 watch(admin, (value, previous) => {
   if (value) unlock.value = false
   else if (previous) {
@@ -37,11 +41,10 @@ watch(admin, (value, previous) => {
       ><AdminExit /></BrandHeader
     ><PartyNotice />
     <GuestIdentity />
+    <QueueCarousel />
     <main>
       <div class="page-title">
-        <span class="eyebrow">BASTIDORES</span>
-        <h1>O ritmo está nas suas mãos.</h1>
-        <p>Escolha onde tocar. Cuide da fila. Aproveite a festa.</p>
+        <h1>Sua festa</h1>
       </div>
       <div class="host-layout">
         <section>
@@ -55,9 +58,7 @@ watch(admin, (value, previous) => {
               <AdminStatus />
             </div>
             <p v-if="!state?.playerId" class="notice">
-              Para começar, clique em <strong>Tocar neste dispositivo</strong> no computador ou TV
-              que vai emitir o som. Depois disso, os pedidos começam automaticamente quando a fila
-              está vazia.
+              Escolha <strong>Tocar neste dispositivo</strong> no aparelho conectado ao som.
             </p>
             <HostInvitation /><EndParty />
             <HostControls />
@@ -66,7 +67,7 @@ watch(admin, (value, previous) => {
           <DeviceManager v-if="admin" />
           <PartyPeople />
           <YoutubePlaylists v-if="admin" />
-          <MediaPlayer v-if="isPlayer" />
+          <PlayerStage v-if="isPlayer" />
           <p v-else class="hint">O som será reproduzido apenas no dispositivo escolhido.</p>
         </section>
         <section v-if="admin" class="panel">

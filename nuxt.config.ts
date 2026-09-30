@@ -56,6 +56,8 @@ export default defineNuxtConfig({
     },
   },
   routeRules: {
+    '/sw.js': { headers: { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } },
+    '/site.webmanifest': { headers: { 'Cache-Control': 'no-cache' } },
     '/f/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' } },
     '/busca': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/host': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },

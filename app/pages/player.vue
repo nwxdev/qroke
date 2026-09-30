@@ -1,7 +1,6 @@
 <script setup lang="ts">
 const { state, queue, isPlayer } = useParty()
 const root = ref<HTMLElement | null>(null)
-const mediaPlayer = ref<{ activate: () => Promise<void> } | null>(null)
 const { active: soundActive } = usePlayerSound()
 const { waiting: karaokeWaiting } = useKaraokeCountdown()
 const karaoke = computed(() => !!state.value?.current?.karaoke)
@@ -49,9 +48,9 @@ useSpatialNav(root, back, () => {})
     <header class="tv-header player-header">
       <BrandLogo class="player-brand" />
       <HeaderMenu>
-        <PlayerSoundButton @activate="mediaPlayer?.activate()" />
+        <PlayerSoundButton />
         <template v-if="!soundActive" #persistent>
-          <PlayerSoundButton @activate="mediaPlayer?.activate()" />
+          <PlayerSoundButton />
         </template>
       </HeaderMenu>
     </header>
@@ -59,7 +58,11 @@ useSpatialNav(root, back, () => {})
     <div class="tv-stage">
       <section class="tv-main">
         <KaraokeCountdown />
-        <MediaPlayer ref="mediaPlayer" />
+        <PlayerStage />
+        <MusicSearch v-if="!karaoke" :allow-karaoke="false" embedded class="player-discovery" />
+        <PartyLink v-else to="/busca?karaoke=1#busca" class="karaoke-search-link"
+          >Buscar karaokê ↗</PartyLink
+        >
         <div v-if="!isPlayer && !karaokeWaiting" class="tv-placeholder">
           <span v-if="state?.current" class="vinyl">♫</span>
           <BrandLogo v-else class="standby-brand" />
@@ -215,7 +218,7 @@ useSpatialNav(root, back, () => {})
 .player-header {
   container: party-header / inline-size;
   position: fixed;
-  inset: 0 0 auto;
+  inset: var(--qroke-install-space, 0px) 0 auto;
   z-index: 30;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -494,5 +497,22 @@ useSpatialNav(root, back, () => {})
   .tv-screen.karaoke-active .tv-aside :deep(.karaoke-qr) {
     bottom: var(--player-footer-space);
   }
+}
+.player-discovery {
+  margin-top: 24px;
+  min-width: 0;
+}
+.karaoke-search-link {
+  display: inline-flex;
+  padding: 12px 0;
+  color: var(--accent);
+}
+.tv-screen:not(.karaoke-active) {
+  height: auto;
+  min-height: 100dvh;
+}
+.tv-screen:not(.karaoke-active) .tv-main {
+  display: block;
+  min-height: 0;
 }
 </style>

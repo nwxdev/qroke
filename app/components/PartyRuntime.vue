@@ -11,4 +11,4 @@ onMounted(() => {
 })
 onBeforeUnmount(() => clearInterval(timer))
 </script>
-<template><PartyAlerts /></template>
+<template><PartyAlerts /><PersistentPlayer /><HostWelcome /></template>

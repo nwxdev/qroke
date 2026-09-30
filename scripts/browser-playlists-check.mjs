@@ -68,7 +68,7 @@ try {
     window.originalFrame = document.querySelector('iframe')
   })
   await page.getByRole('button', { name: 'Minha conta', exact: true }).click()
-  await page.getByRole('button', { name: 'Conectar YouTube', exact: true }).click()
+  await page.getByRole('button', { name: 'Conectar Google', exact: true }).click()
   await expect(page.getByText('Conta conectada neste navegador', { exact: true })).toBeVisible()
   await expect(page.locator('.account-playlists li')).toHaveCount(1)
   expect(page.url()).toBe(fixture.base + '/host')
@@ -88,7 +88,7 @@ try {
     .click()
   await expect(page.locator('.playlist-success')).toContainText('2 já estava(m)')
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Conectar YouTube', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Conectar Google', exact: true })).toBeVisible()
 
   let invite = {
     url: 'http://192.168.1.10:3100/',

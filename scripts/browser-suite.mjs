@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 const scripts = [
+  'browser-continuity-check.mjs',
   'browser-access-check.mjs',
   'browser-multisession-check.mjs',
   'browser-check.mjs',

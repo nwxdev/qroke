@@ -1,3 +1,4 @@
+import { assignPlayer } from '../core/handoff'
 import { previousTrack } from '../core/previous'
 import { clearPlaybackIssue, skipTrack, retryTrack } from '../core/playback'
 import { z } from 'zod'
@@ -42,12 +43,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 409, statusMessage: 'Dispositivo desconectado.' })
     switch (cmd.action) {
       case 'assign':
-        s.playerReadyAt = Math.max(
-          s.playerReadyAt || 0,
-          s.playerId && s.playerId !== cmd.deviceId ? Date.now() + 9000 : Date.now(),
-        )
-        s.playerId = cmd.deviceId
-        s.playerVolume = null
+        assignPlayer(s, cmd.deviceId)
         startNext(s)
         break
       case 'pause':
@@ -83,6 +79,7 @@ export default defineEventHandler(async (event) => {
       case 'remove-device':
         await party(event).removeDevice(cmd.deviceId)
         if (s.playerId === cmd.deviceId) {
+          s.playerHandoff = null
           s.playerId = null
           s.paused = true
           s.playerReadyAt = Date.now() + 9000

@@ -69,11 +69,7 @@ onMounted(async () => {
     <a href="/" aria-label="QRokê, início"><BrandLogo /></a>
     <span v-if="details" class="eyebrow entry-party-name">{{ details.name }}</span>
     <h1>Entre na festa</h1>
-    <p class="entry-description">
-      Escolha músicas, compartilhe playlists e cante karaokê com seus amigos. No QRokê, cada
-      convidado participa da fila pelo QR Code.
-    </p>
-    <p>Recebeu um convite? Abra o link ou escaneie o QR do anfitrião.</p>
+    <p>Abra o convite ou entre com seu PIN.</p>
     <form @submit.prevent="enter">
       <label for="host-pin">Acesso do anfitrião</label>
       <input

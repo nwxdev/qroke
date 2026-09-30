@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import type { ClientSession, Db, MongoClient } from 'mongodb'
 import { normalizeName, uniqueName, orderQueue } from './rules'
 import type { EncryptedStore } from './shared-store'
+import { normalizePartyMedia } from '../../shared/media'
 import { initialState } from './initial-state'
 import { assertPartyActive, partyInfo, type PartyDetails } from './party-lifecycle'
 import type { PartyState, Guest, Device, PublicState } from '../../shared/types'
@@ -147,6 +148,7 @@ export class MongoPartyDatabase {
             )
           if (!row) throw new Error('Festa não encontrada.')
           if (!allowEnded) assertPartyActive(row)
+          if ((row.state.schemaVersion || 1) < 2) normalizePartyMedia(row.state)
           return contexts.run({ scope: this.scope, session, row }, async () => {
             const value = await change(row)
             if (!allowEnded) assertPartyActive(row)
@@ -178,11 +180,12 @@ export class MongoPartyDatabase {
       )
     if (!row) throw new Error('Festa não encontrada.')
     assertPartyActive(row)
-    return row.state
+    return normalizePartyMedia(row.state)
   }
   async mutate(change: (state: PartyState) => void | Promise<void>) {
     return this.write(async (row) => {
       await change(row.state)
+      normalizePartyMedia(row.state)
       if (row.state.queue.length > 2000) throw new Error('A fila está cheia.')
       row.state.history = row.state.history.slice(-100)
       await this.db

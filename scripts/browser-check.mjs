@@ -29,7 +29,7 @@ try {
   await guest.goto(server.base)
   await guest.getByLabel('Seu nome', { exact: true }).fill('Ana')
   await guest.getByRole('button', { name: 'Entrar na festa' }).click()
-  await expect(guest.getByRole('heading', { name: 'Oi, Ana' })).toBeVisible()
+  await expect(guest.getByRole('heading', { name: 'Buscar música', exact: true })).toBeVisible()
   await guest.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
   await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).fill('Faixa')
   await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).press('Enter')
@@ -235,7 +235,7 @@ try {
   // Fallback sem WebSocket: nova aba e pedido chegam via polling.
   await guestContext.routeWebSocket('**/ws', (ws) => ws.close())
   await guest.reload()
-  await expect(guest.getByRole('heading', { name: 'Oi, Ana' })).toBeVisible()
+  await expect(guest.getByRole('heading', { name: 'Buscar música', exact: true })).toBeVisible()
   await guest.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
   await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).fill('Faixa 7')
   await guest.getByRole('button', { name: 'Buscar', exact: true }).click()
