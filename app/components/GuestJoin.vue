@@ -1,7 +1,12 @@
 <script setup lang="ts">
 withDefaults(defineProps<{ host?: boolean; autofocus?: boolean }>(), { autofocus: true })
-const { guest, pending, failure, act, api } = useParty()
+const { guest, pending, failure, act, api, sessionReady } = useParty()
 const name = ref('')
+const mounted = ref(false)
+onMounted(() => {
+  mounted.value = true
+})
+const ready = computed(() => mounted.value && sessionReady.value)
 const googleFailure = useState('qroke:google-failure', () => '')
 const nuxt = useNuxtApp()
 const nameError = computed(() => {
@@ -9,7 +14,7 @@ const nameError = computed(() => {
   return Array.from(n).length >= 2 && Array.from(n).length <= 20 ? '' : 'Use de 2 a 20 caracteres.'
 })
 async function join() {
-  if (nameError.value || pending.value) return false
+  if (!ready.value || nameError.value || pending.value) return false
   await act(() => api('/api/guest', { name: name.value }))
   return !!guest.value && !failure.value
 }
@@ -28,7 +33,7 @@ async function connect() {
         maxlength="24"
         autocomplete="nickname"
         :autofocus="autofocus"
-        :disable="pending"
+        :disable="pending || !ready"
       />
       <small v-if="name && nameError">{{ nameError }}</small>
       <QBtn
@@ -37,12 +42,12 @@ async function connect() {
         no-caps
         :label="host ? 'Continuar' : 'Entrar na festa →'"
         :loading="pending"
-        :disable="!!nameError"
+        :disable="!!nameError || !ready"
       />
       <button
         type="button"
         class="google-connect"
-        :disabled="pending || !!nameError"
+        :disabled="pending || !!nameError || !ready"
         @click="connect"
       >
         Conectar Google e escolher playlists

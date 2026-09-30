@@ -134,6 +134,30 @@ try {
   expect(await page.locator('iframe').count()).toBe(0)
   expect(await target.evaluate(() => window.qrokePosition)).toBe(48.75)
   await context.close()
+  // A server-rendered name field must not accept typing before its handlers are ready.
+  const cold = await browser.newContext()
+  const coldPage = await cold.newPage()
+  let releaseScripts
+  const scriptsReady = new Promise((resolve) => {
+    releaseScripts = resolve
+  })
+  await coldPage.route('**/_nuxt/*.js', async (route) => {
+    await scriptsReady
+    await route.continue()
+  })
+  try {
+    await coldPage.goto(fixture.base + '/busca', { waitUntil: 'commit' })
+    await expect(coldPage.getByLabel('Seu nome', { exact: true })).toBeDisabled()
+  } finally {
+    releaseScripts()
+  }
+  await expect(coldPage.getByLabel('Seu nome', { exact: true })).toBeEnabled()
+  await coldPage.getByLabel('Seu nome', { exact: true }).fill('Primeiro acesso')
+  await coldPage.getByRole('button', { name: 'Entrar na festa →', exact: true }).click()
+  await expect(coldPage.getByRole('region', { name: 'Sua identidade na festa' })).toContainText(
+    'Primeiro acesso',
+  )
+  await cold.close()
   const pwa = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const install = await pwa.newPage()
   await install.goto(fixture.base + '/entrar')
