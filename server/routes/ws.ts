@@ -1,6 +1,9 @@
 import type { Peer } from 'crossws'
 import { dragonflySubscription, rateLimit } from '../core/connections'
-const peers = new Map<string, { peer: Peer; scope: string; token?: string }>()
+const peers = new Map<
+  string,
+  { peer: Peer; scope: string; token?: string; browser?: string; partyId?: string }
+>()
 let subscribed: Promise<unknown> | undefined
 async function subscribe() {
   if (!subscribed)
@@ -25,7 +28,11 @@ async function subscribe() {
 const timer = setInterval(async () => {
   for (const entry of peers.values()) {
     try {
-      if (useRuntimeConfig().accessRequired && !(await validateAccess(entry.token))) {
+      if (
+        entry.partyId
+          ? !(await authenticateBrowserParty(entry.browser, entry.partyId))
+          : useRuntimeConfig().accessRequired && !(await validateAccess(entry.token))
+      ) {
         entry.peer.close(1008, 'Convite expirado.')
         peers.delete(entry.peer.id)
       } else entry.peer.send(JSON.stringify({ type: 'heartbeat' }))
@@ -47,16 +54,29 @@ export default defineWebSocketHandler({
       .map((s) => s.trim())
       .find((s) => s.startsWith('qroke_access='))
       ?.slice(13)
-    const authenticated = await validateAccess(token)
+    const partyId = new URL(request.url).searchParams.get('festa') || ''
+    const browser = request.headers
+      .get('cookie')
+      ?.split(';')
+      .map((s) => s.trim())
+      .find((s) => s.startsWith('qroke_browser='))
+      ?.slice(14)
+    const scoped = partyId
+      ? await authenticateBrowserParty(browser, partyId).catch(() => undefined)
+      : undefined
+    if (partyId && !scoped) return new Response('Convite necessário.', { status: 401 })
+    const authenticated = scoped || (await validateAccess(token).catch(() => undefined))
     if (config.accessRequired && !authenticated)
       return new Response('Convite necessário.', { status: 401 })
     if (peers.size >= 5000) return new Response('Servidor ocupado.', { status: 503 })
     const ip = config.trustProxy ? request.headers.get('x-forwarded-for') || 'unknown' : 'local'
-    if (!(await rateLimit(config.dragonflyUrl, 'ws:' + ip, 120)))
+    if (!(await rateLimit(config.dragonflyUrl, 'ws:' + ip, 600)))
       return new Response('Muitas conexões.', { status: 429 })
     request.context.scope =
       authenticated?.database.scope || config.organizationId + ':' + config.partyId
     request.context.token = token
+    request.context.browser = browser
+    request.context.partyId = partyId
     await subscribe()
   },
   open(peer) {
@@ -64,6 +84,8 @@ export default defineWebSocketHandler({
       peer,
       scope: String(peer.context.scope),
       token: peer.context.token as string | undefined,
+      browser: peer.context.browser as string | undefined,
+      partyId: peer.context.partyId as string | undefined,
     })
     peer.send(JSON.stringify({ type: 'changed' }))
   },

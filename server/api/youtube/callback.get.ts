@@ -12,6 +12,9 @@ export default defineEventHandler(async (event) => {
   )
   setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
   let result = 'error'
+  let createdAccount: string | undefined
+  const scoped = !!event.context.qrokeScoped
+  const destination = scoped ? '/f/' + encodeURIComponent(party(event).partyId) + '/busca' : '/'
   try {
     if (
       !service.configured ||
@@ -19,13 +22,19 @@ export default defineEventHandler(async (event) => {
         new URL(service.config.redirect).origin
     )
       throw new Error('Invalid origin')
+    const route =
+      scoped && typeof query.state === 'string'
+        ? await oauthRoutes(event).take(query.state)
+        : undefined
+    if (scoped && !route) throw new Error('Autorização já utilizada.')
     const id = await service.complete(
       typeof query.state === 'string' ? query.state : '',
-      getCookie(event, 'qroke_youtube_oauth') || '',
+      route ? route.binding : getCookie(event, 'qroke_youtube_oauth') || '',
       typeof query.code === 'string' && query.code.length < 4096 ? query.code : '',
       !!query.error,
     )
-    setCookie(event, 'qroke_youtube', id, {
+    createdAccount = id
+    await setPartyCredential(event, 'qroke_youtube', id, {
       httpOnly: true,
       sameSite: 'strict',
       secure: secureCookie(),
@@ -34,9 +43,10 @@ export default defineEventHandler(async (event) => {
     })
     result = 'connected'
   } catch {
+    if (createdAccount) await service.disconnect(createdAccount).catch(() => {})
     result = query.error === 'access_denied' ? 'cancelled' : 'error'
   }
-  deleteCookie(event, 'qroke_youtube_oauth', { path: '/api/youtube/callback' })
+  if (!scoped) deleteCookie(event, 'qroke_youtube_oauth', { path: '/api/youtube/callback' })
   const message =
     result === 'connected'
       ? 'YouTube conectado. Volte à festa para escolher suas playlists.'
@@ -45,7 +55,9 @@ export default defineEventHandler(async (event) => {
   return (
     '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>QRokê · YouTube</title><body><h1>' +
     message +
-    '</h1><p><a href="/">Voltar à festa</a></p><script nonce="' +
+    '</h1><p><a href="' +
+    destination +
+    '">Voltar à festa</a></p><script nonce="' +
     nonce +
     '">' +
     'if(window.opener){window.opener.postMessage({type:"qroke-youtube",result:' +

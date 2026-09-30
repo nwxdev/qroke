@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const $fetch = usePartyFetch()
 import type { PlaylistPreview, YoutubePlaylist, YoutubeStatus } from '../../shared/playlists'
 const { refresh, session, state, queue } = useParty()
 const playlistQueued = (id: string) =>

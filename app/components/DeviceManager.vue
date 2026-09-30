@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const $fetch = usePartyFetch()
 import type { Device } from '../../shared/types'
 const { state, device, pending, control, playHere, admin } = useParty()
 const devices = ref<Device[]>([])
@@ -52,7 +53,7 @@ onBeforeUnmount(() => {
         Abra o endereço da festa no Chrome do outro aparelho e entre em <strong>Player</strong>. Ele
         aparecerá aqui; selecione-o e toque em <strong>Ativar som</strong> na tela dele.
       </p>
-      <NuxtLink to="/player">Abrir player e QR ↗</NuxtLink>
+      <PartyLink to="/player">Abrir player e QR ↗</PartyLink>
       <p>
         Para uma caixa Bluetooth, faça o pareamento nas configurações do aparelho que reproduz. O
         YouTube usa a saída de áudio desse sistema. O aplicativo não pareia caixas Bluetooth

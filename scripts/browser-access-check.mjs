@@ -22,7 +22,7 @@ try {
   const home = await page.goto(fixture.base + '/')
   expect(home.status()).toBe(200)
   await expect(page).toHaveURL(fixture.base + '/')
-  await expect(page.getByRole('heading', { name: 'Entre na festa' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sua próxima festa começa aqui.' })).toBeVisible()
   await expect(page).toHaveTitle('QRokê — Música e karaokê para sua festa')
   expect((await hostContext.request.get(fixture.base + '/api/state')).status()).toBe(401)
   await page.screenshot({ path: 'test-results/public-home-mobile.png', fullPage: true })
@@ -35,8 +35,9 @@ try {
   await expect(page).toHaveURL(/\/host/)
   await expect(page.getByRole('button', { name: 'Gerar novo convite da festa' })).toBeVisible()
   const returningHome = await hostContext.request.get(fixture.base + '/', { maxRedirects: 0 })
-  expect(returningHome.status()).toBe(302)
-  expect(returningHome.headers().location).toBe('/busca')
+  expect(returningHome.status()).toBe(200)
+  const myParties = await (await hostContext.request.get(fixture.base + '/api/parties')).json()
+  expect(myParties.parties.map((party) => party.id)).toContain('principal')
   // Connect to the other process; mutations below are handled by the first process.
   await page.evaluate(async (base) => {
     window.qrokeSocket = new WebSocket(base.replace('http:', 'ws:') + '/ws')

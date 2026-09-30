@@ -11,22 +11,26 @@ export function errorText(error: unknown) {
   )
 }
 export function useParty() {
-  const clockOffset = useState('server-clock-offset', () => 0)
-  const state = useState<PublicState | null>('party', () => null)
-  const guest = useState<Guest | null>('guest', () => null),
-    admin = useState('admin', () => false)
-  const adminExpiresAt = useState('admin-expires-at', () => 0),
-    adminLeaseSeconds = useState('admin-lease-seconds', () => 120),
-    adminDialogOpen = useState('admin-dialog-open', () => false)
-  const soundDevice = useState<string | null>('sound-device', () => null)
-  const device = useState<{ id: string; token: string } | null>('device', () => null)
-  const connected = useState('connected', () => false),
-    lastContact = useState('contact', () => 0)
-  const failure = useState('failure', () => ''),
-    pending = useState('pending', () => false)
-  const queueReactions = useState<Record<string, 1 | -1>>('queue-reactions', () => ({}))
-  const votedQueueIds = useState<string[]>('voted-queue-ids', () => [])
-  const optimistic = useState<QueueItem[]>('optimistic', () => [])
+  const $fetch = usePartyFetch()
+  const { href, storageKey, id } = usePartyRoute()
+  const scope = id.value
+  const scopedKey = (key: string) => (scope ? key + ':' + scope : key)
+  const clockOffset = useState(scopedKey('server-clock-offset'), () => 0)
+  const state = useState<PublicState | null>(scopedKey('party'), () => null)
+  const guest = useState<Guest | null>(scopedKey('guest'), () => null),
+    admin = useState(scopedKey('admin'), () => false)
+  const adminExpiresAt = useState(scopedKey('admin-expires-at'), () => 0),
+    adminLeaseSeconds = useState(scopedKey('admin-lease-seconds'), () => 120),
+    adminDialogOpen = useState(scopedKey('admin-dialog-open'), () => false)
+  const soundDevice = useState<string | null>(scopedKey('sound-device'), () => null)
+  const device = useState<{ id: string; token: string } | null>(scopedKey('device'), () => null)
+  const connected = useState(scopedKey('connected'), () => false),
+    lastContact = useState(scopedKey('contact'), () => 0)
+  const failure = useState(scopedKey('failure'), () => ''),
+    pending = useState(scopedKey('pending'), () => false)
+  const queueReactions = useState<Record<string, 1 | -1>>(scopedKey('queue-reactions'), () => ({}))
+  const votedQueueIds = useState<string[]>(scopedKey('voted-queue-ids'), () => [])
+  const optimistic = useState<QueueItem[]>(scopedKey('optimistic'), () => [])
   const queue = computed(() => [...(state.value?.queue || []), ...optimistic.value])
   const isPlayer = computed(() => !!device.value && state.value?.playerId === device.value.id)
   async function refresh() {
@@ -39,8 +43,8 @@ export function useParty() {
     } catch (error) {
       connected.value = false
       const status = (error as { statusCode?: number }).statusCode
-      if (import.meta.client && status === 401 && location.pathname !== '/entrar')
-        location.assign('/entrar')
+      if (import.meta.client && [401, 410].includes(status || 0))
+        location.assign(href(status === 410 ? '/encerrada' : '/entrar'))
     }
   }
   async function session() {
@@ -62,7 +66,7 @@ export function useParty() {
     adminLeaseSeconds.value = result.adminLeaseSeconds
     if (result.guest)
       try {
-        localStorage.setItem('qroke:guest', JSON.stringify(result.guest))
+        localStorage.setItem(storageKey('qroke:guest'), JSON.stringify(result.guest))
       } catch {}
   }
   async function api(
@@ -183,6 +187,8 @@ export function useParty() {
   }
 }
 export function usePartyConnection() {
+  const $fetch = usePartyFetch()
+  const { id, page, storageKey } = usePartyRoute()
   const party = useParty(),
     route = useRoute()
   let poll: ReturnType<typeof setInterval>,
@@ -199,7 +205,7 @@ export function usePartyConnection() {
       ? {
           info: {
             ...deviceInfo,
-            view: route.path === '/host' ? 'host' : route.path === '/player' ? 'player' : 'busca',
+            view: page.value === '/host' ? 'host' : page.value === '/player' ? 'player' : 'busca',
           },
         }
       : {}
@@ -207,7 +213,11 @@ export function usePartyConnection() {
   function connect() {
     if (disposed) return
     socket = new WebSocket(
-      (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/ws',
+      (location.protocol === 'https:' ? 'wss:' : 'ws:') +
+        '//' +
+        location.host +
+        '/ws' +
+        (id.value ? '?festa=' + id.value : ''),
     )
     socket.onmessage = () => {
       void party.refresh()
@@ -220,7 +230,7 @@ export function usePartyConnection() {
   async function register() {
     let saved: null | { id: string; token: string } = null
     try {
-      saved = JSON.parse(sessionStorage.getItem('qroke:device') || 'null')
+      saved = JSON.parse(sessionStorage.getItem(storageKey('qroke:device')) || 'null')
     } catch {}
     if (saved && channel) {
       cloned = false
@@ -242,16 +252,16 @@ export function usePartyConnection() {
         timeout: 5000,
       })
       try {
-        sessionStorage.setItem('qroke:device', JSON.stringify(party.device.value))
+        sessionStorage.setItem(storageKey('qroke:device'), JSON.stringify(party.device.value))
       } catch {}
     }
   }
   onMounted(async () => {
-    if (route.path === '/' || route.path === '/entrar') return
+    if (page.value === '/' || page.value === '/entrar') return
     const access = await $fetch<{ authorized: boolean }>('/api/access').catch(() => null)
-    if (!access?.authorized || disposed || route.path === '/' || route.path === '/entrar') return
+    if (!access?.authorized || disposed || page.value === '/' || page.value === '/entrar') return
     if (typeof BroadcastChannel !== 'undefined') {
-      channel = new BroadcastChannel('qroke-tabs')
+      channel = new BroadcastChannel(storageKey('qroke-tabs'))
       channel.onmessage = ({ data }) => {
         if (data?.type === 'probe' && data.id === party.device.value?.id)
           channel?.postMessage({ type: 'alive', nonce: data.nonce })
@@ -280,7 +290,7 @@ export function usePartyConnection() {
           party.device.value = null
           party.soundDevice.value = null
           try {
-            sessionStorage.removeItem('qroke:device')
+            sessionStorage.removeItem(storageKey('qroke:device'))
           } catch {}
           party.failure.value =
             'Este aparelho foi removido. Reabra a página para registrá-lo novamente.'

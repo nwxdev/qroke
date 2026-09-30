@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const $fetch = usePartyFetch()
 const { admin, act } = useParty()
 const message = ref('')
 async function rotate() {

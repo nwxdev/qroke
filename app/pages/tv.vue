@@ -1,4 +1,5 @@
 <script setup lang="ts">
-await navigateTo('/player', { replace: true, redirectCode: 302 })
+const { href } = usePartyRoute()
+await navigateTo(href('/player'), { replace: true, redirectCode: 302 })
 </script>
 <template><div /></template>

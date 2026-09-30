@@ -9,7 +9,10 @@ export default defineEventHandler(async (event) => {
       source: z.enum(['youtube', 'local']).default('youtube'),
     }).parse,
   )
-  if (!(await rateLimit(useRuntimeConfig().dragonflyUrl, 'search:' + requestIp(event), 60)))
+  if (
+    !(await rateLimit(useRuntimeConfig().dragonflyUrl, 'search:' + requestIp(event), 120)) ||
+    !(await rateLimit(useRuntimeConfig().dragonflyUrl, 'search-party:' + party(event).scope, 120))
+  )
     throw createError({ statusCode: 429, statusMessage: 'Muitas buscas. Aguarde um minuto.' })
   try {
     return {

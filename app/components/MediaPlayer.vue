@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { storageKey, id: activePartyId } = usePartyRoute()
+const partyRoute = usePartyRoute()
 /// <reference types="youtube" />
 const {
   state,
@@ -17,9 +19,9 @@ const frame = ref<HTMLDivElement | null>(null),
   slot = ref<HTMLElement | null>(null),
   audio = ref<HTMLAudioElement | null>(null)
 const armed = computed(() => !!device.value && soundDevice.value === device.value.id),
-  warning = useState('player-warning', () => ''),
+  warning = useState(storageKey('player-warning'), () => ''),
   warningKind = useState<'network' | 'activate' | 'load' | 'other'>(
-    'player-warning-kind',
+    storageKey('player-warning-kind'),
     () => 'other',
   ),
   pageVisible = ref(true),
@@ -321,7 +323,7 @@ async function listOutputs() {
 async function changeSink() {
   try {
     await audio.value?.setSinkId(sink.value)
-    sessionStorage.setItem('qroke:audio-output', sink.value)
+    sessionStorage.setItem(storageKey('qroke:audio-output'), sink.value)
   } catch (error) {
     warning.value = errorText(error)
   }
@@ -343,7 +345,7 @@ watch(audio, (element, previous) => {
 })
 onMounted(() => {
   try {
-    sink.value = sessionStorage.getItem('qroke:audio-output') || ''
+    sink.value = sessionStorage.getItem(storageKey('qroke:audio-output')) || ''
   } catch {}
   void mountTrack()
   observer = new IntersectionObserver(
@@ -418,7 +420,7 @@ defineExpose({ activate })
 </script>
 <template>
   <section v-if="isPlayer" class="media-player">
-    <div v-if="route.path !== '/player'" class="player-activation">
+    <div v-if="partyRoute.page.value !== '/player'" class="player-activation">
       <span class="eyebrow">● ESTE É O PLAYER</span
       ><button class="primary-button" aria-label="Ativar som" @click="activate">
         {{ armed ? 'Ativar som novamente' : '▶ Ativar som' }}
@@ -428,7 +430,7 @@ defineExpose({ activate })
       Som ativado. O próximo pedido começa automaticamente.
     </p>
     <p v-if="!safe" class="notice">Aguardando conexão ou transferência do PLAYER…</p>
-    <KaraokeCountdown v-if="route.path !== '/player'" />
+    <KaraokeCountdown v-if="partyRoute.page.value !== '/player'" />
     <div
       v-show="!karaokeWaiting"
       ref="slot"
@@ -452,8 +454,8 @@ defineExpose({ activate })
               ref="audio"
               :key="current.queueId"
               :data-queue-id="current.queueId"
-              :src="'/api/library/' + current.id"
-              :controls="route.path !== '/player'"
+              :src="(activePartyId ? '/api/f/' + activePartyId : '/api') + '/library/' + current.id"
+              :controls="partyRoute.page.value !== '/player'"
               preload="metadata"
               @loadedmetadata="localReady($event.target as HTMLAudioElement)"
               @ended="ended(($event.target as HTMLAudioElement).dataset.queueId)"
@@ -484,7 +486,10 @@ defineExpose({ activate })
         />
       </div>
     </Transition>
-    <div v-if="current?.source === 'local' && route.path !== '/player'" class="audio-output">
+    <div
+      v-if="current?.source === 'local' && partyRoute.page.value !== '/player'"
+      class="audio-output"
+    >
       <button @click="listOutputs">Escolher saída de áudio</button
       ><select
         v-if="outputs.length"
