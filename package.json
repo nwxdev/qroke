@@ -13,7 +13,7 @@
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
-    "test:integration": "node --test tests/integration.mjs tests/playlists-integration.mjs tests/social-integration.mjs tests/playback-integration.mjs tests/karaoke-integration.mjs",
+    "test:integration": "node --test tests/integration.mjs tests/playlists-integration.mjs tests/social-integration.mjs tests/playback-integration.mjs tests/karaoke-integration.mjs tests/media-integration.mjs",
     "test:browser": "node scripts/browser-suite.mjs",
     "spike:catalog": "node scripts/catalog-spike.mjs",
     "test:youtube": "node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --config vitest.live.config.ts",

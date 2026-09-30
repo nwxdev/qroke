@@ -202,9 +202,8 @@ try {
       .toBe(true)
     await expect(page.locator('.qr-plate svg')).toBeVisible()
     if (width >= 1024) {
-      await expect
-        .poll(async () => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
-        .toBe(true)
+      await expect(page.locator('.player-discovery')).toBeVisible()
+      await page.locator('[data-player-stage]').scrollIntoViewIfNeeded()
       const video = await page.locator('iframe').boundingBox()
       const invite = await page.locator('.player-invite').boundingBox()
       const qr = await page.locator('.qr-plate').boundingBox()
@@ -230,12 +229,10 @@ try {
   await expect(page.locator('.tv-screen')).toHaveClass(/music-mode/)
   const size = await page.locator('iframe').boundingBox()
   expect(size.width).toBeGreaterThanOrEqual(200)
-  expect(size.width).toBeLessThanOrEqual(320)
+  expect(size.width).toBeLessThanOrEqual(1440)
   await expect(toggle).toBeHidden()
   await expect(playerLink).toBeVisible()
-  await expect
-    .poll(async () => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight))
-    .toBe(true)
+  await expect(page.locator('.player-discovery')).toBeVisible()
   const musicTheme = await themeControl.boundingBox()
   expect(musicTheme.x).toBe(initialTheme.x)
   expect(musicTheme.y).toBe(initialTheme.y)

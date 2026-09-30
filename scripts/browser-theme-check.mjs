@@ -75,8 +75,8 @@ try {
         .click()
     await checkBrand(page, theme)
     await expect.poll(async () => contrast(page, '.join-card .q-btn')).toBeGreaterThanOrEqual(4.5)
-    expect(await contrast(page, '.hero p')).toBeGreaterThanOrEqual(4.5)
-    expect(await contrast(page, '.hero .eyebrow')).toBeGreaterThanOrEqual(4.5)
+    expect(await contrast(page, '.join-card h2')).toBeGreaterThanOrEqual(4.5)
+    expect(await contrast(page, '.join-card small')).toBeGreaterThanOrEqual(4.5)
     await page.screenshot({ path: 'test-results/theme-guest-' + theme + '.png', fullPage: true })
   }
   await page.goto(fixture.base + '/host')
@@ -108,7 +108,7 @@ try {
   await expect(page.getByRole('dialog')).not.toBeVisible()
   await page.getByRole('button', { name: 'Tocar neste dispositivo', exact: true }).click()
   await expect(page.locator('.empty-player')).toBeVisible()
-  expect(await contrast(page, '.empty-player p')).toBeGreaterThanOrEqual(4.5)
+  expect(await contrast(page, '.empty-player h2')).toBeGreaterThanOrEqual(4.5)
   await checkBrand(page, 'light')
 
   const waitingContext = await browser.newContext()

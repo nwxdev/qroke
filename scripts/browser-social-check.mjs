@@ -65,11 +65,11 @@ try {
   await page.getByLabel('Link da playlist', { exact: true }).press('Enter')
   await page.getByRole('button', { name: 'Adicionar 2 músicas', exact: true }).click()
   await expect(page.locator('.playlist-success')).toContainText('2 música(s)')
-  await expect(page.locator('.playlist-groups summary')).toContainText('Playlist da festa')
-  await expect(page.locator('.playlist-groups summary')).toContainText('Aninha')
-  await page.locator('.playlist-groups summary').click()
-  await expect(page.locator('.playlist-groups li')).toHaveCount(2)
-  await expect(page.locator('.queue-card .playlist-badge')).toHaveCount(2)
+  await expect(page.locator('.rail-playlist summary')).toContainText('Playlist da festa')
+  await expect(page.locator('.rail-playlist summary')).toContainText('Aninha')
+  await page.locator('.rail-playlist summary').click()
+  await expect(page.locator('.rail-playlist ol > li')).toHaveCount(2)
+  await expect(page.locator('.queue-playlist-card')).toHaveCount(1)
   const state = await (await context.request.get(fixture.base + '/api/state')).json()
   expect(
     state.queue.filter((item) => item.playlist).every((item) => item.guestName === 'Aninha'),
@@ -97,14 +97,14 @@ try {
     })
   })
   await page.getByRole('button', { name: 'Minha conta', exact: true }).click()
-  await page.getByRole('button', { name: 'Conectar YouTube', exact: true }).click()
+  await page.getByRole('button', { name: 'Conectar Google', exact: true }).click()
   await expect(page.locator('.account-playlists li')).toHaveCount(1)
   expect((await (await context.request.get(fixture.base + '/api/session')).json()).admin).toBe(
     false,
   )
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click()
 
-  await context.route('**/api/youtube/status', (route) =>
+  await context.route('**/api/media/youtube/status', (route) =>
     route.fulfill({
       json: {
         publicConfigured: true,

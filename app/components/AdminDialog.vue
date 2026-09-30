@@ -7,6 +7,11 @@ function close() {
   open.value = false
 }
 function trapTab(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    close()
+    return
+  }
   if (event.key !== 'Tab' || !dialog.value) return
   const items = Array.from(
     dialog.value.querySelectorAll<HTMLElement>(
@@ -37,7 +42,7 @@ watch(
       failure.value = ''
       await nextTick()
       if (open.value && dialog.value && !dialog.value.open) {
-        dialog.value.showModal()
+        dialog.value.show()
         dialog.value.querySelector<HTMLInputElement>('input')?.focus()
       }
     } else if (dialog.value?.open) dialog.value.close()

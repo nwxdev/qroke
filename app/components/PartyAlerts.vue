@@ -6,6 +6,7 @@ const warningKind = useState<'network' | 'activate' | 'load' | 'other'>(
   storageKey('player-warning-kind'),
   () => 'other',
 )
+const menuOpen = useState('qroke:menu-open', () => false)
 const retrying = ref(false)
 const offline = computed(() => !connected.value && !!state.value)
 const retryLabel = computed(() =>
@@ -31,7 +32,7 @@ function retryMedia() {
 </script>
 <template>
   <Teleport to="body">
-    <aside class="party-alerts" aria-label="Avisos da festa">
+    <aside v-show="!menuOpen" class="party-alerts" aria-label="Avisos da festa">
       <div v-if="offline" class="alert-card connection-alert" role="alert">
         <AppIcon name="warning" />
         <div class="alert-content">
@@ -91,12 +92,12 @@ function retryMedia() {
 .party-alerts {
   position: fixed;
   z-index: 100;
-  top: calc(88px + env(safe-area-inset-top));
+  top: calc(100px + var(--qroke-install-space, 0px) + env(safe-area-inset-top));
   right: max(16px, env(safe-area-inset-right));
   width: min(480px, calc(100vw - 32px));
   display: grid;
   gap: 12px;
-  max-height: calc(100dvh - 190px - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 190px - var(--qroke-dock-space, 0px) - env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
   pointer-events: none;

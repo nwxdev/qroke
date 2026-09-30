@@ -22,7 +22,7 @@ try {
     errors = []
   a.on('pageerror', (e) => errors.push(e.message))
   await a.goto(fixture.base)
-  await expect(a.getByRole('heading', { name: 'Sua próxima festa começa aqui.' })).toBeVisible()
+  await expect(a.getByRole('heading', { name: /Sua festa/ })).toBeVisible()
   await a.screenshot({ path: 'test-results/multisession-home-desktop.png', fullPage: true })
   await a.getByLabel('Nome da festa', { exact: true }).fill('Sextou na casa da Ana')
   await a.getByLabel('PIN do administrador', { exact: true }).fill('123456')
@@ -32,6 +32,9 @@ try {
   await a.getByLabel('Confirmar PIN').fill('123456')
   await a.getByRole('button', { name: 'Criar festa', exact: true }).click()
   await expect(a).toHaveURL(/\/f\/[^/]+\/host$/)
+  await expect(a.getByRole('dialog', { name: 'Nome do anfitrião' })).toBeVisible()
+  await a.getByRole('textbox', { name: 'Nome do anfitrião', exact: true }).fill('Ana')
+  await a.getByRole('button', { name: 'Continuar', exact: true }).click()
   const idA = new URL(a.url()).pathname.split('/')[2],
     apiA = fixture.base + '/api/f/' + idA
   await expect(a.locator('.party-session-banner')).toContainText('Sextou na casa da Ana')
@@ -50,6 +53,8 @@ try {
   await b.getByLabel('Confirmar PIN').fill('654321')
   await b.getByRole('button', { name: 'Criar festa', exact: true }).click()
   await expect(b).toHaveURL(/\/f\/[^/]+\/host$/)
+  await b.getByRole('textbox', { name: 'Nome do anfitrião', exact: true }).fill('Bia')
+  await b.getByRole('button', { name: 'Continuar', exact: true }).click()
   const idB = new URL(b.url()).pathname.split('/')[2],
     apiB = fixture.base + '/api/f/' + idB
   expect(idA).not.toBe(idB)

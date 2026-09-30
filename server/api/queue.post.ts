@@ -1,25 +1,22 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
+import { MEDIA_PROVIDERS, MEDIA_CHANNELS, mediaIdentity } from '../../shared/media'
 export default defineEventHandler(async (event) => {
   const guest = await requireGuest(event)
   const input = await readValidatedBody(
     event,
     z.object({
       id: z.string().max(64),
-      source: z.enum(['youtube', 'local']),
+      source: z.enum(MEDIA_PROVIDERS),
+      channel: z.enum(MEDIA_CHANNELS).optional(),
       karaoke: z.boolean().default(false),
       singers: z.array(z.string().uuid()).max(50).default([]),
     }).parse,
   )
-  if (input.source === 'youtube' && (await party(event).youtubeBlocked(input.id)))
-    throw createError({
-      statusCode: 409,
-      statusMessage: 'Esta versão ficou indisponível. Busque outra versão da música.',
-    })
-  const track =
-    input.source === 'local'
-      ? (await library()).files.get(input.id)?.track
-      : await (await catalog(event)).selected(input.id, input.karaoke)
+  const track = await mediaProvider(event, input.source).resolve(
+    input.id,
+    input.channel || (input.karaoke ? 'karaoke' : 'music'),
+  )
   if (!track)
     throw createError({
       statusCode: 400,
@@ -29,7 +26,7 @@ export default defineEventHandler(async (event) => {
   const state = await party(event).mutate(async (s) => {
     if (
       [...s.queue, ...(s.current ? [s.current] : [])].some(
-        (t) => t.source === track.source && t.id === track.id,
+        (t) => mediaIdentity(t) === mediaIdentity(track),
       )
     )
       return

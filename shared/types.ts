@@ -1,6 +1,8 @@
+import type { MediaDescriptor, MediaProviderId } from './media'
 export interface Track {
   id: string
-  source: 'youtube' | 'local'
+  source: MediaProviderId
+  media?: MediaDescriptor
   title: string
   artist: string
   duration: number
@@ -59,6 +61,7 @@ export interface Device {
   lastSeen: number
 }
 export interface PartyState {
+  schemaVersion?: number
   karaokeDelaySeconds?: number
   karaokeTransitionMusic?: boolean
   karaokeLeadSeconds?: number
@@ -72,6 +75,7 @@ export interface PartyState {
   current: QueueItem | null
   history: HistoryItem[]
   playerId: string | null
+  playerHandoff?: { id: string; from: string; to: string; queueId: string | null } | null
   playerReadyAt: number
   mode: 'video' | 'music'
   autoContinue: boolean

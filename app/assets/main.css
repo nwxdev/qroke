@@ -1742,3 +1742,20 @@ a.header-control:hover {
     align-items: flex-start;
   }
 }
+
+/* Reserve space for the persistent player, including on short mobile screens. */
+body {
+  padding-bottom: var(--qroke-dock-space, 0px);
+}
+.admin-dialog {
+  position: fixed;
+  z-index: 105;
+  inset: 12px 0 auto;
+  margin: 24px auto;
+  max-height: calc(100dvh - var(--qroke-dock-space, 0px) - 64px);
+}
+.queue-card-empty {
+  flex: 0 0 calc((100% - (var(--cards) - 1) * 14px) / var(--cards));
+  min-width: 0;
+  scroll-snap-align: start;
+}

@@ -11,6 +11,7 @@ watch(
 )
 </script>
 <template>
+  <PwaInstall />
   <PartySessionBanner v-if="active" :key="'banner:' + id" /><NuxtPage /><PartyRuntime
     v-if="active"
     :key="id || 'legacy'"

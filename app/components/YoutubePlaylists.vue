@@ -1,5 +1,9 @@
 <script setup lang="ts">
 const $fetch = usePartyFetch()
+withDefaults(defineProps<{ allowKaraoke?: boolean }>(), { allowKaraoke: true })
+const googleVersion = useState('qroke:google-version', () => 0)
+const googleFailure = useState('qroke:google-failure', () => '')
+const nuxt = useNuxtApp()
 import type { PlaylistPreview, YoutubePlaylist, YoutubeStatus } from '../../shared/playlists'
 const { refresh, session, state, queue } = useParty()
 const playlistQueued = (id: string) =>
@@ -24,7 +28,6 @@ const playlists = ref<YoutubePlaylist[]>([]),
 const preview = ref<PlaylistPreview | null>(null),
   imported = ref(false)
 const selected = ref({ input: '', personal: false })
-let popup: Window | null = null
 let controller: AbortController | undefined
 async function task(action: () => Promise<void>) {
   if (busy.value) return
@@ -45,7 +48,9 @@ async function task(action: () => Promise<void>) {
   }
 }
 async function loadStatus() {
-  status.value = await $fetch<YoutubeStatus>('/api/youtube/status', { signal: controller?.signal })
+  status.value = await $fetch<YoutubeStatus>('/api/media/youtube/status', {
+    signal: controller?.signal,
+  })
 }
 function chooseSource(value: 'link' | 'mine') {
   source.value = value
@@ -57,7 +62,7 @@ function chooseSource(value: 'link' | 'mine') {
 async function loadMine(append = false) {
   await task(async () => {
     const data = await $fetch<{ items: YoutubePlaylist[]; nextPageToken: string }>(
-      '/api/youtube/playlists',
+      '/api/media/youtube/playlists',
       {
         query: { pageToken: append ? nextListPage.value : '' },
         signal: controller?.signal,
@@ -74,7 +79,7 @@ async function inspect(value = input.value, personal = false, pageToken = '') {
     preview.value = null
     imported.value = false
     selected.value = { input: value, personal }
-    preview.value = await $fetch<PlaylistPreview>('/api/youtube/preview', {
+    preview.value = await $fetch<PlaylistPreview>('/api/media/youtube/preview', {
       method: 'POST',
       body: { input: value, personal, pageToken, karaoke: karaoke.value },
       signal: controller?.signal,
@@ -85,11 +90,14 @@ async function inspect(value = input.value, personal = false, pageToken = '') {
 async function add(videoId?: string) {
   if (!preview.value || imported.value) return
   await task(async () => {
-    const result = await $fetch<{ added: number; duplicates: number }>('/api/youtube/import', {
-      method: 'POST',
-      body: { ticket: preview.value!.ticket, singers: singers.value, videoId },
-      signal: controller?.signal,
-    })
+    const result = await $fetch<{ added: number; duplicates: number }>(
+      '/api/media/youtube/import',
+      {
+        method: 'POST',
+        body: { ticket: preview.value!.ticket, singers: singers.value, videoId },
+        signal: controller?.signal,
+      },
+    )
     imported.value = !videoId
     notice.value =
       result.added +
@@ -110,29 +118,11 @@ async function addAll(item: YoutubePlaylist) {
   if (preview.value?.playlist.id === item.id) await add()
 }
 async function connect() {
-  if (busy.value) return
-  // Abrir no gesto do usuário evita bloqueadores e mantém o player nesta página.
-  popup = window.open('about:blank', 'qroke-youtube-auth', 'popup,width=520,height=720')
-  if (!popup) {
-    failure.value = 'Permita pop-ups para conectar o YouTube sem sair do player.'
-    return
-  }
-  await task(async () => {
-    try {
-      const result = await $fetch<{ url: string }>('/api/youtube/connect', {
-        method: 'POST',
-        body: {},
-      })
-      if (popup && !popup.closed) popup.location.href = result.url
-    } catch (error) {
-      popup?.close()
-      throw error
-    }
-  })
+  await nuxt.$connectGoogle()
 }
 async function disconnect() {
   await task(async () => {
-    await $fetch('/api/youtube/disconnect', { method: 'POST', body: {} })
+    await $fetch('/api/media/youtube/disconnect', { method: 'POST', body: {} })
     playlists.value = []
     preview.value = null
     await loadStatus()
@@ -140,49 +130,29 @@ async function disconnect() {
       'Conta desconectada deste navegador. As músicas já adicionadas continuam na fila.'
   })
 }
-async function oauthMessage(event: MessageEvent) {
-  if (
-    event.origin !== location.origin ||
-    event.source !== popup ||
-    event.data?.type !== 'qroke-youtube'
-  )
-    return
-  popup = null
-  if (event.data.result !== 'connected') {
-    failure.value =
-      event.data.result === 'cancelled'
-        ? 'Conexão cancelada. Você pode continuar usando um link público.'
-        : 'Não foi possível conectar. Confira as credenciais, o redirecionamento e a permissão de leitura.'
-    return
-  }
+async function connectedPlaylists() {
   await task(loadStatus)
   if (status.value?.connected) {
     source.value = 'mine'
     await loadMine()
   }
 }
+watch(googleVersion, connectedPlaylists)
 watch(karaoke, () => {
   preview.value = null
 })
 onMounted(() => {
-  window.addEventListener('message', oauthMessage)
-  void task(loadStatus)
+  void connectedPlaylists()
 })
 onBeforeUnmount(() => {
   controller?.abort()
-  window.removeEventListener('message', oauthMessage)
 })
 </script>
 <template>
   <section class="panel youtube-playlists" aria-labelledby="playlists-title" :aria-busy="busy">
     <div class="section-heading">
       <h2 id="playlists-title"><AppIcon name="playlist" /> Playlists do YouTube</h2>
-      <span>Sua seleção para a festa</span>
     </div>
-    <p>
-      Traga uma playlist inteira para a fila. O player livre começa a tocar; os pedidos dos
-      convidados entram no rodízio.
-    </p>
     <div class="playlist-tabs" aria-label="Origem da playlist">
       <button :aria-pressed="source === 'link'" :disabled="busy" @click="chooseSource('link')">
         <AppIcon name="link" /> Colar link
@@ -209,13 +179,9 @@ onBeforeUnmount(() => {
           <AppIcon name="search" /> Conferir
         </button>
       </div>
-      <small
-        >Públicas e não listadas: suas, da comunidade, de outros canais ou do próprio YouTube,
-        quando disponíveis pela API. Mixes automáticos e listas especiais podem não estar
-        disponíveis.</small
-      >
+      <small>Playlists públicas ou não listadas.</small>
       <p v-if="status && !status.publicConfigured" class="notice">
-        Configure YOUTUBE_API_KEY no servidor para usar links públicos.
+        Playlists por link estão indisponíveis no momento.
       </p>
     </form>
     <div v-else class="playlist-account">
@@ -224,10 +190,7 @@ onBeforeUnmount(() => {
           <span><AppIcon name="check" /> Conta conectada neste navegador</span>
           <button :disabled="busy" @click="disconnect">Desconectar</button>
         </div>
-        <p class="hint">
-          Playlists criadas pela conta autorizada, incluindo privadas. O nome da playlist e as
-          faixas adicionadas ficam visíveis para a festa. Sua conta continua privada.
-        </p>
+        <p class="hint">Sua conta é privada. As músicas adicionadas aparecem na festa.</p>
         <button :disabled="busy" @click="loadMine()">Atualizar playlists</button>
         <ul v-if="playlists.length" class="account-playlists">
           <li v-for="item in playlists" :key="item.id">
@@ -237,28 +200,21 @@ onBeforeUnmount(() => {
                 :aria-expanded="preview?.playlist.id === item.id && selected.personal"
                 @click="expand(item)"
               >
-                <img
-                  v-if="item.thumbnail"
-                  :src="item.thumbnail"
-                  alt=""
-                  loading="lazy"
-                  referrerpolicy="no-referrer"
-                />
+                <span class="playlist-art">
+                  <img
+                    v-if="item.thumbnail"
+                    :src="item.thumbnail"
+                    alt=""
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  />
+                  <span v-if="playlistQueued(item.id)" class="tag">Na fila</span>
+                </span>
                 <span
                   ><strong>{{ item.title }}</strong
                   ><small>{{ item.channel }} · {{ item.count }} faixas</small></span
                 >
-                <span v-if="playlistQueued(item.id)" class="tag">Na fila</span>
                 <AppIcon name="expand" />
-              </button>
-              <button
-                class="add-all-playlist"
-                :disabled="busy"
-                :aria-label="'Adicionar todas de ' + item.title"
-                title="Adicionar todas, sem duplicar faixas"
-                @click="addAll(item)"
-              >
-                <AppIcon name="playlist-plus" />
               </button>
             </div>
             <PlaylistPreviewCard
@@ -269,17 +225,23 @@ onBeforeUnmount(() => {
               @add="add"
               @more="inspect(selected.input, selected.personal, preview!.nextPageToken)"
             />
+            <button
+              class="add-all-playlist"
+              :disabled="busy"
+              :aria-label="'Adicionar todas de ' + item.title"
+              title="Adicionar todas, sem duplicar faixas"
+              @click="addAll(item)"
+            >
+              <AppIcon name="playlist-plus" /> Adicionar playlist
+            </button>
           </li>
         </ul>
         <button v-if="nextListPage" :disabled="busy" @click="loadMine(true)">Mais playlists</button>
       </template>
       <template v-else-if="status?.oauthConfigured">
-        <p>
-          Autorize apenas a leitura da sua conta. A conexão dura até 8 horas neste navegador e pode
-          ser encerrada a qualquer momento.
-        </p>
+        <p>Conecte o Google para escolher suas playlists.</p>
         <button v-if="status.connectHere" :disabled="busy" @click="connect">
-          <AppIcon name="link" /> Conectar YouTube
+          <AppIcon name="link" /> Conectar Google
         </button>
         <p v-else class="notice">
           <template v-if="remoteConnect"
@@ -297,22 +259,18 @@ onBeforeUnmount(() => {
           Enquanto isso, use Colar link para playlists públicas ou não listadas.
         </p>
       </template>
-      <div v-else-if="status" class="notice">
-        <strong>Conecte suas playlists pessoais</strong>
-        <p>
-          Configure YOUTUBE_CLIENT_ID e YOUTUBE_CLIENT_SECRET no .env com uma credencial OAuth do
-          Google. O README contém o passo a passo. Enquanto isso, use Colar link.
-        </p>
-      </div>
+      <p v-else-if="status" class="notice">Google indisponível. Use o link da playlist.</p>
     </div>
-    <label class="playlist-karaoke"
+    <label v-if="allowKaraoke" class="playlist-karaoke"
       ><input v-model="karaoke" type="checkbox" :disabled="busy" /> Estas faixas são de
       karaokê</label
     >
-    <p class="hint">A opção ativa o layout de karaokê. Ela não remove a voz dos vídeos.</p>
+
     <KaraokePartners v-if="karaoke" v-model="singers" :disabled="busy" />
     <p v-if="busy" role="status" class="hint">Carregando playlist…</p>
-    <p v-if="failure" class="notice" role="alert">{{ failure }}</p>
+    <p v-if="failure || googleFailure" class="notice" role="alert">
+      {{ failure || googleFailure }}
+    </p>
     <p v-if="notice" class="playlist-success" role="status">
       <AppIcon name="check" /> {{ notice }}
     </p>
@@ -504,6 +462,36 @@ onBeforeUnmount(() => {
 @media (prefers-reduced-motion: reduce) {
   .playlist-success {
     animation: none;
+  }
+}
+
+.playlist-art {
+  display: grid;
+  gap: 5px;
+  flex: 0 0 64px !important;
+  justify-items: center;
+}
+.playlist-art .tag {
+  font-size: 10px;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+.account-playlists .add-all-playlist {
+  width: 100%;
+  justify-content: center;
+  margin-top: 8px;
+}
+.account-playlists li {
+  padding: 10px 0;
+}
+@media (max-width: 600px) {
+  .account-playlists {
+    max-height: none;
+    overflow: visible;
+  }
+  .account-playlists img {
+    width: 64px;
+    height: 48px;
   }
 }
 </style>

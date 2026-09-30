@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#101214" />
+    <title>QRokê · Sem conexão</title>
+    <style>
+      body {
+        margin: 0;
+        background: #101214;
+        color: #f3f1e9;
+        font: 18px system-ui;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+      }
+      main {
+        text-align: center;
+        padding: 28px;
+        max-width: 400px;
+      }
+      img {
+        width: 96px;
+        border-radius: 20px;
+      }
+      p {
+        color: #bcc2c7;
+      }
+      button {
+        font: inherit;
+        background: #c4f332;
+        color: #101214;
+        border: 0;
+        border-radius: 12px;
+        padding: 14px 24px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icon-192.png" alt="QRokê" />
+      <h1>Sem conexão</h1>
+      <p>Conecte-se à internet para voltar à festa.</p>
+      <button onclick="location.reload()">Tentar novamente</button>
+    </main>
+  </body>
+</html>

@@ -1,22 +1,11 @@
 <script setup lang="ts">
+import { describeMedia } from '#shared/media'
 const { storageKey, id: activePartyId } = usePartyRoute()
-const partyRoute = usePartyRoute()
 /// <reference types="youtube" />
-const {
-  state,
-  isPlayer,
-  api,
-  refresh,
-  lastContact,
-  device,
-  soundDevice,
-  armSound,
-  adminDialogOpen,
-} = useParty()
-const route = useRoute()
+const { state, isPlayer, api, refresh, lastContact, device, soundDevice, armSound, clockOffset } =
+  useParty()
 const { waiting: karaokeWaiting } = useKaraokeCountdown()
 const frame = ref<HTMLDivElement | null>(null),
-  slot = ref<HTMLElement | null>(null),
   audio = ref<HTMLAudioElement | null>(null)
 const armed = computed(() => !!device.value && soundDevice.value === device.value.id),
   warning = useState(storageKey('player-warning'), () => ''),
@@ -25,15 +14,13 @@ const armed = computed(() => !!device.value && soundDevice.value === device.valu
     () => 'other',
   ),
   pageVisible = ref(true),
-  inView = ref(true),
-  slotHeight = ref(200),
   outputs = ref<MediaDeviceInfo[]>([]),
   sink = ref(''),
   clock = ref(Date.now())
 let loadedId: string | undefined
+let seekOnStart = true
 let localFinish: { id: string; at: number } | undefined
 let yt: YT.Player | undefined,
-  observer: IntersectionObserver | undefined,
   timer: ReturnType<typeof setInterval>,
   generation = 0,
   reporting = false
@@ -42,34 +29,19 @@ let terminalId: string | undefined
 let preparingId: string | undefined
 let pendingYoutubeError: { id: string; code: number } | undefined
 const current = computed(() => state.value?.current)
-const docked = computed(
-  () =>
-    armed.value && current.value?.source === 'youtube' && !inView.value && !karaokeWaiting.value,
+const playbackKind = computed(() =>
+  current.value ? describeMedia(current.value).playback.kind : null,
 )
-// Observar o espaço original evita alternar entre fixo/normal em um ciclo.
-watch(
-  docked,
-  (value) => {
-    if (value && slot.value) slotHeight.value = slot.value.getBoundingClientRect().height
-  },
-  { flush: 'sync' },
-)
-function returnToPlayer() {
-  slot.value?.scrollIntoView({
-    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-    block: 'center',
-  })
-}
 const safe = computed(
   () =>
     isPlayer.value &&
     clock.value - lastContact.value < 8000 &&
-    clock.value >= (state.value?.playerReadyAt || 0),
+    clock.value + clockOffset.value >= (state.value?.playerReadyAt || 0),
 )
 const eligible = computed(
   () =>
     armed.value &&
-    (current.value?.source === 'local' || (pageVisible.value && !adminDialogOpen.value)) &&
+    (playbackKind.value === 'audio-file' || pageVisible.value) &&
     safe.value &&
     !state.value?.paused &&
     !state.value?.playbackIssue?.halted &&
@@ -194,6 +166,16 @@ async function sync() {
     return
   }
   applyVolume()
+  if (seekOnStart && loadedId === current.value?.queueId) {
+    const position = state.value?.position || 0
+    yt?.seekTo?.(position, true)
+    if (audio.value && audio.value.readyState >= 1)
+      audio.value.currentTime = Math.min(
+        position,
+        Math.max(0, audio.value.duration - 0.1) || position,
+      )
+    seekOnStart = false
+  }
   yt?.playVideo?.()
   if (audio.value)
     try {
@@ -206,9 +188,31 @@ async function sync() {
 async function mountTrack() {
   const seq = ++generation,
     track = current.value
+  const transfer = state.value?.playerHandoff
+  const release =
+    !isPlayer.value && transfer && transfer.from === device.value?.id
+      ? {
+          handoffId: transfer.id,
+          queueId: transfer.queueId,
+          position: Math.max(
+            0,
+            Math.min(
+              86400,
+              yt?.getCurrentTime?.() ?? audio.value?.currentTime ?? state.value?.position ?? 0,
+            ),
+          ),
+        }
+      : null
+  // Destroying the iframe (or pausing native audio) completes the stop before acknowledging it.
   yt?.destroy()
   yt = undefined
+  if (!isPlayer.value) releaseAudio(audio.value)
+  if (release && Number.isFinite(release.position))
+    void api('/api/player/release', release)
+      .then(refresh)
+      .catch(() => {})
   loadedId = undefined
+  seekOnStart = true
   localFinish = undefined
   terminalId = undefined
   pendingEndId = undefined
@@ -217,8 +221,12 @@ async function mountTrack() {
   warning.value = ''
   if (!track || !isPlayer.value) return
   await nextTick()
-  if (track.source === 'local') {
+  if (describeMedia(track).playback.kind === 'audio-file') {
     if (audio.value && audio.value.readyState >= 1) localReady(audio.value)
+    return
+  }
+  if (describeMedia(track).playback.kind !== 'youtube-embed') {
+    warning.value = 'Esta plataforma precisa de um player compatível.'
     return
   }
   try {
@@ -328,12 +336,8 @@ async function changeSink() {
     warning.value = errorText(error)
   }
 }
-watch([() => current.value?.queueId, isPlayer], () => void mountTrack(), { flush: 'post' })
+watch([() => current.value?.queueId, isPlayer], () => void mountTrack(), { flush: 'pre' })
 watch(eligible, () => void sync(), { flush: 'post' })
-watch(slot, (element, previous) => {
-  if (previous) observer?.unobserve(previous)
-  if (element) observer?.observe(element)
-})
 function releaseAudio(element: HTMLAudioElement | null) {
   if (!element) return
   element.pause()
@@ -348,16 +352,10 @@ onMounted(() => {
     sink.value = sessionStorage.getItem(storageKey('qroke:audio-output')) || ''
   } catch {}
   void mountTrack()
-  observer = new IntersectionObserver(
-    (entries) => {
-      inView.value = (entries[0]?.intersectionRatio || 0) > 0.6
-    },
-    { threshold: [0, 0.6, 1] },
-  )
   pageVisible.value = !document.hidden
-  if (slot.value) observer.observe(slot.value)
   document.addEventListener('visibilitychange', pageVisibility)
   window.addEventListener('qroke:retry-media', retryWarning)
+  window.addEventListener('qroke:activate-media', activate)
   timer = setInterval(async () => {
     clock.value = Date.now()
     void prepare()
@@ -382,7 +380,7 @@ onMounted(() => {
     // Alguns navegadores chegam ao fim do áudio sem emitir ended.
     // Só recupera o último centésimo de segundo após pelo menos dois segundos estáveis.
     const atLocalEnd =
-      current.value.source === 'local' &&
+      playbackKind.value === 'audio-file' &&
       eligible.value &&
       audio.value &&
       !audio.value.seeking &&
@@ -410,98 +408,60 @@ onBeforeUnmount(() => {
   generation++
   yt?.destroy()
   releaseAudio(audio.value)
-  observer?.disconnect()
   clearInterval(timer)
   document.removeEventListener('visibilitychange', pageVisibility)
   window.removeEventListener('qroke:retry-media', retryWarning)
+  window.removeEventListener('qroke:activate-media', activate)
   warning.value = ''
 })
 defineExpose({ activate })
 </script>
 <template>
   <section v-if="isPlayer" class="media-player">
-    <div v-if="partyRoute.page.value !== '/player'" class="player-activation">
-      <span class="eyebrow">● ESTE É O PLAYER</span
-      ><button class="primary-button" aria-label="Ativar som" @click="activate">
-        {{ armed ? 'Ativar som novamente' : '▶ Ativar som' }}
-      </button>
-    </div>
-    <p v-if="armed && !current" class="hint">
-      Som ativado. O próximo pedido começa automaticamente.
-    </p>
-    <p v-if="!safe" class="notice">Aguardando conexão ou transferência do PLAYER…</p>
-    <KaraokeCountdown v-if="partyRoute.page.value !== '/player'" />
-    <div
-      v-show="!karaokeWaiting"
-      ref="slot"
-      class="media-slot"
-      :style="docked ? { height: slotHeight + 'px' } : undefined"
-    >
-      <div
-        class="media-shell"
-        :class="{
-          'player-floating': docked,
-          'player-covered': adminDialogOpen && current?.source === 'youtube',
-        }"
-      >
-        <div class="media-viewport" :class="{ 'local-media': current?.source === 'local' }">
-          <div v-if="current?.source === 'youtube'" ref="frame" class="youtube-frame" />
-          <div v-else-if="current?.source === 'local'" class="local-player">
-            <span class="vinyl">♫</span>
-            <h2>{{ current.title }}</h2>
-            <p>{{ current.artist }}</p>
-            <audio
-              ref="audio"
-              :key="current.queueId"
-              :data-queue-id="current.queueId"
-              :src="(activePartyId ? '/api/f/' + activePartyId : '/api') + '/library/' + current.id"
-              :controls="partyRoute.page.value !== '/player'"
-              preload="metadata"
-              @loadedmetadata="localReady($event.target as HTMLAudioElement)"
-              @ended="ended(($event.target as HTMLAudioElement).dataset.queueId)"
-              @error="report('error', ($event.target as HTMLAudioElement).dataset.queueId)"
-            />
-          </div>
-          <div v-else class="empty-player">
-            <BrandLogo tone="dark" class="standby-brand" />
-            <h2>Esperando a próxima música</h2>
-            <p>A fila começa assim que alguém fizer um pedido.</p>
-          </div>
-        </div>
-        <div v-if="docked" class="floating-controls">
-          <span>{{ current?.title }}</span>
-          <button @click="returnToPlayer" aria-label="Voltar ao player na página">↗ Voltar</button>
-        </div>
-      </div>
-    </div>
-    <Transition name="track" mode="out-in">
-      <div v-if="current" :key="current.queueId" class="player-caption">
-        <strong>{{ current.title }}</strong
-        ><span>{{ current.artist }} · {{ current.guestName }}</span>
-        <PlaylistBadge :playlist="current.playlist" />
-        <KaraokeSingers
-          v-if="current.karaoke"
-          :people="current.singers"
-          :fallback="current.guestName"
+    <div class="media-viewport" :class="{ 'local-media': playbackKind === 'audio-file' }">
+      <div v-if="playbackKind === 'youtube-embed'" ref="frame" class="youtube-frame" />
+      <div v-else-if="current && playbackKind === 'audio-file'" class="local-player">
+        <h2>{{ current.title }}</h2>
+        <audio
+          ref="audio"
+          :key="current.queueId"
+          :data-queue-id="current.queueId"
+          :src="
+            (activePartyId ? '/api/f/' + activePartyId : '/api') +
+            '/media/' +
+            current.source +
+            '/stream/' +
+            encodeURIComponent(current.id)
+          "
+          controls
+          preload="metadata"
+          @loadedmetadata="localReady($event.target as HTMLAudioElement)"
+          @ended="ended(($event.target as HTMLAudioElement).dataset.queueId)"
+          @error="report('error', ($event.target as HTMLAudioElement).dataset.queueId)"
         />
+        <div class="audio-output">
+          <button @click="listOutputs">Escolher saída de áudio</button>
+          <select
+            v-if="outputs.length"
+            v-model="sink"
+            aria-label="Saída de áudio"
+            @change="changeSink"
+          >
+            <option value="">Padrão do sistema</option>
+            <option
+              v-for="(output, index) in outputs"
+              :key="output.deviceId"
+              :value="output.deviceId"
+            >
+              {{ output.label || 'Saída ' + (index + 1) }}
+            </option>
+          </select>
+        </div>
       </div>
-    </Transition>
-    <div
-      v-if="current?.source === 'local' && partyRoute.page.value !== '/player'"
-      class="audio-output"
-    >
-      <button @click="listOutputs">Escolher saída de áudio</button
-      ><select
-        v-if="outputs.length"
-        v-model="sink"
-        aria-label="Saída de áudio"
-        @change="changeSink"
-      >
-        <option value="">Padrão do sistema</option>
-        <option v-for="(output, index) in outputs" :key="output.deviceId" :value="output.deviceId">
-          {{ output.label || 'Saída ' + (index + 1) }}
-        </option>
-      </select>
+      <div v-else class="empty-player">
+        <BrandLogo tone="dark" class="standby-brand" />
+        <h2>Escolha uma música</h2>
+      </div>
     </div>
   </section>
 </template>

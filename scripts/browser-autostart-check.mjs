@@ -22,9 +22,7 @@ try {
   })
   await page.goto(fixture.base + '/host')
   await page.getByRole('button', { name: 'Tocar neste dispositivo', exact: true }).click()
-  await expect(
-    page.getByText('Som ativado. O próximo pedido começa automaticamente.'),
-  ).toBeVisible()
+  await expect(page.getByText('Player pronto', { exact: true })).toBeVisible()
   await guestContext.request.post(fixture.base + '/api/guest', { data: { name: 'Convidado' } })
   const search = await guestContext.request.get(fixture.base + '/api/search?q=Faixa&source=local')
   const { tracks } = await search.json()
@@ -39,9 +37,7 @@ try {
       )
 
       await page.getByRole('link', { name: 'Player', exact: true }).click()
-      await expect(
-        page.getByText('Som ativado. O próximo pedido começa automaticamente.'),
-      ).toBeVisible()
+      await expect(page.getByText('Player pronto', { exact: true })).toBeVisible()
     }
     const add = await guestContext.request.post(fixture.base + '/api/queue', {
       data: { id: tracks[i].id, source: 'local' },

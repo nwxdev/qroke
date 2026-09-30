@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const partyRoute = usePartyRoute()
-const { connected } = useParty()
+const { connected, isPlayer } = useParty()
 const route = useRoute()
 const id = useId()
 const dialog = ref<HTMLDialogElement | null>(null)
@@ -9,6 +9,7 @@ const navigation = ref<HTMLElement | null>(null)
 const menuContent = ref<HTMLElement | null>(null)
 let resizeObserver: ResizeObserver | undefined
 const isOpen = ref(false)
+const playbackMenuOpen = useState('qroke:menu-open', () => false)
 let previousOverflow = ''
 const links = [
   {
@@ -28,13 +29,16 @@ const links = [
 function open() {
   if (!dialog.value || isOpen.value) return
   previousOverflow = document.documentElement.style.overflow
-  dialog.value.showModal()
+  dialog.value.show()
+  playbackMenuOpen.value = true
+  void nextTick(() => dialog.value?.querySelector<HTMLButtonElement>('.menu-close')?.focus())
   document.documentElement.style.overflow = 'hidden'
   isOpen.value = true
 }
 function close(restoreFocus = true) {
   if (!isOpen.value) return
   isOpen.value = false
+  playbackMenuOpen.value = false
   dialog.value?.close()
   document.documentElement.style.overflow = previousOverflow
   if (restoreFocus)
@@ -108,8 +112,7 @@ onBeforeUnmount(() => {
           >
             <AppIcon :name="link.icon" />
             <span
-              ><strong>{{ link.label }}</strong
-              ><small>{{ link.hint }}</small></span
+              ><strong>{{ link.label }}</strong></span
             >
             <AppIcon name="arrow-right" class="menu-arrow" />
           </PartyLink>
@@ -143,7 +146,7 @@ onBeforeUnmount(() => {
         :id="id"
         ref="dialog"
         class="fullscreen-menu"
-        :class="{ 'has-persistent': !!$slots.persistent }"
+        :class="{ 'has-persistent': !!$slots.persistent, 'has-player': isPlayer }"
         aria-label="Menu da festa"
         @cancel.prevent="close()"
         @close="!dialog?.open && close()"
@@ -166,8 +169,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="menu-body">
           <div ref="menuContent" class="menu-content">
-            <span class="eyebrow">SUA FESTA, SEU RITMO</span>
-            <h2>Para onde vamos?</h2>
+            <h2>Menu</h2>
           </div>
           <p class="menu-connection" :class="{ offline: !connected }" role="status">
             <i aria-hidden="true" />{{ connected ? 'A festa está online' : 'Reconectando…' }}
@@ -202,12 +204,14 @@ onBeforeUnmount(() => {
 .fullscreen-menu {
   position: fixed;
   inset: 0;
+  z-index: 100;
+  padding-bottom: var(--qroke-dock-space, 0px);
   width: 100%;
   height: 100dvh;
   max-width: none;
   max-height: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 var(--qroke-dock-space, 0px);
   border: 0;
   background: var(--bg);
   color: var(--text);
@@ -272,7 +276,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 18px;
-  min-height: 84px;
+  min-height: 64px;
   padding: 16px 20px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -446,6 +450,24 @@ onBeforeUnmount(() => {
   }
   .menu-link:hover {
     transform: none;
+  }
+}
+@media (max-height: 480px) and (min-width: 520px) {
+  .fullscreen-menu.has-player {
+    padding-right: 240px;
+    padding-bottom: 0;
+  }
+  .menu-top {
+    padding-inline: 12px;
+  }
+  .menu-brand {
+    --brand-logo-width: 120px;
+  }
+  .menu-content h2 {
+    margin-bottom: 14px;
+  }
+  .menu-body {
+    padding: 12px;
   }
 }
 </style>
