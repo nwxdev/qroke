@@ -33,6 +33,8 @@ try {
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto(fixture.base + '/host')
   await page.getByRole('button', { name: 'Tocar neste dispositivo', exact: true }).click()
+  await expect(page.locator('[data-player-stage]')).toBeVisible()
+  await expect.poll(async () => (await db.readState()).playerId).toBeTruthy()
   const state = await db.readState()
   const current = {
     id: 'abcdefghijk',
