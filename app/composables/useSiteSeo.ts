@@ -100,13 +100,34 @@ export function useSiteSeo() {
                   ],
                 },
                 {
-                  '@type': route.path === '/perguntas-frequentes' ? 'FAQPage' : 'WebPage',
+                  '@type':
+                    route.path === '/perguntas-frequentes'
+                      ? 'FAQPage'
+                      : route.path === '/mapa-do-site'
+                        ? 'CollectionPage'
+                        : 'WebPage',
                   '@id': canonical.value + '#page',
                   url: canonical.value,
                   name: title.value,
                   description: description.value,
+                  dateModified: publicMeta.value.lastModified,
                   inLanguage: 'pt-BR',
                   isPartOf: { '@id': SITE_URL + '/#website' },
+                  ...(route.path === '/mapa-do-site'
+                    ? {
+                        mainEntity: {
+                          '@type': 'ItemList',
+                          itemListElement: Object.entries(PUBLIC_PAGES)
+                            .filter(([path]) => path !== '/mapa-do-site')
+                            .map(([path, entry], index) => ({
+                              '@type': 'ListItem',
+                              position: index + 1,
+                              name: entry.label,
+                              url: SITE_URL + path,
+                            })),
+                        },
+                      }
+                    : {}),
                   ...(route.path === '/perguntas-frequentes'
                     ? {
                         mainEntity: SITE_FAQ.map(({ question, answer }) => ({

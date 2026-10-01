@@ -6,6 +6,7 @@
       <NuxtLink to="/como-funciona">Como funciona</NuxtLink>
       <NuxtLink to="/karaoke-online">Karaokê online</NuxtLink>
       <NuxtLink to="/perguntas-frequentes">Perguntas frequentes</NuxtLink>
+      <NuxtLink to="/mapa-do-site">Mapa do site</NuxtLink>
     </nav>
   </footer>
 </template>
