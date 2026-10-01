@@ -1,6 +1,7 @@
 <script setup lang="ts">
 useSiteSeo()
 const route = useRoute()
+const joinOpen = useState('qroke:join-open', () => false)
 const { id, page } = usePartyRoute()
 const theme = useTheme()
 useMotionPreference()
@@ -13,10 +14,10 @@ watch(
 </script>
 <template>
   <PwaInstall />
-  <JoinPartyDialog :key="'join:' + id" />
-  <PartySessionBanner v-if="active" :key="'banner:' + id" />
+  <LazyJoinPartyDialog v-if="joinOpen" :key="'join:' + id" />
+  <LazyPartySessionBanner v-if="active" :key="'banner:' + id" />
   <NuxtPage :transition="{ name: 'scene', mode: 'out-in' }" />
   <ClientOnly><AnalyticsConsent /></ClientOnly>
-  <ClientOnly><MotionFeedback :key="'motion:' + id" /></ClientOnly>
-  <PartyRuntime v-if="active" :key="id || 'legacy'" />
+  <ClientOnly><LazyMotionFeedback v-if="active" :key="'motion:' + id" /></ClientOnly>
+  <LazyPartyRuntime v-if="active" :key="id || 'legacy'" />
 </template>

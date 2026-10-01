@@ -118,7 +118,13 @@ try {
   await page.reload()
   await page.getByRole('button', { name: 'Minha conta', exact: true }).click()
   await expect(page.locator('.playlist-account')).toContainText('login Google pelo celular precisa')
-  await expect(page.locator('.playlist-account a')).toHaveCount(0)
+  // A localhost OAuth origin must not be offered to the phone. Public legal links remain available.
+  await expect(page.locator('.playlist-account .notice a')).toHaveCount(0)
+  expect(
+    await page
+      .locator('.playlist-account a')
+      .evaluateAll((links) => links.map((link) => link.getAttribute('href')).sort()),
+  ).toEqual(['/politica-de-privacidade', '/termos-de-uso'])
 
   const host = client(fixture.base)
   await host.request('/api/auth', { action: 'login', pin: '4321' })

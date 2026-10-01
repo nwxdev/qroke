@@ -10,6 +10,7 @@ const { isPlayer } = useParty()
       <GuestIdentity /><PartyPeople />
       <PlayerStage v-if="isPlayer" />
     </main>
+    <footer><LegalLinks new-tab /></footer>
   </div>
 </template>
 <style scoped>

@@ -49,29 +49,39 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <aside
-    v-if="ready && !installed && !dismissed"
-    ref="bar"
-    class="pwa-install"
-    aria-label="Instalar aplicativo"
-  >
-    <div>
-      <span>QRokê no seu celular</span
-      ><button class="install-link" @click="install">Instalar QRokê</button
-      ><button class="install-close" aria-label="Fechar convite de instalação" @click="close">
-        ×
-      </button>
-    </div>
-    <p v-if="help" role="status">
-      {{
-        ios
-          ? 'No Safari, toque em Compartilhar e em Adicionar à Tela de Início.'
-          : 'No menu do navegador, escolha Instalar aplicativo ou Adicionar à tela inicial. Se a opção não aparecer, abra este link no Chrome ou Edge.'
-      }}
-    </p>
-  </aside>
+  <div class="pwa-install-slot" :class="{ pending: !ready }">
+    <aside
+      v-if="ready && !installed && !dismissed"
+      ref="bar"
+      class="pwa-install"
+      aria-label="Instalar aplicativo"
+    >
+      <div>
+        <span>QRokê no seu celular</span
+        ><button class="install-link" @click="install">Instalar QRokê</button
+        ><button class="install-close" aria-label="Fechar convite de instalação" @click="close">
+          ×
+        </button>
+      </div>
+      <p v-if="help" role="status">
+        {{
+          ios
+            ? 'No Safari, toque em Compartilhar e em Adicionar à Tela de Início.'
+            : 'No menu do navegador, escolha Instalar aplicativo ou Adicionar à tela inicial. Se a opção não aparecer, abra este link no Chrome ou Edge.'
+        }}
+      </p>
+    </aside>
+  </div>
 </template>
 <style scoped>
+.pwa-install-slot {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.pwa-install-slot.pending {
+  height: 45px;
+}
 .pwa-install {
   position: sticky;
   top: 0;

@@ -255,7 +255,11 @@ onBeforeUnmount(() => {
         <button v-if="nextListPage" :disabled="busy" @click="loadMine(true)">Mais playlists</button>
       </template>
       <template v-else-if="status?.oauthConfigured">
-        <p>Conecte o Google para escolher suas playlists.</p>
+        <p>
+          Conecte o Google para ler suas playlists. Ao adicionar itens, eles aparecem na festa. A
+          conexão não altera suas playlists no YouTube.
+        </p>
+        <LegalNotice action="conectar o Google" />
         <button v-if="status.connectHere" :disabled="busy" @click="connect">
           <AppIcon name="link" /> Conectar Google
         </button>

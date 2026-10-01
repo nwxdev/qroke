@@ -9,6 +9,9 @@ describe('sitemap público', () => {
       '/como-funciona',
       '/karaoke-online',
       '/perguntas-frequentes',
+      '/termos-de-uso',
+      '/politica-de-privacidade',
+      '/exclusao-de-dados',
       '/mapa-do-site',
     ])
     const xml = publicSitemap(SITE_URL)

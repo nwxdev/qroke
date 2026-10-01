@@ -88,7 +88,7 @@ onBeforeUnmount(() => {
   <main class="party-home">
     <header><BrandLogo /></header>
     <div class="home-grid">
-      <MotionReveal as="section" class="home-intro">
+      <MotionReveal as="section" class="home-intro" immediate>
         <h1>Música e karaokê<br />para sua festa.</h1>
         <p>
           Com o QRokê, a galera entra pelo QR Code, escolhe músicas e vota em uma fila
@@ -165,6 +165,7 @@ onBeforeUnmount(() => {
           />
           <small>Guarde o PIN para administrar a festa.</small>
           <p v-if="failure" class="notice" role="alert">{{ failure }}</p>
+          <LegalNotice action="criar uma festa" />
           <button class="create-party-button" :disabled="busy">
             {{ busy ? 'Criando sua festa…' : 'Criar festa' }}
           </button>

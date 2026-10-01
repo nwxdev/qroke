@@ -47,6 +47,7 @@
     "@types/youtube": "^0.1.2",
     "better-sqlite3": "^13.0.3",
     "prettier": "3.9.9",
+    "sass": "^1.105.1",
     "typescript": "^5.9.0",
     "vitest": "5.0.2",
     "vue-tsc": "^3.0.0"

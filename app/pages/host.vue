@@ -95,6 +95,7 @@ watch(admin, (value, previous) => {
         </section>
       </div>
     </main>
+    <footer><LegalLinks new-tab /></footer>
     <AdminDialog v-model="unlock" />
   </div>
 </template>

@@ -90,6 +90,7 @@ onMounted(async () => {
       </button>
     </form>
     <p v-if="failure" role="alert">{{ failure }}</p>
+    <LegalLinks new-tab />
     <a class="entry-home" href="/">Criar uma festa ou ver suas festas</a>
   </main>
 </template>
