@@ -22,7 +22,9 @@ try {
     errors = []
   a.on('pageerror', (e) => errors.push(e.message))
   await a.goto(fixture.base)
-  await expect(a.getByRole('heading', { name: /Sua festa/ })).toBeVisible()
+  await expect(
+    a.getByRole('heading', { name: 'Música e karaokê para sua festa.', level: 1 }),
+  ).toBeVisible()
   await a.screenshot({ path: 'test-results/multisession-home-desktop.png', fullPage: true })
   await a.getByLabel('Nome da festa', { exact: true }).fill('Sextou na casa da Ana')
   await a.getByLabel('PIN do administrador', { exact: true }).fill('123456')

@@ -35,8 +35,8 @@ function trapTab(event: KeyboardEvent) {
 }
 if (props.tv) useSpatialNav(dialog, close, () => {})
 watch(
-  open,
-  async (value) => {
+  [open, dialog],
+  async ([value]) => {
     adminDialogOpen.value = value
     if (value) {
       failure.value = ''

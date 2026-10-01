@@ -2,6 +2,7 @@
 import type { QueueItem } from '../../shared/types'
 const props = defineProps<{ item: QueueItem; index: number }>()
 const { guest, queue, pending, vote, queueReactions } = useParty()
+const { feedback } = usePartyMotion()
 const reaction = computed(() => queueReactions.value[props.item.queueId] || 0)
 const manual = computed(() => queue.value.some((item) => item.manualOrder !== null))
 function reason(value: 1 | -1) {
@@ -35,7 +36,18 @@ function blocked(value: 1 | -1) {
       :disabled="pending || blocked(value)"
       @click="vote(item.queueId, reaction === value ? 0 : value)"
     >
-      <AppIcon :name="value === 1 ? 'like' : 'dislike'" /><span>{{
+      <MotionCue
+        :trigger="
+          feedback?.target === item.queueId &&
+          (feedback.kind === 'undo' ||
+            (value === 1 ? feedback.kind === 'like' : feedback.kind === 'dislike'))
+            ? feedback.id
+            : 0
+        "
+        :kind="feedback?.kind || 'success'"
+      >
+        <AppIcon :name="value === 1 ? 'like' : 'dislike'" /> </MotionCue
+      ><span>{{
         value === 1 ? (item.likes ?? Math.max(0, item.votes || 0)) : item.dislikes || 0
       }}</span>
     </button>
@@ -69,12 +81,9 @@ function blocked(value: 1 | -1) {
 .queue-vote.dislike[aria-pressed='true'] {
   border-color: var(--coral);
 }
-.queue-vote .app-icon {
+.queue-vote :deep(.app-icon) {
   width: 18px;
   height: 18px;
-}
-.queue-vote[aria-pressed='true'] .app-icon {
-  animation: voted 0.2s ease-out;
 }
 .vote-score {
   font-size: 10px;
@@ -89,7 +98,7 @@ function blocked(value: 1 | -1) {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .queue-vote .app-icon {
+  .queue-vote :deep(.app-icon) {
     animation: none;
   }
 }

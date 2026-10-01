@@ -9,6 +9,7 @@ const props = withDefaults(defineProps<{ allowKaraoke?: boolean; embedded?: bool
 })
 const { state, guest, queue, pending, act, api, add, isPlayer } = useParty()
 const route = useRoute()
+const { feedback } = usePartyMotion()
 async function focusSearchTarget() {
   if (!import.meta.client || route.hash !== '#busca') return
   await nextTick()
@@ -29,8 +30,8 @@ const query = ref(''),
 const singers = ref<string[]>([])
 let feedbackTimer: ReturnType<typeof setTimeout>
 async function requestAdd(track: Track) {
-  await add(track, track.karaoke ? singers.value : [])
-  if (alreadyQueued(track)) {
+  const accepted = await add(track, track.karaoke ? singers.value : [])
+  if (accepted) {
     addedId.value = track.source + track.id
     clearTimeout(feedbackTimer)
     feedbackTimer = setTimeout(() => {
@@ -84,7 +85,7 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
 <template>
   <div class="music-search">
     <GuestJoin v-if="!guest" :autofocus="!embedded" />
-    <section v-if="guest" id="busca" class="search-section">
+    <MotionReveal v-if="guest" as="section" id="busca" class="search-section">
       <div class="section-heading">
         <h2>Buscar música</h2>
       </div>
@@ -150,8 +151,12 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
         <h3>Nada por aqui ainda</h3>
         <p>Tente outro nome de música ou artista.</p>
       </div>
-      <ul v-else-if="results.length" class="results">
-        <li v-for="track in results" :key="track.source + track.id">
+      <MotionList v-else-if="results.length" tag="ul" class="results" appear>
+        <li
+          v-for="(track, index) in results"
+          :key="track.source + track.id"
+          :style="{ '--result-delay': Math.min(index, 5) * 35 + 'ms' }"
+        >
           <img
             v-if="track.thumbnail"
             :src="track.thumbnail"
@@ -170,11 +175,22 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
             :aria-label="'Adicionar ' + track.title + ' à fila'"
             @click="requestAdd(track)"
           >
-            <AppIcon :name="alreadyQueued(track) ? 'check' : 'plus'" />
+            <MotionCue
+              :trigger="
+                feedback?.target === 'track:' + track.source + ':' + track.id ? feedback.id : 0
+              "
+              kind="add"
+            >
+              <AppIcon
+                :name="
+                  alreadyQueued(track) || addedId === track.source + track.id ? 'check' : 'plus'
+                "
+              />
+            </MotionCue>
           </button>
         </li>
-      </ul>
-    </section>
+      </MotionList>
+    </MotionReveal>
     <YoutubePlaylists v-if="guest" :allow-karaoke="allowKaraoke" />
   </div>
 </template>

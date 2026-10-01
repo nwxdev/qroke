@@ -6,6 +6,7 @@ const googleFailure = useState('qroke:google-failure', () => '')
 const nuxt = useNuxtApp()
 import type { PlaylistPreview, YoutubePlaylist, YoutubeStatus } from '../../shared/playlists'
 const { refresh, session, state, queue } = useParty()
+const { celebrate } = usePartyMotion()
 const playlistQueued = (id: string) =>
   [...queue.value, ...(state.value?.current ? [state.value.current] : [])].some(
     (track) => track.playlist?.id === id,
@@ -98,6 +99,15 @@ async function add(videoId?: string) {
         signal: controller?.signal,
       },
     )
+    if (result.added > 0)
+      celebrate({
+        kind: videoId ? 'add' : 'playlist',
+        message:
+          result.added === 1
+            ? 'Mais uma para a festa!'
+            : result.added + ' músicas! A trilha da festa ganhou força.',
+        target: videoId ? 'track:youtube:' + videoId : 'playlist:' + preview.value!.playlist.id,
+      })
     imported.value = !videoId
     notice.value =
       result.added +
@@ -149,7 +159,13 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <section class="panel youtube-playlists" aria-labelledby="playlists-title" :aria-busy="busy">
+  <MotionReveal
+    as="section"
+    class="panel youtube-playlists"
+    :delay="100"
+    aria-labelledby="playlists-title"
+    :aria-busy="busy"
+  >
     <div class="section-heading">
       <h2 id="playlists-title"><AppIcon name="playlist" /> Playlists do YouTube</h2>
     </div>
@@ -282,7 +298,7 @@ onBeforeUnmount(() => {
       @add="add"
       @more="inspect(selected.input, selected.personal, preview!.nextPageToken)"
     />
-  </section>
+  </MotionReveal>
 </template>
 <style scoped>
 .playlist-result-actions {

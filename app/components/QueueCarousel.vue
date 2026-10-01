@@ -54,7 +54,9 @@ function position() {
 function slide(direction: number) {
   const el = rail.value
   if (!el) return
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reduced =
+    document.documentElement.dataset.motion === 'off' ||
+    matchMedia('(prefers-reduced-motion: reduce)').matches
   el.scrollBy({ left: direction * el.clientWidth, behavior: reduced ? 'instant' : 'smooth' })
 }
 watch(
@@ -97,7 +99,7 @@ onBeforeUnmount(() => observer?.disconnect())
       aria-label="Fila de músicas, role para os lados"
       @scroll.passive="position"
     >
-      <TransitionGroup name="queue">
+      <MotionList>
         <li
           v-if="state?.current && !state.current.playlist"
           :key="'current-' + state.current.queueId"
@@ -216,7 +218,7 @@ onBeforeUnmount(() => observer?.disconnect())
             <div class="queue-card-vote"><QueueVote :item="item" :index="index" /></div>
           </template>
         </li>
-      </TransitionGroup>
+      </MotionList>
       <li v-if="!queue.length" class="queue-card-empty">
         <div>Escolha a próxima música.<br /><QueueSearchLink /></div>
       </li>

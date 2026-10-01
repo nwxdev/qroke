@@ -37,7 +37,7 @@ function duration(item: QueueItem) {
     <p>Escolha uma música e dê o tom da festa.</p>
     <QueueSearchLink />
   </div>
-  <TransitionGroup v-else name="queue" tag="ol" class="queue-list" :class="{ compact }">
+  <MotionList v-else tag="ol" class="queue-list" :class="{ compact }">
     <li v-for="item in displayed" :key="item.queueId" class="queue-row">
       <span class="queue-number">{{ String(position(item) + 1).padStart(2, '0') }}</span>
       <img
@@ -90,5 +90,5 @@ function duration(item: QueueItem) {
         ×
       </button>
     </li>
-  </TransitionGroup>
+  </MotionList>
 </template>

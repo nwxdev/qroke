@@ -9,32 +9,39 @@ const docked = ref(true)
 const bounds = ref<Record<string, string>>({})
 const route = useRoute()
 let resize: ResizeObserver | undefined
+let observedStage: HTMLElement | null = null
 let frame = 0
 let timer: ReturnType<typeof setInterval>
+function updatePlacement() {
+  const stage = document.querySelector<HTMLElement>('[data-player-stage]')
+  if (stage !== observedStage) {
+    if (observedStage) resize?.unobserve(observedStage)
+    observedStage = stage
+    if (observedStage) resize?.observe(observedStage)
+  }
+  const box = stage?.getBoundingClientRect()
+  docked.value =
+    !!menuOpen.value ||
+    !!joinOpen.value ||
+    !!adminDialogOpen.value ||
+    !box ||
+    box.bottom < 220 ||
+    box.top > innerHeight - 180
+  bounds.value =
+    !docked.value && box
+      ? {
+          left: box.left + 'px',
+          top: box.top + 'px',
+          width: box.width + 'px',
+          height: Math.max(264, box.height) + 'px',
+        }
+      : {}
+  const space = isPlayer.value && docked.value ? (root.value?.offsetHeight || 270) + 20 : 0
+  document.documentElement.style.setProperty('--qroke-dock-space', space + 'px')
+}
 function place() {
   cancelAnimationFrame(frame)
-  frame = requestAnimationFrame(() => {
-    const stage = document.querySelector<HTMLElement>('[data-player-stage]')
-    const box = stage?.getBoundingClientRect()
-    docked.value =
-      !!menuOpen.value ||
-      !!joinOpen.value ||
-      !!adminDialogOpen.value ||
-      !box ||
-      box.bottom < 220 ||
-      box.top > innerHeight - 180
-    bounds.value =
-      !docked.value && box
-        ? {
-            left: box.left + 'px',
-            top: box.top + 'px',
-            width: box.width + 'px',
-            height: Math.max(264, box.height) + 'px',
-          }
-        : {}
-    const space = isPlayer.value && docked.value ? (root.value?.offsetHeight || 270) + 20 : 0
-    document.documentElement.style.setProperty('--qroke-dock-space', space + 'px')
-  })
+  frame = requestAnimationFrame(updatePlacement)
 }
 async function returnToPlayer() {
   if (!document.querySelector('[data-player-stage]')) await navigateTo(href('/player'))
@@ -51,7 +58,8 @@ watch(
   { flush: 'post' },
 )
 onMounted(() => {
-  resize = new ResizeObserver(place)
+  // Follow animated stage dimensions before paint without remounting the media.
+  resize = new ResizeObserver(updatePlacement)
   resize.observe(document.body)
   window.addEventListener('scroll', place, { passive: true, capture: true })
   window.addEventListener('resize', place)

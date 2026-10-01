@@ -1,7 +1,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2026-09-01',
   modules: ['nuxt-quasar-ui'],
-  css: ['~/assets/main.css'],
+  css: ['~/assets/main.css', '~/assets/motion.css'],
   devServer: { host: '0.0.0.0', port: Number(process.env.QROKE_PORT || 3000) },
   nitro: { experimental: { websocket: true }, externals: { external: ['mongodb', 'redis'] } },
   runtimeConfig: {
@@ -50,7 +50,7 @@ export default defineNuxtConfig({
       script: [
         {
           innerHTML:
-            "try{document.documentElement.dataset.theme=localStorage.getItem('qroke:theme:'+location.pathname)||'dark'}catch(e){}",
+            "try{document.documentElement.dataset.theme=localStorage.getItem('qroke:theme:'+location.pathname)||'dark';document.documentElement.dataset.motion=localStorage.getItem('qroke:motion')==='off'?'off':'on'}catch(e){}",
         },
       ],
     },
@@ -59,6 +59,10 @@ export default defineNuxtConfig({
     '/sw.js': { headers: { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } },
     '/site.webmanifest': { headers: { 'Cache-Control': 'no-cache' } },
     '/f/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' } },
+    '/entrar': {
+      headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' },
+    },
+    '/brand/qroke-share-v2.jpg': { headers: { 'Cache-Control': 'public, max-age=86400' } },
     '/busca': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/host': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/player': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },

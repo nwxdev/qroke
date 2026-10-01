@@ -3,6 +3,7 @@ import type { PlaylistPreview } from '../../shared/playlists'
 const props = defineProps<{ preview: PlaylistPreview; busy: boolean; imported: boolean }>()
 defineEmits<{ add: [videoId?: string]; more: [] }>()
 const { state, queue } = useParty()
+const { feedback } = usePartyMotion()
 function position(id: string) {
   if (state.value?.current?.source === 'youtube' && state.value.current.id === id)
     return 'Tocando agora'
@@ -15,7 +16,7 @@ const allQueued = computed(
 )
 </script>
 <template>
-  <div class="playlist-preview">
+  <MotionReveal class="playlist-preview" glow>
     <h3>{{ preview.playlist.title }}</h3>
     <p>{{ preview.playlist.channel }} · {{ preview.playlist.count }} itens na playlist</p>
     <p class="hint">
@@ -35,7 +36,12 @@ const allQueued = computed(
           :aria-label="'Adicionar somente ' + track.title"
           @click="$emit('add', track.id)"
         >
-          <AppIcon :name="position(track.id) ? 'check' : 'plus'" />
+          <MotionCue
+            :trigger="feedback?.target === 'track:youtube:' + track.id ? feedback.id : 0"
+            kind="add"
+          >
+            <AppIcon :name="position(track.id) ? 'check' : 'plus'" />
+          </MotionCue>
         </button>
       </li>
     </ol>
@@ -48,7 +54,12 @@ const allQueued = computed(
         :disabled="busy || imported || allQueued || !preview.tracks.length"
         @click="$emit('add')"
       >
-        <AppIcon :name="imported || allQueued ? 'check' : 'playlist-plus'" />{{
+        <MotionCue
+          :trigger="feedback?.target === 'playlist:' + preview.playlist.id ? feedback.id : 0"
+          kind="playlist"
+        >
+          <AppIcon :name="imported || allQueued ? 'check' : 'playlist-plus'" /> </MotionCue
+        >{{
           imported || allQueued
             ? 'Adicionadas à fila'
             : 'Adicionar ' + preview.tracks.length + ' músicas'
@@ -61,7 +72,7 @@ const allQueued = computed(
     <p v-if="preview.nextPageToken" class="hint">
       Esta playlist continua. Confira o próximo lote (até 200 itens por lote).
     </p>
-  </div>
+  </MotionReveal>
 </template>
 <style scoped>
 .playlist-preview {

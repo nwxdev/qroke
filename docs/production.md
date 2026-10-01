@@ -27,11 +27,11 @@ O retorno Google deve ser cadastrado exatamente como https://qroke.com.br/api/yo
 
 ## Apresentação pública e SEO
 
-A página inicial apresenta o QRokê sem exigir convite, oferece criação de festas e lista “Suas festas” para quem já entrou neste navegador. As APIs continuam protegidas. Título, descrição, canonical, Open Graph, Twitter Card e dados estruturados WebSite usam https://qroke.com.br. URLs de convite e parâmetros da festa não entram nos metadados.
+A página inicial apresenta o QRokê sem exigir convite, oferece criação de festas e lista “Suas festas” para quem já entrou neste navegador. As APIs continuam protegidas. As páginas públicas /, /como-funciona, /karaoke-online e /perguntas-frequentes têm título, descrição, canonical e conteúdo renderizado no servidor. Open Graph, Twitter Card e dados estruturados de site, aplicativo, página, navegação e FAQ usam https://qroke.com.br. Metadados de convites usam apenas o caminho público de entrada, sem query, fragmento, PIN, token ou nomes de participantes.
 
-A indexação só é habilitada quando QROKE_PUBLIC_URL corresponde ao domínio de produção. robots.txt aponta para sitemap.xml, que contém apenas a página inicial. Busca, anfitrião, player, QR, TV e APIs recebem noindex; a entrada alternativa /entrar aponta o canonical para /. Ambientes locais bloqueiam rastreamento.
+A indexação só é habilitada quando QROKE_PUBLIC_URL corresponde ao domínio de produção. robots.txt aponta para sitemap.xml, que contém as quatro páginas públicas. Busca, anfitrião, player, QR, TV, APIs e entradas de festas recebem noindex; /entrar e as entradas /f/:id/entrar usam canonical próprio, sem parâmetros. Ambientes locais bloqueiam rastreamento.
 
-Os ícones para navegador e celular e a imagem de compartilhamento ficam em public/. O manifesto usa os ícones de 192 e 512 pixels; não há funcionamento offline.
+Os ícones para navegador e celular e a imagem de compartilhamento ficam em public/. O cartão social /brand/qroke-share-v2.jpg tem 1200 x 630 pixels e usa a logo original. Pode ser regenerado com node scripts/generate-social-card.mjs. O roteiro de publicação, Search Console, Analytics e prévias sociais está em [SEO e descoberta](seo-rollout.md) e na [issue #12](https://github.com/nwxdev/qroke/issues/12). O manifesto usa os ícones de 192 e 512 pixels; não há funcionamento offline.
 
 ## Concorrência e limites
 

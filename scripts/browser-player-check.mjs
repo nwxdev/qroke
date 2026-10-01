@@ -157,6 +157,19 @@ try {
     window.qrokePosition = 26
   })
   await expect(page.locator('.next-strip')).toBeVisible({ timeout: 6000 })
+  // Measure the settled layout after the animated stage columns finish moving.
+  await page.locator('.tv-stage').evaluate(async (el) => {
+    await Promise.all(el.getAnimations().map((animation) => animation.finished.catch(() => {})))
+  })
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const video = document.querySelector('iframe').getBoundingClientRect()
+        const aside = document.querySelector('.tv-aside').getBoundingClientRect()
+        return video.right <= aside.left
+      }),
+    )
+    .toBe(true)
   const rects = await page.evaluate(() => {
     const video = document.querySelector('iframe').getBoundingClientRect(),
       aside = document.querySelector('.tv-aside').getBoundingClientRect()

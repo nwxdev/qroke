@@ -137,7 +137,7 @@ onBeforeUnmount(() => {
         </section>
       </div>
     </Teleport>
-    <ThemeToggle />
+    <ThemeToggle /><MotionToggle compact />
     <button
       ref="trigger"
       type="button"
@@ -180,6 +180,7 @@ onBeforeUnmount(() => {
           <div ref="menuContent" class="menu-content">
             <h2>Menu</h2>
           </div>
+          <MotionToggle class="menu-motion-control" />
           <p class="menu-connection" :class="{ offline: !connected }" role="status">
             <i aria-hidden="true" />{{ connected ? 'A festa está online' : 'Reconectando…' }}
           </p>
@@ -355,6 +356,11 @@ onBeforeUnmount(() => {
   font-size: 14px;
   border-radius: 12px;
 }
+.menu-motion-control {
+  width: min(100%, 680px);
+  margin: 24px auto 0;
+  flex-shrink: 0;
+}
 .menu-connection {
   display: flex;
   align-items: center;
@@ -390,7 +396,7 @@ onBeforeUnmount(() => {
 .header-menu > .header-navigation {
   display: none;
 }
-@container party-header (min-width: 50rem) {
+@container party-header (min-width: 54rem) {
   .header-menu:not(.has-actions) > .header-navigation {
     display: flex;
   }
@@ -398,7 +404,7 @@ onBeforeUnmount(() => {
     display: none;
   }
 }
-@container party-header (min-width: 63rem) {
+@container party-header (min-width: 67rem) {
   .header-menu.has-actions > .header-navigation {
     display: flex;
   }
