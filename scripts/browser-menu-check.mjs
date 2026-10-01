@@ -93,7 +93,7 @@ try {
       await page.getByRole('button', { name: 'Fechar PIN', exact: true }).click()
     for (const width of [320, 390, 768, 820, 910, 912, 1024, 1280, 1920]) {
       await page.setViewportSize({ width, height: 900 })
-      const horizontal = path === '/busca' ? width >= 910 : width >= 1280
+      const horizontal = path === '/busca' ? width >= 1024 : width >= 1280
       const nav = page.locator('header .header-navigation')
       await expect(trigger)[horizontal ? 'toBeHidden' : 'toBeVisible']()
       await expect(nav)[horizontal ? 'toBeVisible' : 'toBeHidden']()

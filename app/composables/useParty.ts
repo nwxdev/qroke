@@ -1,3 +1,4 @@
+import type { PartyMotionInput } from './usePartyMotion'
 import { deviceLabel } from '../utils/device-identity'
 import { browserDeviceInfo } from '../utils/device-info'
 import type { PublicState, Guest, QueueItem, Track } from '../../shared/types'
@@ -13,6 +14,7 @@ export function errorText(error: unknown) {
 export function useParty() {
   const $fetch = usePartyFetch()
   const { href, storageKey, id } = usePartyRoute()
+  const { celebrate } = usePartyMotion()
   const scope = id.value
   const scopedKey = (key: string) => (scope ? key + ':' + scope : key)
   const clockOffset = useState(scopedKey('server-clock-offset'), () => 0)
@@ -83,12 +85,15 @@ export function useParty() {
       headers: device.value ? { 'x-qroke-device-key': device.value.token } : undefined,
     })
   }
-  async function act(action: () => Promise<unknown>) {
-    if (pending.value) return
+  async function act(action: () => Promise<unknown>, feedback?: PartyMotionInput) {
+    if (pending.value) return false
+    let committed = false
     pending.value = true
     failure.value = ''
     try {
       await action()
+      committed = true
+      if (feedback) celebrate(feedback)
       await refresh()
       await session()
     } catch (error) {
@@ -97,6 +102,7 @@ export function useParty() {
     } finally {
       pending.value = false
     }
+    return committed
   }
   const control = (body: Record<string, unknown>) => {
     const command = ['skip', 'retry'].includes(String(body.action))
@@ -104,7 +110,20 @@ export function useParty() {
       : body
     if (['skip', 'retry'].includes(String(body.action)) && !state.value?.current)
       return Promise.resolve()
-    return act(() => api('/api/control', command))
+    const messages: Record<string, string> = {
+      skip: 'Próxima música, bora!',
+      previous: 'Vamos de bis!',
+      pause: body.paused ? 'Pausa na festa. Já já tem mais!' : 'Dá o play na energia!',
+      assign: 'Aparelho escolhido para o som!',
+      mode: 'Novo visual para a festa!',
+      auto: body.enabled ? 'Rádio ligado. A festa continua!' : 'Rádio desligado.',
+      'reset-order': 'Rodízio e votos liberados!',
+    }
+    const message = messages[String(body.action)]
+    return act(
+      () => api('/api/control', command),
+      message ? { kind: 'success', message } : undefined,
+    )
   }
   function armSound() {
     if (device.value) soundDevice.value = device.value.id
@@ -116,7 +135,11 @@ export function useParty() {
     await nextTick()
     if (isPlayer.value)
       document.querySelector('.media-player')?.scrollIntoView({
-        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        behavior:
+          document.documentElement.dataset.motion === 'off' ||
+          matchMedia('(prefers-reduced-motion: reduce)').matches
+            ? 'instant'
+            : 'smooth',
         block: 'center',
       })
   }
@@ -133,21 +156,48 @@ export function useParty() {
       manualOrder: null,
     }
     optimistic.value = [temp]
-    await act(() =>
-      api('/api/queue', {
-        id: track.id,
-        source: track.source,
-        channel: track.media?.channel,
-        karaoke: track.karaoke,
-        singers,
-      }),
+    const accepted = await act(
+      () =>
+        api('/api/queue', {
+          id: track.id,
+          source: track.source,
+          channel: track.media?.channel,
+          karaoke: track.karaoke,
+          singers,
+        }),
+      {
+        kind: 'add',
+        message: track.karaoke
+          ? 'Microfone a postos! Karaokê na fila.'
+          : 'Boa escolha! Música na fila.',
+        target: 'track:' + track.source + ':' + track.id,
+      },
     )
     optimistic.value = []
+    return accepted
   }
   const vote = (id: string, value: -1 | 0 | 1) =>
-    act(() => api('/api/queue/' + id + '/vote', { value }))
-  const rename = (name: string) => act(() => api('/api/guest/name', { name }))
-  const remove = (id: string) => act(() => api('/api/queue/' + id, {}, 'DELETE'))
+    act(() => api('/api/queue/' + id + '/vote', { value }), {
+      kind: value === 1 ? 'like' : value === -1 ? 'dislike' : 'undo',
+      message:
+        value === 1
+          ? 'Essa merece o palco! Like registrado.'
+          : value === -1
+            ? 'Outra vibe? Dislike registrado.'
+            : 'Tudo certo! Reação retirada.',
+      target: id,
+    })
+  const rename = (name: string) =>
+    act(() => api('/api/guest/name', { name }), {
+      kind: 'success',
+      message: 'Nome atualizado. A festa é sua!',
+    })
+  const remove = (id: string) =>
+    act(() => api('/api/queue/' + id, {}, 'DELETE'), {
+      kind: 'remove',
+      message: 'Pedido retirado. Tem espaço para outra escolha!',
+      target: id,
+    })
   async function reorder(items: QueueItem[]) {
     if (!state.value || pending.value) return
     const previous = [...state.value.queue],
@@ -156,6 +206,7 @@ export function useParty() {
     await act(async () => {
       try {
         await api('/api/control', { action: 'reorder', ids: items.map((t) => t.queueId), revision })
+        celebrate({ kind: 'success', message: 'Fila no ritmo que você escolheu!' })
       } catch (error) {
         if (state.value) state.value.queue = previous
         throw error

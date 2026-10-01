@@ -15,7 +15,10 @@ const nameError = computed(() => {
 })
 async function join() {
   if (!ready.value || nameError.value || pending.value) return false
-  await act(() => api('/api/guest', { name: name.value }))
+  await act(() => api('/api/guest', { name: name.value }), {
+    kind: 'success',
+    message: 'Chegou! Escolha uma música e entre no ritmo.',
+  })
   return !!guest.value && !failure.value
 }
 async function connect() {
@@ -23,7 +26,7 @@ async function connect() {
 }
 </script>
 <template>
-  <section class="join-card panel">
+  <MotionReveal as="section" class="join-card panel" glow>
     <h2>{{ host ? 'Nome do anfitrião' : 'Qual é seu nome?' }}</h2>
     <form @submit.prevent="join">
       <QInput
@@ -57,7 +60,7 @@ async function connect() {
     <p v-if="failure || googleFailure" class="notice" role="alert">
       {{ failure || googleFailure }}
     </p>
-  </section>
+  </MotionReveal>
 </template>
 <style scoped>
 .join-card h2 {

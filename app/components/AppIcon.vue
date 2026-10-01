@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineProps<{
   name:
+    | 'sparkles'
     | 'warning'
     | 'refresh'
     | 'menu'
@@ -34,6 +35,7 @@ defineProps<{
     | 'link'
 }>()
 const paths = {
+  sparkles: 'M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z M20 2v4 M18 4h4',
   warning: 'M12 3l10 18H2z M12 9v5 M12 17v1',
   refresh: 'M20 7v5h-5 M4 17v-5h5 M5 8a8 8 0 0 1 13-3l2 3 M4 16l2 3a8 8 0 0 0 13-3',
   menu: 'M4 6h16 M4 12h16 M4 18h16',

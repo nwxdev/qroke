@@ -22,8 +22,10 @@ try {
   const home = await page.goto(fixture.base + '/')
   expect(home.status()).toBe(200)
   await expect(page).toHaveURL(fixture.base + '/')
-  await expect(page.getByRole('heading', { name: /Sua festa/ })).toBeVisible()
-  await expect(page).toHaveTitle('QRokê — Música e karaokê para sua festa')
+  await expect(
+    page.getByRole('heading', { name: 'Música e karaokê para sua festa.', level: 1 }),
+  ).toBeVisible()
+  await expect(page).toHaveTitle('QRokê | Karaokê online e música para festas com QR Code')
   expect((await hostContext.request.get(fixture.base + '/api/state')).status()).toBe(401)
   await page.screenshot({ path: 'test-results/public-home-mobile.png', fullPage: true })
   await page.goto(fixture.base + '/host')

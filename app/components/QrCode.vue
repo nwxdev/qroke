@@ -11,6 +11,7 @@ const url = ref(''),
   warning = ref(''),
   message = ref('')
 const copied = ref(false)
+const { celebrate } = usePartyMotion()
 async function shareLink() {
   if (!url.value) return
   if (navigator.share) {
@@ -46,6 +47,7 @@ async function copyLink() {
       if (!ok) throw new Error('copy')
     }
     copied.value = true
+    celebrate({ kind: 'success', message: 'Convite copiado. Chame a galera!' })
     clearTimeout(copiedTimer)
     copiedTimer = setTimeout(() => {
       copied.value = false

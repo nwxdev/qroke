@@ -3,6 +3,7 @@ import { VueDraggable } from 'vue-draggable-plus'
 import type { QueueItem } from '../../shared/types'
 const { href } = usePartyRoute()
 const { state, admin, pending, reorder, isPlayer, sessionReady } = useParty()
+const { enabled: motionEnabled, reduced: motionReduced } = useMotionPreference()
 const dragged = ref<QueueItem[]>([])
 const dragging = ref(false)
 watch(
@@ -81,7 +82,7 @@ watch(admin, (value, previous) => {
             <p class="hint">Arraste pela alça. As escolhas humanas ficam antes do rádio.</p>
             <VueDraggable
               v-model="dragged"
-              :animation="180"
+              :animation="motionEnabled && !motionReduced ? 180 : 0"
               handle=".drag-handle"
               :disabled="pending"
               @start="dragging = true"

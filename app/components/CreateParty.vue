@@ -88,9 +88,13 @@ onBeforeUnmount(() => {
   <main class="party-home">
     <header><BrandLogo /></header>
     <div class="home-grid">
-      <section class="home-intro">
-        <h1>Sua festa.<br />Sua música.</h1>
-        <p>Crie, compartilhe e dê o play.</p>
+      <MotionReveal as="section" class="home-intro">
+        <h1>Música e karaokê<br />para sua festa.</h1>
+        <p>
+          Com o QRokê, a galera entra pelo QR Code, escolhe músicas e vota em uma fila
+          compartilhada. Crie, compartilhe e dê o play no navegador.
+        </p>
+        <NuxtLink class="home-guide-link" to="/como-funciona">Veja como funciona ↗</NuxtLink>
         <button type="button" class="home-join" :disabled="!ready" @click="joinOpen = true">
           <AppIcon name="qr" /> Entrar na festa
         </button>
@@ -111,8 +115,15 @@ onBeforeUnmount(() => {
             </li>
           </ul>
         </section>
-      </section>
-      <section class="create-party-card" aria-labelledby="create-title">
+      </MotionReveal>
+      <MotionReveal
+        as="section"
+        class="create-party-card"
+        id="criar-festa"
+        :delay="100"
+        glow
+        aria-labelledby="create-title"
+      >
         <h2 id="create-title">Criar festa</h2>
         <p>Disponível por 24 horas ou até você encerrar.</p>
         <form @submit.prevent="create">
@@ -158,8 +169,22 @@ onBeforeUnmount(() => {
             {{ busy ? 'Criando sua festa…' : 'Criar festa' }}
           </button>
         </form>
-      </section>
+      </MotionReveal>
     </div>
+    <section class="home-about" aria-labelledby="home-about-title">
+      <span class="eyebrow">DO PRIMEIRO PEDIDO AO ÚLTIMO REFRÃO</span>
+      <h2 id="home-about-title">Todo mundo ajuda a escolher a trilha.</h2>
+      <p>
+        Use o celular para pedir músicas, conferir playlists do YouTube e acompanhar a fila. Na hora
+        do karaokê, escolha uma versão para cantar e convide uma dupla. O anfitrião mantém os
+        controles e escolhe o aparelho que vai tocar o som.
+      </p>
+      <div class="home-about-links">
+        <NuxtLink to="/karaoke-online">Prepare seu karaokê</NuxtLink
+        ><NuxtLink to="/perguntas-frequentes">Tire suas dúvidas</NuxtLink>
+      </div>
+    </section>
+    <PublicSiteLinks />
   </main>
 </template>
 <style scoped>
@@ -175,6 +200,37 @@ onBeforeUnmount(() => {
   gap: 24px;
   padding-bottom: 28px;
   border-bottom: 1px solid var(--line);
+}
+.home-guide-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.home-about {
+  margin-top: 80px;
+  max-width: 760px;
+}
+.home-about h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.2;
+  margin: 18px 0;
+}
+.home-about p {
+  line-height: 1.75;
+  font-size: 18px;
+}
+.home-about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 24px;
+}
+.home-about-links a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .home-join {
   display: flex;

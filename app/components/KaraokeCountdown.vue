@@ -16,6 +16,7 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
       }"
       aria-label="Preparação do karaokê"
     >
+      <MotionShowLights :key="state.current.queueId" />
       <div class="countdown-content">
         <span class="eyebrow">{{
           state.paused ? 'PREPARAÇÃO EM PAUSA' : 'A SEGUIR NO KARAOKÊ'
@@ -48,6 +49,8 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
 <style scoped>
 .karaoke-countdown {
   position: relative;
+  isolation: isolate;
+  position: relative;
   display: grid;
   place-items: center;
   text-align: center;
@@ -59,6 +62,8 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
   overflow-wrap: anywhere;
 }
 .countdown-content {
+  position: relative;
+  z-index: 1;
   width: min(100%, 1080px);
   min-width: 0;
   display: grid;

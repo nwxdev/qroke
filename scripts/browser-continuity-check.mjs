@@ -126,6 +126,16 @@ try {
   await page.screenshot({ path: 'test-results/continuity-player-mobile.png', fullPage: true })
   // An empty upcoming queue retains a horizontally reachable search card.
   await page.setViewportSize({ width: 1440, height: 1000 })
+  // Resizing after a mobile scroll must leave the fixed header reachable above the video.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const header = document.querySelector('.player-header').getBoundingClientRect()
+        const frame = document.querySelector('iframe').getBoundingClientRect()
+        return frame.top >= header.bottom
+      }),
+    )
+    .toBe(true)
   await page.locator('header').getByRole('link', { name: 'Buscar músicas', exact: true }).click()
   await page.setViewportSize({ width: 320, height: 740 })
   await page

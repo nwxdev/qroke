@@ -1,0 +1,121 @@
+/* The theme owns movement. Components inherit these semantic tokens, including overrides
+   on a themed subtree. No animation imports a palette or modifies the media element. */
+:root {
+  --motion-color: var(--accent);
+  --motion-glow: color-mix(in srgb, var(--accent) 24%, transparent);
+  --motion-fast: 160ms;
+  --motion-enter: 380ms;
+  --motion-celebrate: 620ms;
+  --motion-show: 1000ms;
+  --motion-distance: 16px;
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --motion-spring: cubic-bezier(0.2, 0.9, 0.3, 1.35);
+}
+.scene-enter-active {
+  transition: opacity var(--motion-enter) var(--motion-ease);
+}
+.scene-leave-active {
+  transition: opacity var(--motion-fast) var(--motion-ease);
+}
+.scene-enter-from,
+.scene-leave-to {
+  opacity: 0;
+}
+.motion-list-move {
+  transition: transform var(--motion-enter) var(--motion-ease);
+}
+.motion-list-enter-active,
+.motion-list-leave-active {
+  transition:
+    opacity var(--motion-fast),
+    transform var(--motion-enter) var(--motion-spring);
+}
+.motion-list-enter-from {
+  opacity: 0;
+  transform: translateY(var(--motion-distance)) scale(0.97);
+}
+.motion-list-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+}
+.motion-list-leave-active {
+  pointer-events: none;
+}
+.results .motion-list-enter-active {
+  transition-delay: var(--result-delay, 0ms);
+}
+button,
+a.primary-button,
+summary {
+  transition:
+    transform var(--motion-fast) var(--motion-spring),
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast);
+}
+button:active:not(:disabled),
+a.primary-button:active,
+summary:active {
+  transform: translateY(1px) scale(0.97);
+}
+.theme-toggle .app-icon {
+  transition: transform var(--motion-enter) var(--motion-spring);
+}
+.theme-toggle:active .app-icon {
+  transform: rotate(80deg) scale(0.85);
+}
+input,
+select,
+.q-field__control {
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+input:focus-visible,
+select:focus-visible {
+  box-shadow: 0 0 0 5px var(--motion-glow);
+}
+dialog[open] {
+  animation: motion-dialog var(--motion-enter) var(--motion-ease);
+}
+@keyframes motion-dialog {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+[data-motion='off'] *,
+[data-motion='off'] *::before,
+[data-motion='off'] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+[data-motion='off'] button:active,
+[data-motion='off'] summary:active,
+[data-motion='off'] a.primary-button:active,
+[data-motion='off'] .theme-toggle .app-icon {
+  transform: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  button:active,
+  summary:active,
+  a.primary-button:active,
+  .theme-toggle .app-icon {
+    transform: none !important;
+  }
+}
+
+[data-motion='off'] .motion-burst,
+[data-motion='off'] .motion-show-lights {
+  display: none;
+}
