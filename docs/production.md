@@ -32,6 +32,8 @@ A página inicial apresenta o QRokê sem exigir convite, oferece criação de fe
 
 A indexação só é habilitada quando QROKE_PUBLIC_URL corresponde ao domínio de produção. robots.txt aponta para sitemap.xml, que contém as cinco páginas públicas e a data da última atualização relevante de cada uma. /mapa-do-site oferece links, descrições e datas em uma página navegável. As datas ficam no cadastro shared/site.ts e não mudam a cada requisição ou deploy. Busca, anfitrião, player, QR, TV, APIs e entradas de festas recebem noindex; /entrar e as entradas /f/:id/entrar usam canonical próprio, sem parâmetros. Ambientes locais bloqueiam rastreamento.
 
+As rotas /sitemap.xml e /robots.txt atendem GET e HEAD com o mesmo tipo de conteúdo e a mesma política de cache. As rotas HEAD reutilizam os handlers GET para evitar que verificações de cabeçalhos caiam na página 404 do Nuxt. O teste de SEO cobre Googlebot, Google-InspectionTool e navegador comum, além da leitura do XML. A URL a enviar ao Search Console é exatamente https://qroke.com.br/sitemap.xml, sem www e com HTTPS; as variantes HTTP/www redirecionam.
+
 Os ícones para navegador e celular e a imagem de compartilhamento ficam em public/. O cartão social /brand/qroke-share-v2.jpg tem 1200 x 630 pixels e usa a logo original. Pode ser regenerado com node scripts/generate-social-card.mjs. O roteiro de publicação, Search Console, Analytics e prévias sociais está em [SEO e descoberta](seo-rollout.md) e na [issue #12](https://github.com/nwxdev/qroke/issues/12). O manifesto usa os ícones de 192 e 512 pixels; não há funcionamento offline.
 
 ## Concorrência e limites

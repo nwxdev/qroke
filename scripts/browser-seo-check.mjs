@@ -117,6 +117,21 @@ try {
   expect(robots).toContain('Allow: /')
   expect(robots).toContain('Disallow: /api/')
   expect(robots).toContain('Sitemap: https://qroke.com.br/sitemap.xml')
+  // HEAD must describe the same resource as GET, not fall through to Nuxt's 404.
+  for (const path of ['/sitemap.xml', '/robots.txt']) {
+    for (const agent of ['Googlebot', 'Google-InspectionTool', 'Mozilla/5.0']) {
+      const headers = { 'user-agent': agent }
+      const get = await fetch(fixture.base + path, { headers })
+      const head = await fetch(fixture.base + path, { method: 'HEAD', headers })
+      expect(get.status).toBe(200)
+      expect(head.status).toBe(200)
+      expect(head.headers.get('content-type')).toBe(get.headers.get('content-type'))
+      expect(head.headers.get('cache-control')).toBe(get.headers.get('cache-control'))
+      expect(head.headers.get('x-robots-tag')).toBeNull()
+      expect((await head.arrayBuffer()).byteLength).toBe(0)
+      await get.arrayBuffer()
+    }
+  }
   // Share previews must be in HTML for crawlers without scripts, cookies or invitation tokens.
   for (const agent of [
     'facebookexternalhit/1.1',
@@ -162,7 +177,7 @@ try {
   ])
   expect(errors).toEqual([])
   console.log(
-    'SEO: 5 páginas SSR, mapa navegável, títulos/canonicals, FAQ, XML válido com datas estáveis, robots, 5 crawlers, convite sem segredos, imagem 1200×630, 404 e acesso privado OK',
+    'SEO: 5 páginas SSR, mapa navegável, títulos/canonicals, FAQ, XML válido com datas estáveis, GET/HEAD de sitemap e robots, 5 crawlers, convite sem segredos, imagem 1200×630, 404 e acesso privado OK',
   )
 } finally {
   await browser.close()
