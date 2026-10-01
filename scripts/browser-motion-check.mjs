@@ -47,6 +47,8 @@ try {
   const react = async (label, kind) => {
     await page.getByRole('button', { name: label, exact: true }).click()
     await expect(page.locator('.motion-feedback[data-kind="' + kind + '"]')).toBeVisible()
+    // Vue keeps the outgoing toast in the DOM until its leave transition ends.
+    await expect(page.locator('.motion-feedback')).toHaveCount(1)
   }
   await react('Like para subir na fila: ' + tracks[2].title, 'like')
   await expect(page.locator('.queue-card').first()).toContainText(tracks[2].title)
