@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 const scripts = [
+  'browser-search-check.mjs',
   'browser-motion-check.mjs',
   'browser-seo-check.mjs',
   'browser-analytics-check.mjs',

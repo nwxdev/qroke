@@ -33,6 +33,79 @@ describe('catálogo', () => {
     expect(JSON.stringify(warn.mock.calls)).not.toContain('private-marker')
   })
 
+  it.each([
+    ['validação', 'errors'],
+    ['validação', 'details'],
+    ['reserva', 'errors'],
+    ['reserva', 'details'],
+  ])('recusa chave de navegador na %s com erro em %s, sem expor segredos', async (stage, field) => {
+    const p = provider()
+    if (stage === 'reserva') {
+      vi.mocked(p.searchSongs).mockRejectedValue(new Error('offline'))
+      vi.mocked(p.searchVideos).mockRejectedValue(new Error('offline'))
+    }
+    const warn = vi.fn(),
+      reserve = vi.fn(() => true),
+      http = vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            error: {
+              message: 'Provider detail: private-marker',
+              [field]: [
+                {
+                  reason: 'API_KEY_HTTP_REFERRER_BLOCKED',
+                  metadata: { api_key: 'private-marker' },
+                },
+              ],
+            },
+          },
+          { status: 403 },
+        ),
+      )
+    const catalog = new Catalog(p, 'private-marker', reserve, warn, http)
+    await expect(catalog.search('cpm22')).rejects.toThrow(
+      'A chave usa restrição de navegador. Configure uma chave para chamadas do servidor.',
+    )
+    expect(http).toHaveBeenCalledTimes(1)
+    expect(new URL(String(http.mock.calls[0]![0])).pathname).toBe(
+      '/youtube/v3/' + (stage === 'reserva' ? 'search' : 'videos'),
+    )
+    expect(reserve).toHaveBeenCalledTimes(stage === 'reserva' ? 1 : 0)
+    expect(catalog.selected(raw.videoId, false)).toBeUndefined()
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private-marker')
+  })
+
+  it('refaz a consulta após corrigir a chave, sem reaproveitar a falha como resultado', async () => {
+    const http = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json(
+          { error: { details: [{ reason: 'API_KEY_HTTP_REFERRER_BLOCKED' }] } },
+          { status: 403 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          items: [
+            {
+              id: raw.videoId,
+              status: { embeddable: true, privacyStatus: 'public' },
+              snippet: { title: raw.name, channelTitle: 'Artista' },
+              contentDetails: { duration: 'PT3M' },
+            },
+          ],
+        }),
+      )
+    const warn = vi.fn()
+    const catalog = new Catalog(provider(), 'key', () => true, warn, http)
+    await expect(catalog.search('cpm22')).rejects.toThrow('restrição de navegador')
+    expect(await catalog.search('cpm22')).toEqual([
+      expect.objectContaining({ id: raw.videoId, title: raw.name }),
+    ])
+    expect(http).toHaveBeenCalledTimes(2)
+    expect(warn).toHaveBeenLastCalledWith(null)
+  })
+
   it('compartilha consultas simultâneas, normaliza e usa cache', async () => {
     const p = provider(),
       warning = vi.fn(),

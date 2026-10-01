@@ -8,6 +8,10 @@ Node 24. Subir as dependências descartáveis com docker compose -p qroke-tests 
 
 Executar npm ci, npm run typecheck, npm test, npm run test:storage, npm run build, npm run test:integration, npm run test:distributed, npm run test:load e npm run test:browser. A suíte de navegador inclui a entrada por convite. Os testes não acessam os bancos de produção.
 
+A regressão da busca do YouTube é coberta em três níveis: `tests/media-integration.mjs` chama as rotas HTTP reais com e sem escopo de festa; `tests/catalog.test.ts` simula a recusa da chave pelo Google; `scripts/browser-search-check.mjs` testa a busca na interface, o aviso de erro e uma nova tentativa após a recuperação. O roteiro de navegador faz parte de `npm run test:browser` e do CI. Seus dados são isolados e não dependem do YouTube real.
+
+Para verificar a configuração externa, executar `npm run test:youtube:key` no ambiente de origem das chamadas, com `NUXT_YOUTUBE_API_KEY` ou `YOUTUBE_API_KEY` configurada. Esse teste opt-in realiza uma chamada real `videos.list`, sem busca de emergência ou alteração de festas, e falha se o Google recusar a chave. Não imprime a chave nem a URL autenticada. Validar em uma máquina local não comprova a permissão do IP de produção; a configuração efetiva do servidor precisa da mesma conferência. Esse teste não integra o CI comum, que não recebe credenciais de produção. A pendência atual da chave está na [issue #19](https://github.com/nwxdev/qroke/issues/19).
+
 ## Configuração
 
 - QROKE_MONGODB_URI e QROKE_MONGODB_DATABASE: conexão e banco exclusivos.
