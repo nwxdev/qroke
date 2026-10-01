@@ -1,6 +1,6 @@
 O QRokê precisa publicar as melhorias de SEO e concluir a configuração das plataformas para acompanhar a descoberta e o uso do produto. Esta issue é o roteiro operacional: preparar o site, verificar o domínio, enviar o sitemap, integrar GA4 e validar as prévias sociais.
 
-**Implementação:** animações, páginas públicas com HTML no servidor, metadados, sitemap e cartão social publicados. O sitemap inclui as quatro páginas de conteúdo e o mapa navegável em /mapa-do-site. O estado da publicação e das verificações externas é acompanhado na [issue #12](https://github.com/nwxdev/qroke/issues/12). Em 1º de outubro de 2026, o responsável informou que o site já foi verificado no Google Search Console. A integração de Analytics descrita abaixo ainda precisa ser implementada e ativada com o ID da propriedade.
+**Implementação:** animações, páginas públicas com HTML no servidor, metadados, sitemap e cartão social publicados. O sitemap inclui as quatro páginas de conteúdo e o mapa navegável em /mapa-do-site. O estado da publicação e das verificações externas é acompanhado na [issue #12](https://github.com/nwxdev/qroke/issues/12). Em 1º de outubro de 2026, o responsável informou que o site já foi verificado no Google Search Console. A integração de Analytics usa o fluxo informado G-ZMWF4HFBV4, com preferência de medição e page_view das páginas públicas. Publicação e recebimento na conta são acompanhados na issue.
 
 ## 1. Publicar a base técnica
 
@@ -27,13 +27,13 @@ Referências: [propriedade de domínio](https://support.google.com/webmasters/an
 ## 3. Google Analytics 4: criar e integrar
 
 1. [ ] Em [Google Analytics](https://analytics.google.com), criar ou selecionar a conta do QRokê; criar uma propriedade GA4 com fuso de São Paulo e moeda BRL. O responsável pela conta deve revisar os termos e o compartilhamento de dados.
-2. [ ] Criar um fluxo **Web** para `https://qroke.com.br` e registrar o ID de medição `G-...`. Este ID não existe no projeto ainda; não usar um valor fictício em produção.
-3. [ ] Implementar uma única integração, por exemplo um plugin Nuxt no cliente com `gtag.js`, e uma configuração pública `NUXT_PUBLIC_GA_MEASUREMENT_ID`. ID vazio deve desativar a integração. Não instalar a mesma propriedade simultaneamente por plugin e Google Tag Manager.
-4. [ ] Antes de coletar, oferecer uma preferência de medição com aceitar, recusar e rever a escolha; documentar o uso dos dados. Como padrão inicial do projeto, carregar Analytics somente após aceite, manter recursos de publicidade desativados e respeitar a recusa.
-5. [ ] Implementar visualizações de página para a navegação do app. Escolher **um** mecanismo. Para controle sobre URLs, usar eventos `page_view` manuais com `send_page_view: false` e desligar a captura automática de mudanças do histórico na medição otimizada. Validar que cada navegação produz um único evento.
+2. [ ] Criar um fluxo **Web** para `https://qroke.com.br` e registrar o ID de medição `G-...`. Fluxo informado pelo responsável: `G-ZMWF4HFBV4`; substitui o identificador anterior. A conta, o fuso e a moeda ainda devem ser conferidos no painel.
+3. [x] Implementar uma única integração, com um plugin Nuxt no cliente e `gtag.js` em um documento isolado, e uma configuração pública `NUXT_PUBLIC_GA_MEASUREMENT_ID`. ID vazio deve desativar a integração. Não instalar a mesma propriedade simultaneamente por plugin e Google Tag Manager.
+4. [x] Antes de coletar, oferecer uma preferência de medição com aceitar, recusar e rever a escolha; documentar o uso dos dados. Como padrão inicial do projeto, carregar Analytics somente após aceite, manter recursos de publicidade desativados e respeitar a recusa.
+5. [x] Implementar visualizações manuais `page_view` para as páginas públicas, com `send_page_view: false`, sem parâmetros ou fragmentos e com título do cadastro. A tag fica em /analytics-frame, sem observar o histórico ou os formulários do app. Os testes verificam um evento por navegação. No painel do fluxo, ainda conferir/desativar a medição otimizada automática.
 6. [ ] Começar pelas páginas públicas. Para medir ações dentro das festas, remover query/hash e normalizar caminhos com IDs antes do envio. Revisar também `page_referrer`, títulos e medições automáticas. Desativar captura automática de formulários e termos de busca até haver sanitização verificada.
 7. [ ] Implementar eventos abaixo somente após sucesso da operação e aceite de medição. Não usar texto livre como parâmetro.
-8. [ ] Validar no DebugView, no relatório em tempo real e nas requisições do navegador: nenhum carregamento antes do aceite, nenhuma duplicação, nenhuma URL de convite ou dado pessoal. Repetir ao recusar, revogar e recarregar.
+8. [ ] Validar o recebimento real no DebugView, no relatório em tempo real e nas requisições do navegador: nenhum carregamento antes do aceite, nenhuma duplicação, nenhuma URL de convite ou dado pessoal. Os testes locais de navegador já cobrem aceite, recusa, revogação entre abas, recarga e URLs privadas sem enviar tráfego de teste à propriedade.
 9. [ ] Definir retenção e filtros de tráfego interno; registrar o responsável pela propriedade. Marcar `create_party` e `join_party` como eventos principais depois de validar os disparos.
 
 | Evento proposto | Momento                                             | Parâmetros permitidos                            |

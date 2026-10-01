@@ -1,4 +1,4 @@
-import { chromium, expect } from '@playwright/test'
+import { chromium, expect, request } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 import { startFixture } from '../tests/helpers/server.mjs'
@@ -156,17 +156,25 @@ try {
   await page.evaluate(() => {
     window.qrokePosition = 48.75
   })
+  // The setup API connection has been idle while the browser exercised the UI.
+  // Use a fresh connection with the same cookies for this timed handoff, rather
+  // than racing the server's keep-alive timeout or retrying a control command.
+  const control = await request.newContext({ storageState: await context.storageState() })
   const started = Date.now()
-  await context.request.post(fixture.base + '/api/control', {
-    data: { action: 'assign', deviceId: device.id },
-  })
-  await expect
-    .poll(
-      async () =>
-        (await (await context.request.get(fixture.base + '/api/state')).json()).playerHandoff,
-      { timeout: 7500 },
-    )
-    .toBeNull()
+  try {
+    const assigned = await control.post(fixture.base + '/api/control', {
+      data: { action: 'assign', deviceId: device.id },
+    })
+    expect(assigned.status()).toBe(200)
+    await expect
+      .poll(
+        async () => (await (await control.get(fixture.base + '/api/state')).json()).playerHandoff,
+        { timeout: 7500 },
+      )
+      .toBeNull()
+  } finally {
+    await control.dispose()
+  }
   await expect.poll(() => target.evaluate(() => window.qrokePlaying), { timeout: 7500 }).toBe(true)
   expect(Date.now() - started).toBeLessThan(9000)
   expect(await page.locator('iframe').count()).toBe(0)

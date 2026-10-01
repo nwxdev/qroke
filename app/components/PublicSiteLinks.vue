@@ -1,3 +1,6 @@
+<script setup lang="ts">
+const { enabled, opened } = useAnalyticsConsent()
+</script>
 <template>
   <footer class="public-footer">
     <strong>QRokê · A festa é de todo mundo.</strong>
@@ -8,6 +11,15 @@
       <NuxtLink to="/perguntas-frequentes">Perguntas frequentes</NuxtLink>
       <NuxtLink to="/mapa-do-site">Mapa do site</NuxtLink>
     </nav>
+    <button
+      v-if="enabled"
+      type="button"
+      class="analytics-settings"
+      data-analytics-settings
+      @click="opened = true"
+    >
+      Preferências de medição
+    </button>
   </footer>
 </template>
 <style scoped>
@@ -30,5 +42,9 @@
   font-size: 14px;
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+.analytics-settings {
+  margin-top: 18px;
+  font-size: 14px;
 }
 </style>

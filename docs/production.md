@@ -13,6 +13,7 @@ Executar npm ci, npm run typecheck, npm test, npm run test:storage, npm run buil
 - QROKE_MONGODB_URI e QROKE_MONGODB_DATABASE: conexão e banco exclusivos.
 - QROKE_DRAGONFLY_URL: serviço existente pela rede privada.
 - QROKE_PUBLIC_URL=https://qroke.com.br.
+- NUXT_PUBLIC_GA_MEASUREMENT_ID: ID público do fluxo GA4. O fluxo informado é G-ZMWF4HFBV4. Vazio desativa a integração; o .env local não é enviado ao servidor.
 - QROKE_ACCESS_REQUIRED=true e QROKE_TRUST_PROXY=true na stack privada atrás do Nginx.
 - QROKE_HOST_PIN: PIN com 4 a 8 dígitos da festa original. Festas novas exigem PIN próprio de 6 dígitos.
 - QROKE_SESSION_SECRET: segredo aleatório de pelo menos 32 caracteres.
@@ -50,3 +51,38 @@ A reversão troca a imagem; não apaga nem desfaz o banco. Migrações devem man
 ## Limitações operacionais
 
 A primeira instalação usa a VPS atual. Duas instâncias não protegem contra falha do host. Escalar entre servidores exige redundância do MongoDB e do Dragonfly, backups externos e nova autenticação no registry ao adicionar nós. Os testes de API e navegador simulam YouTube; o login Google real e áudio em celular/TV devem ser verificados após configurar o callback de produção.
+
+## Medição de visitas
+
+A tag GA4 só é carregada depois do aceite em “Ajude o QRokê a melhorar”.
+O rodapé das páginas públicas permite reabrir “Preferências de medição”.
+A escolha é salva neste navegador e sincronizada entre abas; recusar interrompe
+a medição e remove os cookies host-only _ga. Isso não exclui dados já coletados.
+ID vazio desativa tanto a interface quanto a coleta. Não instalar outra tag do
+mesmo fluxo em paralelo.
+
+O plugin analytics.client.ts monta um documento descartável /analytics-frame.
+Esse documento recebe apenas caminhos do cadastro PUBLIC_PAGES e referências
+sanitizadas. A tag fica nesse documento para não observar formulários, buscas,
+links de convite ou alterações de histórico do aplicativo. As rotas privadas
+removem o documento antes da navegação; voltar a uma página pública pode retomá-lo
+se o consentimento continuar aceito. A revogação desativa o envio antes de remover
+o documento, inclusive com o script ainda carregando.
+
+As visitas usam page_view manual, send_page_view=false, título do cadastro e
+URL canônica sem parâmetros ou fragmentos. O referenciador externo mantém só a
+origem. Publicidade e Google Signals ficam desativados, com cookies host-only de
+até 180 dias. O Google ainda recebe dados técnicos da requisição e do aparelho;
+não apresentar essa medição como anônima. Não medimos ações dentro das festas
+nesta etapa. O isolamento não é um sandbox para scripts maliciosos: é uma separação
+do contexto de navegação usado pela tag oficial.
+
+No fluxo Web, desativar a medição otimizada automática (histórico, formulários,
+buscas, saídas, downloads e vídeos) para manter somente os eventos definidos.
+O documento da tag já não contém histórico, formulários ou links do aplicativo.
+Validar recebimento em Tempo real/DebugView na conta responsável; os testes locais
+interceptam a coleta e não alimentam a propriedade real.
+
+Teste: node scripts/browser-analytics-check.mjs. Inclui ausência de tag antes do
+aceite, recusa persistida, contagem por navegação, URL privada rejeitada, referência
+limpa, revogação entre abas, cookies removidos, ID vazio e layouts claro/escuro.

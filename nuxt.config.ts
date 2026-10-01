@@ -30,7 +30,10 @@ export default defineNuxtConfig({
     musicDir: process.env.QROKE_MUSIC_DIR || '',
     database: process.env.QROKE_DATABASE || '.data/qroke.sqlite',
     quotaDailyCap: Number(process.env.QROKE_QUOTA_DAILY_CAP || 90),
-    public: { partyUrl: process.env.QROKE_PUBLIC_URL || '' },
+    public: {
+      partyUrl: process.env.QROKE_PUBLIC_URL || '',
+      gaMeasurementId: '',
+    },
   },
   app: {
     head: {
