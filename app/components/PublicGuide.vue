@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SiteGuide } from '#shared/site-content'
-defineProps<{ guide: SiteGuide }>()
+withDefaults(defineProps<{ guide: SiteGuide; showCta?: boolean }>(), { showCta: true })
 </script>
 <template>
   <div class="public-guide">
@@ -12,7 +12,7 @@ defineProps<{ guide: SiteGuide }>()
         <span class="eyebrow">{{ guide.eyebrow }}</span>
         <h1>{{ guide.title }}</h1>
         <p>{{ guide.intro }}</p>
-        <NuxtLink class="primary-button guide-cta" to="/#criar-festa"
+        <NuxtLink v-if="showCta" class="primary-button guide-cta" to="/#criar-festa"
           >Criar minha festa <span aria-hidden="true">↗</span></NuxtLink
         >
       </MotionReveal>

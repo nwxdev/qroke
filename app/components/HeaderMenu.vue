@@ -180,6 +180,7 @@ onBeforeUnmount(() => {
           <div ref="menuContent" class="menu-content">
             <h2>Menu</h2>
           </div>
+          <LegalLinks new-tab class="menu-legal-links" />
           <MotionToggle class="menu-motion-control" />
           <p class="menu-connection" :class="{ offline: !connected }" role="status">
             <i aria-hidden="true" />{{ connected ? 'A festa está online' : 'Reconectando…' }}
@@ -355,6 +356,10 @@ onBeforeUnmount(() => {
   padding: 12px 20px;
   font-size: 14px;
   border-radius: 12px;
+}
+.menu-legal-links {
+  width: min(100%, 680px);
+  margin: 24px auto 0;
 }
 .menu-motion-control {
   width: min(100%, 680px);

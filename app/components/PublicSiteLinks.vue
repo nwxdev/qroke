@@ -11,6 +11,7 @@ const { enabled, opened } = useAnalyticsConsent()
       <NuxtLink to="/perguntas-frequentes">Perguntas frequentes</NuxtLink>
       <NuxtLink to="/mapa-do-site">Mapa do site</NuxtLink>
     </nav>
+    <LegalLinks />
     <button
       v-if="enabled"
       type="button"

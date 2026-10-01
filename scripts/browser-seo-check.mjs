@@ -15,7 +15,16 @@ try {
     if (['warning', 'error'].includes(m.type()) && /hydration|invalid vnode/i.test(m.text()))
       errors.push(m.text())
   })
-  const paths = ['/', '/como-funciona', '/karaoke-online', '/perguntas-frequentes', '/mapa-do-site']
+  const paths = [
+    '/',
+    '/como-funciona',
+    '/karaoke-online',
+    '/perguntas-frequentes',
+    '/termos-de-uso',
+    '/politica-de-privacidade',
+    '/exclusao-de-dados',
+    '/mapa-do-site',
+  ]
   const titles = new Set()
   const modifiedDates = new Map()
   for (const path of paths) {
@@ -56,6 +65,26 @@ try {
     await expect(
       page.locator('footer').getByRole('link', { name: 'Mapa do site', exact: true }),
     ).toBeVisible()
+    for (const [href, label] of [
+      ['/termos-de-uso', 'Termos de Uso'],
+      ['/politica-de-privacidade', 'Política de Privacidade'],
+      ['/exclusao-de-dados', 'Exclusão de dados'],
+    ]) {
+      await expect(
+        page.locator('footer').getByRole('link', { name: label, exact: true }),
+      ).toHaveAttribute('href', href)
+    }
+    if (['/termos-de-uso', '/politica-de-privacidade', '/exclusao-de-dados'].includes(path)) {
+      expect(source).toContain('RAFAEL VERGO POLAN AGENCIA DIGITAL')
+      expect(source).toContain('47.049.695/0001-60')
+      expect(source).toContain('mailto:contato@nwx.ag')
+      expect(r.headers()['x-robots-tag']).toBeUndefined()
+      const anchors = await page
+        .getByRole('navigation', { name: 'Nesta página' })
+        .locator('a')
+        .evaluateAll((items) => items.map((item) => item.getAttribute('href')))
+      for (const anchor of anchors) await expect(page.locator(anchor)).toHaveCount(1)
+    }
     if (path === '/mapa-do-site') {
       const links = await page
         .getByRole('navigation', { name: 'Mapa das páginas públicas' })
@@ -66,7 +95,7 @@ try {
       expect(
         pageSchema.mainEntity.itemListElement.map((item) => new URL(item.url).pathname).sort(),
       ).toEqual(links.sort())
-      await expect(page.locator('time')).toHaveCount(4)
+      await expect(page.locator('time')).toHaveCount(paths.length - 1)
     }
     if (path === '/perguntas-frequentes') {
       const faq = meta.graph.find((x) => x['@type'] === 'FAQPage')
@@ -177,7 +206,7 @@ try {
   ])
   expect(errors).toEqual([])
   console.log(
-    'SEO: 5 páginas SSR, mapa navegável, títulos/canonicals, FAQ, XML válido com datas estáveis, GET/HEAD de sitemap e robots, 5 crawlers, convite sem segredos, imagem 1200×630, 404 e acesso privado OK',
+    'SEO: 8 páginas SSR, políticas públicas e contato, mapa navegável, títulos/canonicals, FAQ, XML válido com datas estáveis, GET/HEAD de sitemap e robots, 5 crawlers, convite sem segredos, imagem 1200×630, 404 e acesso privado OK',
   )
 } finally {
   await browser.close()

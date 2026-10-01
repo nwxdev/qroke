@@ -43,6 +43,8 @@ function save(value: 'accepted' | 'declined') {
         a coleta e removemos os cookies de medição deste navegador. Isso não apaga dados já
         recebidos pelo Google.
       </p>
+      <NuxtLink to="/politica-de-privacidade">Política de Privacidade do QRokê</NuxtLink>
+      <br />
       <a
         href="https://policies.google.com/privacy?hl=pt-BR"
         target="_blank"

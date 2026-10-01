@@ -39,6 +39,7 @@ async function connect() {
         :disable="pending || !ready"
       />
       <small v-if="name && nameError">{{ nameError }}</small>
+      <LegalNotice action="continuar ou conectar o Google" />
       <QBtn
         type="submit"
         color="primary"

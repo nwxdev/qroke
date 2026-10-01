@@ -45,6 +45,21 @@ export default defineNuxtConfig({
         { name: 'apple-mobile-web-app-title', content: 'QRokê' },
       ],
       link: [
+        {
+          rel: 'preload',
+          href: '/fonts/dm-sans-latin-v17.woff2',
+          as: 'font',
+          type: 'font/woff2',
+          crossorigin: '',
+        },
+        {
+          rel: 'preload',
+          href: '/fonts/manrope-latin-v20.woff2',
+          as: 'font',
+          type: 'font/woff2',
+          crossorigin: '',
+        },
+
         { rel: 'icon', href: '/favicon.ico', type: 'image/x-icon', sizes: '16x16 32x32 48x48' },
         { rel: 'icon', href: '/favicon-96.png', type: 'image/png', sizes: '96x96' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' },
@@ -59,6 +74,8 @@ export default defineNuxtConfig({
     },
   },
   routeRules: {
+    '/brand/**': { headers: { 'Cache-Control': 'public, max-age=604800' } },
+    '/fonts/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
     '/sw.js': { headers: { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } },
     '/site.webmanifest': { headers: { 'Cache-Control': 'no-cache' } },
     '/f/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' } },
@@ -74,5 +91,5 @@ export default defineNuxtConfig({
     '/api/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/ws': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
   },
-  quasar: { plugins: ['Dark'], lang: 'pt-BR' },
+  quasar: { plugins: ['Dark'], lang: 'pt-BR', iconSet: 'svg-material-icons' },
 })

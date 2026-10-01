@@ -30,24 +30,24 @@ function closeDialog() {
   document.documentElement.style.overflow = previousOverflow
   if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true })
 }
-watch(
-  opened,
-  async (open) => {
-    if (open) {
-      returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
-      previousOverflow = document.documentElement.style.overflow
-      link.value = ''
-      failure.value = ''
-      confirmation.value = null
-      await nextTick()
-      if (!opened.value) return
-      dialog.value?.show()
-      document.documentElement.style.overflow = 'hidden'
-      dialog.value?.querySelector<HTMLButtonElement>('.join-close')?.focus()
-    } else closeDialog()
-  },
-  { flush: 'post' },
-)
+async function syncDialog(open: boolean) {
+  if (open) {
+    returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    previousOverflow = document.documentElement.style.overflow
+    link.value = ''
+    failure.value = ''
+    confirmation.value = null
+    await nextTick()
+    if (!opened.value) return
+    dialog.value?.show()
+    document.documentElement.style.overflow = 'hidden'
+    dialog.value?.querySelector<HTMLButtonElement>('.join-close')?.focus()
+  } else closeDialog()
+}
+watch(opened, syncDialog, { flush: 'post' })
+onMounted(() => {
+  if (opened.value) void syncDialog(true)
+})
 watch(() => route.fullPath, close)
 watch([camera, confirmation], async () => {
   await nextTick()

@@ -41,6 +41,27 @@ export const PUBLIC_PAGES: Record<string, PublicPage> = {
     label: 'Perguntas frequentes',
     lastModified: '2026-10-01',
   },
+  '/termos-de-uso': {
+    title: 'Termos de Uso do QRokê | Regras do aplicativo',
+    description:
+      'Conheça os Termos de Uso do QRokê, as regras de participação nas festas, responsabilidades dos usuários e condições de uso das integrações com YouTube e Google.',
+    label: 'Termos de Uso',
+    lastModified: '2026-10-01',
+  },
+  '/politica-de-privacidade': {
+    title: 'Política de Privacidade do QRokê | Seus dados e escolhas',
+    description:
+      'Entenda como o QRokê trata dados das festas, conexão com Google, playlists do YouTube e cookies, e saiba como controlar a medição ou exercer seus direitos.',
+    label: 'Política de Privacidade',
+    lastModified: '2026-10-01',
+  },
+  '/exclusao-de-dados': {
+    title: 'Exclusão de dados do QRokê | Solicitações e desconexão',
+    description:
+      'Veja como solicitar acesso, correção ou exclusão dos dados mantidos pelo QRokê, desconectar sua conta Google e controlar os dados de medição e do navegador.',
+    label: 'Exclusão de dados',
+    lastModified: '2026-10-01',
+  },
   '/mapa-do-site': {
     title: 'Mapa do site: guias e páginas do QRokê',
     description:

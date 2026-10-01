@@ -52,7 +52,14 @@ async function checkBrand(page, theme) {
     const visible = logo.locator('.brand-logo-' + selected)
     await expect(visible).toBeVisible()
     await expect
-      .poll(async () => visible.evaluate((img) => img.complete && img.naturalWidth === 2172))
+      .poll(async () =>
+        visible.evaluate(
+          (img) =>
+            img.complete &&
+            img.naturalWidth > 0 &&
+            /qroke-(dark|light)-(240|480|720)-v1\.webp$/.test(img.currentSrc),
+        ),
+      )
       .toBe(true)
     await expect(
       logo.locator('.brand-logo-' + (selected === 'dark' ? 'light' : 'dark')),
@@ -201,7 +208,7 @@ try {
     }
   }
   console.log(
-    'Marca: originais carregados, versão por tema, proporção preservada e sem sobreposição/overflow entre 320 e 1280px nas três telas OK',
+    'Marca: imagens responsivas carregadas, versão por tema, proporção preservada e sem sobreposição/overflow entre 320 e 1280px nas três telas OK',
   )
   expect(errors).toEqual([])
   console.log('Contraste >=4.5 em botões, textos da TV e player; temas e movimento reduzido OK')
