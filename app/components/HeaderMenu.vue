@@ -10,6 +10,12 @@ const menuContent = ref<HTMLElement | null>(null)
 let resizeObserver: ResizeObserver | undefined
 const isOpen = ref(false)
 const playbackMenuOpen = useState('qroke:menu-open', () => false)
+const joinOpen = useState('qroke:join-open', () => false)
+async function joinParty() {
+  close()
+  await nextTick()
+  joinOpen.value = true
+}
 let previousOverflow = ''
 const links = [
   {
@@ -117,6 +123,9 @@ onBeforeUnmount(() => {
             <AppIcon name="arrow-right" class="menu-arrow" />
           </PartyLink>
         </nav>
+        <button type="button" class="menu-link join-party-menu" @click="joinParty">
+          <AppIcon name="qr" /><span><strong>Entrar na festa</strong></span>
+        </button>
         <section
           v-if="$slots.default"
           class="menu-actions"
@@ -272,6 +281,15 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 12px;
 }
+.join-party-menu {
+  width: 100%;
+  margin-top: 12px;
+  text-align: left;
+}
+.header-menu > .header-navigation .join-party-menu {
+  width: auto;
+  margin-top: 0;
+}
 .menu-link {
   display: flex;
   align-items: center;
@@ -372,7 +390,7 @@ onBeforeUnmount(() => {
 .header-menu > .header-navigation {
   display: none;
 }
-@container party-header (min-width: 40rem) {
+@container party-header (min-width: 50rem) {
   .header-menu:not(.has-actions) > .header-navigation {
     display: flex;
   }
@@ -380,7 +398,7 @@ onBeforeUnmount(() => {
     display: none;
   }
 }
-@container party-header (min-width: 51.25rem) {
+@container party-header (min-width: 63rem) {
   .header-menu.has-actions > .header-navigation {
     display: flex;
   }

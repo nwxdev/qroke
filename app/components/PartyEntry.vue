@@ -7,6 +7,7 @@ const pin = ref(''),
   pending = ref(false),
   details = ref<PartyInfo | null>(null)
 const route = useRoute()
+const joinOpen = useState('qroke:join-open', () => false)
 async function enter() {
   if (pending.value) return
   pending.value = true
@@ -70,6 +71,9 @@ onMounted(async () => {
     <span v-if="details" class="eyebrow entry-party-name">{{ details.name }}</span>
     <h1>Entre na festa</h1>
     <p>Abra o convite ou entre com seu PIN.</p>
+    <button type="button" class="entry-join" @click="joinOpen = true">
+      <AppIcon name="qr" /> Entrar com link ou QR Code
+    </button>
     <form @submit.prevent="enter">
       <label for="host-pin">Acesso do anfitrião</label>
       <input
@@ -90,6 +94,13 @@ onMounted(async () => {
   </main>
 </template>
 <style scoped>
+.entry-join {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 20px;
+}
 .entry-card {
   max-width: 440px;
   margin: 10vh auto;

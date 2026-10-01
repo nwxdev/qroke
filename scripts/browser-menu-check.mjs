@@ -93,7 +93,7 @@ try {
       await page.getByRole('button', { name: 'Fechar PIN', exact: true }).click()
     for (const width of [320, 390, 768, 820, 910, 912, 1024, 1280, 1920]) {
       await page.setViewportSize({ width, height: 900 })
-      const horizontal = path === '/busca' ? width >= 768 : width >= 912
+      const horizontal = path === '/busca' ? width >= 910 : width >= 1280
       const nav = page.locator('header .header-navigation')
       await expect(trigger)[horizontal ? 'toBeHidden' : 'toBeVisible']()
       await expect(nav)[horizontal ? 'toBeVisible' : 'toBeHidden']()
@@ -171,7 +171,7 @@ try {
   await pin.getByLabel('PIN do anfitrião', { exact: true }).fill('4321')
   await pin.getByRole('button', { name: 'Liberar controles', exact: true }).click()
   await expect(pin).toBeHidden()
-  await page.setViewportSize({ width: 1024, height: 900 })
+  await page.setViewportSize({ width: 1280, height: 900 })
   await expect(trigger).toBeHidden()
   await expect(
     page.locator('header').getByRole('button', { name: 'Sair do admin', exact: true }),

@@ -543,6 +543,67 @@ cliente **e** no servidor.
 | IP da LAN muda no DHCP | QR impresso morre | QR gerado em runtime; reserva de DHCP no roteador é o conserto definitivo |
 | Acento em `QRokê` vazando para contexto técnico | caminho ou URL quebrado | Regra fixada na seção **Nome**: `qroke` em diretório, pacote, hostname e repositório |
 
+## Integração futura — Spotify Premium via Spotify Connect
+
+**Status: planejada, ainda não implementada.** Registrada em 30/09/2026 a pedido do usuário.
+
+**Objetivo:** continuar ouvindo no mesmo celular ao sair da aba do QRokê ou bloquear a tela.
+O aplicativo oficial do Spotify será responsável pelo áudio; o QRokê organizará a festa e
+controlará o dispositivo por Spotify Connect. A VPS coordenará a fila e os comandos, sem
+capturar, armazenar ou retransmitir o áudio do Spotify. A PWA não será o motor de reprodução
+deste fluxo.
+
+### Etapas pendentes
+
+- [ ] Validar primeiro o acesso à API com uma conta Spotify Premium e um aplicativo de
+  desenvolvimento. Conferir novamente os limites e as regras antes da implementação.
+- [ ] Implementar OAuth no domínio qroke.com.br, com permissões mínimas para consultar e
+  controlar a reprodução. Guardar tokens cifrados no servidor, vinculados ao usuário e à
+  festa; tratar renovação, revogação, desconexão e encerramento da sessão.
+- [ ] Acrescentar o adaptador Spotify e a modalidade de reprodução por Connect à arquitetura
+  de [plataformas e canais](media-platforms.md), usando rotas
+  /api/f/:partyId/media/spotify/... e o canal music. Habilitar a opção somente após validar
+  o fluxo completo.
+- [ ] Permitir ao anfitrião conectar sua conta Premium, listar dispositivos e escolher o
+  aplicativo Spotify do próprio celular ou outro dispositivo compatível. Orientar a abrir
+  o Spotify quando nenhum dispositivo estiver disponível.
+- [ ] Coordenar avanço, pausa, retomada, posição e troca de faixa no servidor, inclusive
+  quando nenhuma aba do QRokê estiver ativa. Garantir uma coordenação por festa entre
+  réplicas, sem comandos duplicados após reconexão ou reinício.
+- [ ] Tratar dispositivo indisponível, controle feito fora do QRokê, token vencido, limite da
+  API e tentativa de usar a mesma conta em festas simultâneas. Definir a transição entre
+  Spotify e YouTube/biblioteca sem presumir que toda fonte oferece as mesmas capacidades.
+- [ ] Validar o protótipo em celulares reais e, separadamente, a elegibilidade da integração
+  para acesso público antes de habilitá-la para todos.
+
+### Critérios de aceite
+
+No Android e no iPhone, com Spotify instalado e a conta/dispositivo autorizados: iniciar
+a reprodução pelo QRokê, trocar de aplicativo e bloquear a tela; pelo menos três músicas
+devem avançar pela fila sem depender de uma aba aberta. Ao voltar ao QRokê, música, posição
+e controles devem refletir a reprodução real. Testar também reconexão, troca de aparelho,
+isolamento entre festas e recuperação do servidor sem duplicar comandos.
+
+### Dependências e limites
+
+As regras consultadas em 30/09/2026 limitam aplicativos Spotify em desenvolvimento a
+5 contas autenticadas previamente autorizadas, com Premium exigido para o dono do aplicativo;
+as APIs de controle de reprodução também exigem Premium do usuário. A expansão para o
+público depende da elegibilidade e aprovação do Spotify. Não considerar esse acesso aprovado
+apenas porque o protótipo funcionou.
+
+YouTube Premium continua sem habilitar reprodução em segundo plano no player incorporado
+do QRokê. Esta entrega futura é específica do Spotify; não representa retransmissão do
+YouTube pela VPS, nem conclusão de uma integração com Deezer.
+
+Referências oficiais para revalidar ao iniciar:
+[controle e transferência de reprodução](https://developer.spotify.com/documentation/web-api/reference/transfer-a-users-playback),
+[limites e aprovação da API](https://developer.spotify.com/documentation/web-api/concepts/quota-modes),
+[políticas do Spotify](https://developer.spotify.com/policy) e
+[regras do player do YouTube](https://developers.google.com/youtube/terms/developer-policies#i-additional-prohibitions).
+
+---
+
 ## Roadmap — depois da v1
 
 Spotify (busca e playback, exige Premium do dono do app) · Deezer como catálogo complementar ·

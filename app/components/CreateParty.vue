@@ -5,6 +5,7 @@ const name = ref(''),
   confirmation = ref(''),
   failure = ref(''),
   busy = ref(false)
+const joinOpen = useState('qroke:join-open', () => false)
 const ready = ref(false),
   parties = ref<MyParty[]>([]),
   now = ref(Date.now()),
@@ -90,6 +91,10 @@ onBeforeUnmount(() => {
       <section class="home-intro">
         <h1>Sua festa.<br />Sua música.</h1>
         <p>Crie, compartilhe e dê o play.</p>
+        <button type="button" class="home-join" :disabled="!ready" @click="joinOpen = true">
+          <AppIcon name="qr" /> Entrar na festa
+        </button>
+        <small class="home-join-hint">Cole o link ou escaneie o QR Code.</small>
         <section v-if="active.length" class="my-parties" aria-labelledby="my-parties-title">
           <h2 id="my-parties-title">Suas festas</h2>
           <ul>
@@ -153,7 +158,6 @@ onBeforeUnmount(() => {
             {{ busy ? 'Criando sua festa…' : 'Criar festa' }}
           </button>
         </form>
-        <p class="invite-hint">Tem um convite? Abra o link ou escaneie o QR.</p>
       </section>
     </div>
   </main>
@@ -171,6 +175,21 @@ onBeforeUnmount(() => {
   gap: 24px;
   padding-bottom: 28px;
   border-bottom: 1px solid var(--line);
+}
+.home-join {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  margin-top: 24px;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.home-join-hint {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
 }
 .home-label {
   font-size: 10px;
@@ -237,12 +256,6 @@ onBeforeUnmount(() => {
   color: var(--on-accent);
   font-weight: 700;
   min-height: 50px;
-}
-.invite-hint {
-  border-top: 1px solid var(--line);
-  margin-top: 24px;
-  padding-top: 20px;
-  font-size: 12px;
 }
 .my-parties {
   margin-top: 44px;
