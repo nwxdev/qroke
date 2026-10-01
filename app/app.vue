@@ -16,6 +16,7 @@ watch(
   <JoinPartyDialog :key="'join:' + id" />
   <PartySessionBanner v-if="active" :key="'banner:' + id" />
   <NuxtPage :transition="{ name: 'scene', mode: 'out-in' }" />
+  <ClientOnly><AnalyticsConsent /></ClientOnly>
   <ClientOnly><MotionFeedback :key="'motion:' + id" /></ClientOnly>
   <PartyRuntime v-if="active" :key="id || 'legacy'" />
 </template>
