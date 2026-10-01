@@ -20,11 +20,14 @@ function updatePlacement() {
     if (observedStage) resize?.observe(observedStage)
   }
   const box = stage?.getBoundingClientRect()
+  const header = document.querySelector<HTMLElement>('.player-header')?.getBoundingClientRect()
   docked.value =
     !!menuOpen.value ||
     !!joinOpen.value ||
     !!adminDialogOpen.value ||
     !box ||
+    // The fixed header lives in the page stacking context; dock before the video overlaps it.
+    (!!header && box.top < header.bottom) ||
     box.bottom < 220 ||
     box.top > innerHeight - 180
   bounds.value =

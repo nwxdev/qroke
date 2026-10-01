@@ -137,19 +137,21 @@ try {
     expect(afterScroll.y).toBe(beforeScroll.y)
     expect(afterScroll.x).toBe(beforeScroll.x)
     await page.evaluate(() => window.scrollTo(0, 0))
-    expect(
-      await page.evaluate(() => {
-        const a = document.querySelector('iframe').getBoundingClientRect()
-        const b = document.querySelector('.karaoke-qr').getBoundingClientRect()
-        return (
-          b.left >= 0 &&
-          b.right <= innerWidth &&
-          b.bottom <= innerHeight &&
-          !(a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) &&
-          document.documentElement.scrollWidth <= innerWidth
-        )
-      }),
-    ).toBe(true)
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const a = document.querySelector('iframe').getBoundingClientRect()
+          const b = document.querySelector('.karaoke-qr').getBoundingClientRect()
+          return (
+            b.left >= 0 &&
+            b.right <= innerWidth &&
+            b.bottom <= innerHeight &&
+            !(a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) &&
+            document.documentElement.scrollWidth <= innerWidth
+          )
+        }),
+      )
+      .toBe(true)
     await page.screenshot({ path: 'test-results/karaoke-qr-' + width + '.png', fullPage: true })
   }
   await page.setViewportSize({ width: 1440, height: 1000 })
