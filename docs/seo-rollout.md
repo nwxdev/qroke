@@ -1,14 +1,14 @@
 O QRokê precisa publicar as melhorias de SEO e concluir a configuração das plataformas para acompanhar a descoberta e o uso do produto. Esta issue é o roteiro operacional: preparar o site, verificar o domínio, enviar o sitemap, integrar GA4 e validar as prévias sociais.
 
-**Implementação:** animações, quatro páginas públicas com HTML no servidor, metadados, sitemap e cartão social preparados na branch codex/qroke-motion. O estado da publicação e das verificações externas é acompanhado na [issue #12](https://github.com/nwxdev/qroke/issues/12). Em 1º de outubro de 2026, o responsável informou que o site já foi verificado no Google Search Console. A integração de Analytics descrita abaixo ainda precisa ser implementada e ativada com o ID da propriedade.
+**Implementação:** animações, páginas públicas com HTML no servidor, metadados, sitemap e cartão social publicados. O sitemap inclui as quatro páginas de conteúdo e o mapa navegável em /mapa-do-site. O estado da publicação e das verificações externas é acompanhado na [issue #12](https://github.com/nwxdev/qroke/issues/12). Em 1º de outubro de 2026, o responsável informou que o site já foi verificado no Google Search Console. A integração de Analytics descrita abaixo ainda precisa ser implementada e ativada com o ID da propriedade.
 
 ## 1. Publicar a base técnica
 
 - [ ] Revisar e publicar a versão que inclui `shared/site.ts`, `shared/site-content.ts`, `useSiteSeo`, as páginas públicas e `public/brand/qroke-share-v2.jpg`.
 - [ ] Em produção, manter `QROKE_ACCESS_REQUIRED=true` e a URL pública `https://qroke.com.br`. Em execução Nuxt compilada, conferir `NUXT_PUBLIC_PARTY_URL=https://qroke.com.br`; se o inicializador preencher valores a partir de `QROKE_PUBLIC_URL`, validar o valor efetivo. Nunca usar o domínio de produção como configuração de uma instalação de teste.
 - [ ] Configurar no proxy redirecionamento permanente de HTTP e www para `https://qroke.com.br`, preservando caminho e parâmetros necessários. Conferir certificado TLS e ausência de desafios de login/CAPTCHA nas páginas públicas e na imagem.
-- [ ] Validar retorno 200 para `/`, `/como-funciona`, `/karaoke-online` e `/perguntas-frequentes`; 404 para URL inexistente.
-- [ ] Conferir que `/robots.txt` permite as páginas públicas e aponta para `https://qroke.com.br/sitemap.xml`. O sitemap deve listar somente as quatro páginas públicas.
+- [ ] Validar retorno 200 para `/`, `/como-funciona`, `/karaoke-online`, `/perguntas-frequentes` e `/mapa-do-site`; 404 para URL inexistente.
+- [ ] Conferir que `/robots.txt` permite as páginas públicas e aponta para `https://qroke.com.br/sitemap.xml`. O sitemap deve listar somente as páginas públicas canônicas cadastradas em shared/site.ts, incluindo /mapa-do-site. Cada entrada tem lastmod com a data da última alteração relevante de conteúdo.
 - [ ] Manter `/entrar`, `/f/**`, busca, player, QR, administração e APIs fora da indexação. Convites continuam protegidos por acesso; seus metadados não incluem nomes, PINs ou tokens.
 - [ ] Conferir o HTML sem JavaScript: título, descrição, canonical sem query/hash, Open Graph e JSON-LD. Validar também em PageSpeed Insights e no Rich Results Test. FAQ visível e schema coerente não garantem um resultado enriquecido.
 
@@ -18,7 +18,7 @@ O QRokê precisa publicar as melhorias de SEO e concluir a configuração das pl
 2. [ ] Adicionar propriedade do tipo **Domínio**: `qroke.com.br`, sem protocolo ou caminho.
 3. [ ] Copiar o registro TXT fornecido pelo Google e adicioná-lo ao DNS do domínio. Não inventar o valor nem remover registros existentes. Voltar ao Search Console e verificar após propagação; manter o registro.
 4. [ ] Em **Sitemaps**, enviar `https://qroke.com.br/sitemap.xml` e confirmar a leitura.
-5. [ ] Em **Inspeção de URL**, testar ao vivo as quatro páginas públicas. Conferir o canonical reconhecido, possibilidade de indexação e HTML; solicitar indexação das páginas novas.
+5. [ ] Em **Inspeção de URL**, testar ao vivo as cinco páginas públicas. Conferir o canonical reconhecido, possibilidade de indexação e HTML; solicitar indexação das páginas novas.
 6. [ ] Conferir relatórios de indexação, HTTPS, segurança e ações manuais. Registrar os motivos de exclusões inesperadas.
 7. [ ] Após haver dados, acompanhar impressões, cliques, CTR, posição e páginas de entrada. Não solicitar indexação de convites ou repetir pedidos diariamente.
 
@@ -82,10 +82,30 @@ Referência técnica: [Open Graph](https://ogp.me/).
 
 ## Critérios de conclusão
 
-- [ ] Quatro páginas públicas publicadas e rastreáveis; convites e controles continuam não indexáveis.
+- [ ] Cinco páginas públicas publicadas e rastreáveis; convites e controles continuam não indexáveis.
 - [ ] Sitemap aceito e domínio verificado; evidências anexadas sem credenciais.
 - [ ] GA4 integrado, testado com preferência de medição e sem dados pessoais; Search Console vinculado.
 - [ ] Prévias sociais conferidas nos aplicativos escolhidos, com limitações registradas.
 - [ ] Registrar a data da publicação e a linha de base das métricas. Reavaliar resultados em 7, 14 e 30 dias, sem tratar esses prazos como garantia de indexação.
 
 As verificações locais ficam em `scripts/browser-seo-check.mjs`; gerar novamente o cartão com `node scripts/generate-social-card.mjs`. Esta issue não agenda execuções automáticas.
+
+## Manutenção do sitemap
+
+O XML em /sitemap.xml e os metadados usam o cadastro explícito de páginas públicas
+em shared/site.ts. O mapa navegável em /mapa-do-site mostra os nomes, descrições,
+links e datas dessas páginas. Ao criar uma nova página pública, adicionar sua
+rota, título, descrição e lastModified ao cadastro e um link de navegação relevante.
+
+Atualizar lastModified quando o conteúdo principal, os dados estruturados ou os
+links da página mudarem de forma relevante. A data inicial é 2026-10-01, quando as
+páginas foram publicadas. Não usar a hora da requisição ou do deploy: uma correção
+sem mudança de conteúdo não torna todas as páginas novas.
+
+O arquivo não lista URLs privadas de festas, convites, buscas, player, administração,
+APIs, redirecionamentos, parâmetros ou fragmentos. Títulos e descrições pertencem
+ao HTML das páginas; não criar tags XML que o protocolo de sitemap não reconhece.
+Não são usadas priority e changefreq, que o Google ignora. O sitemap XML continua
+na mesma URL informada ao Search Console.
+
+Referência: https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap

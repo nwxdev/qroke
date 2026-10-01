@@ -17,10 +17,12 @@ defineProps<{ guide: SiteGuide }>()
         >
       </MotionReveal>
       <div class="guide-sections">
-        <section v-for="section in guide.sections" :key="section.title">
-          <h2>{{ section.title }}</h2>
-          <p>{{ section.text }}</p>
-        </section>
+        <slot>
+          <section v-for="section in guide.sections" :key="section.title">
+            <h2>{{ section.title }}</h2>
+            <p>{{ section.text }}</p>
+          </section>
+        </slot>
       </div>
     </main>
     <PublicSiteLinks />
