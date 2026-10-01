@@ -79,3 +79,30 @@ Manifesto standalone, convite de instalação, instruções para iPhone e servic
 O cache contém apenas a página offline e ícones. APIs, OAuth, convites e páginas de festas
 não são armazenados. Atualizações não forçam recarga durante a reprodução.
 A instalação não altera as restrições de segundo plano do YouTube.
+
+## Entrada por link ou câmera
+
+O botão **Entrar na festa** aparece na página inicial e no menu; a tela de PIN também
+oferece a entrada por convite. A câmera só é solicitada após **Escanear QR Code**, sem
+microfone. O leitor processa os frames localmente e encerra todas as faixas ao ler,
+fechar, mudar de tela ou colocar o aplicativo em segundo plano. Ao retornar, o usuário
+retoma a câmera explicitamente.
+
+HTTPS e permissão de câmera são necessários no site e na PWA. Recusa, câmera ausente,
+ocupada ou navegador incompatível têm orientação e alternativa por link; a interface
+não tenta solicitar permissão repetidamente. O QR deve pertencer à origem atual, e a
+API continua validando o convite, a validade da festa e a permissão do participante.
+O token não é copiado para a URL de destino. Abrir o leitor mantém o player; trocar
+de festa no aparelho que está tocando exige confirmação.
+
+Os testes de navegador usam vídeo de câmera simulado com QR real, incluindo encerramento
+de faixas, resposta de permissão atrasada e orientações da PWA. A validação física no
+Safari/iOS e Chrome/Android deve complementar esses testes, especialmente para ajustes
+de permissão do sistema e seleção da câmera traseira.
+
+## Próxima integração planejada
+
+O [plano de implementação](plano.md#integração-futura--spotify-premium-via-spotify-connect)
+registra a integração futura com Spotify Premium via Spotify Connect, incluindo controle
+pelo servidor, reprodução no aplicativo oficial e validação em segundo plano. A integração
+permanece pendente; as entradas reservadas não significam suporte já disponível.

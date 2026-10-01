@@ -2,6 +2,7 @@
 const { state, isPlayer, adminDialogOpen, soundDevice, device } = useParty()
 const { href } = usePartyRoute()
 const menuOpen = useState('qroke:menu-open', () => false)
+const joinOpen = useState('qroke:join-open', () => false)
 const root = ref<HTMLElement | null>(null)
 const media = ref<{ activate: () => Promise<void> } | null>(null)
 const docked = ref(true)
@@ -17,6 +18,7 @@ function place() {
     const box = stage?.getBoundingClientRect()
     docked.value =
       !!menuOpen.value ||
+      !!joinOpen.value ||
       !!adminDialogOpen.value ||
       !box ||
       box.bottom < 220 ||
@@ -41,7 +43,7 @@ async function returnToPlayer() {
   place()
 }
 watch(
-  [() => route.path, isPlayer, menuOpen, adminDialogOpen],
+  [() => route.path, isPlayer, menuOpen, joinOpen, adminDialogOpen],
   async () => {
     await nextTick()
     place()

@@ -12,6 +12,7 @@ watch(
 </script>
 <template>
   <PwaInstall />
+  <JoinPartyDialog :key="'join:' + id" />
   <PartySessionBanner v-if="active" :key="'banner:' + id" /><NuxtPage /><PartyRuntime
     v-if="active"
     :key="id || 'legacy'"

@@ -7,6 +7,7 @@ const warningKind = useState<'network' | 'activate' | 'load' | 'other'>(
   () => 'other',
 )
 const menuOpen = useState('qroke:menu-open', () => false)
+const joinOpen = useState('qroke:join-open', () => false)
 const retrying = ref(false)
 const offline = computed(() => !connected.value && !!state.value)
 const retryLabel = computed(() =>
@@ -32,7 +33,7 @@ function retryMedia() {
 </script>
 <template>
   <Teleport to="body">
-    <aside v-show="!menuOpen" class="party-alerts" aria-label="Avisos da festa">
+    <aside v-show="!menuOpen && !joinOpen" class="party-alerts" aria-label="Avisos da festa">
       <div v-if="offline" class="alert-card connection-alert" role="alert">
         <AppIcon name="warning" />
         <div class="alert-content">

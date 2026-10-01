@@ -96,7 +96,33 @@ try {
   expect(video.height).toBeGreaterThanOrEqual(200)
   expect(video.y + video.height).toBeLessThanOrEqual(844)
   await page.screenshot({ path: 'test-results/continuity-menu-mobile.png', animations: 'disabled' })
-  await page.getByRole('button', { name: 'Fechar menu', exact: true }).click()
+  await page.getByRole('button', { name: 'Entrar na festa', exact: true }).click()
+  const join = page.getByRole('dialog', { name: 'Entrar na festa', exact: true })
+  await expect(join).toBeVisible()
+  await expect(page.locator('.persistent-player.is-docked')).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => window.qrokePlaying && window.originalFrame === document.querySelector('iframe'),
+    ),
+  ).toBe(true)
+  const joinedVideo = await page.locator('iframe').boundingBox()
+  expect(joinedVideo.width).toBeGreaterThanOrEqual(200)
+  expect(joinedVideo.height).toBeGreaterThanOrEqual(200)
+  expect(joinedVideo.y + joinedVideo.height).toBeLessThanOrEqual(844)
+  await join
+    .getByLabel('Link da festa', { exact: true })
+    .fill(fixture.base + '/f/another-party#convite=token')
+  await join.getByRole('button', { name: 'Entrar com link', exact: true }).click()
+  await expect(join.getByText('Este aparelho está tocando.', { exact: false })).toBeVisible()
+  await join.getByRole('button', { name: 'Continuar nesta festa', exact: true }).click()
+  expect(
+    await page.evaluate(
+      () => window.qrokePlaying && window.originalFrame === document.querySelector('iframe'),
+    ),
+  ).toBe(true)
+  await page.screenshot({ path: 'test-results/continuity-join-mobile.png', animations: 'disabled' })
+  await join.getByRole('button', { name: 'Fechar entrada na festa', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Abrir menu', exact: true })).toBeFocused()
   await page.screenshot({ path: 'test-results/continuity-player-mobile.png', fullPage: true })
   // An empty upcoming queue retains a horizontally reachable search card.
   await page.setViewportSize({ width: 1440, height: 1000 })
