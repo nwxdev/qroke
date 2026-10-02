@@ -66,8 +66,18 @@ try {
     window.originalFrame = document.querySelector('iframe')
     window.documentMarker = {}
   })
-  for (const name of ['Player', 'Buscar músicas', 'Anfitrião', 'Player']) {
+  for (const [name, path] of [
+    ['Player', '/player'],
+    ['Buscar músicas', '/busca'],
+    ['Anfitrião', '/host'],
+    ['Player', '/player'],
+  ]) {
+    // Await the destination scene before clicking again; playback stays true throughout.
+    await expect(page.locator('header')).toHaveCount(1)
     await page.locator('header').getByRole('link', { name, exact: true }).click()
+    await expect(page).toHaveURL(fixture.base + path)
+    await expect(page.locator('.scene-enter-active, .scene-leave-active')).toHaveCount(0)
+    await expect(page.locator('header')).toHaveCount(1)
     await expect.poll(() => page.evaluate(() => window.qrokePlaying)).toBe(true)
     expect(
       await page.evaluate(
