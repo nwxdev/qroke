@@ -3,7 +3,7 @@ export const LEGAL_OPERATOR = {
   cnpj: '47.049.695/0001-60',
   email: 'contato@nwx.ag',
 }
-export const LEGAL_UPDATED = '2026-10-01'
+export const LEGAL_UPDATED = '2026-10-02'
 export const LEGAL_LINKS = [
   { path: '/termos-de-uso', label: 'Termos de Uso' },
   { path: '/politica-de-privacidade', label: 'Política de Privacidade' },

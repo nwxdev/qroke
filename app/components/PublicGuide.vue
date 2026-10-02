@@ -12,7 +12,7 @@ withDefaults(defineProps<{ guide: SiteGuide; showCta?: boolean }>(), { showCta: 
         <span class="eyebrow">{{ guide.eyebrow }}</span>
         <h1>{{ guide.title }}</h1>
         <p>{{ guide.intro }}</p>
-        <NuxtLink v-if="showCta" class="primary-button guide-cta" to="/#criar-festa"
+        <NuxtLink v-if="showCta" class="primary-button guide-cta" to="/criar-festa"
           >Criar minha festa <span aria-hidden="true">↗</span></NuxtLink
         >
       </MotionReveal>

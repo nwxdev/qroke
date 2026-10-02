@@ -81,7 +81,16 @@ const sections = [
     </section>
     <section id="uso-permitido">
       <h2>4. Regras de uso</h2>
+      <p>
+        O QRokê é destinado à organização de músicas e karaokê. Não oferece ferramentas para gerar
+        ou editar imagens por inteligência artificial.
+      </p>
       <ul>
+        <li>
+          É proibido usar o QRokê ou suas integrações com APIs do Google para criar, solicitar ou
+          compartilhar conteúdo íntimo sem consentimento, inclusive imagens ou vídeos gerados ou
+          alterados por inteligência artificial.
+        </li>
         <li>
           Respeite os participantes: não pratique assédio, discriminação, ameaças, fraude ou
           divulgação indevida de dados pessoais.

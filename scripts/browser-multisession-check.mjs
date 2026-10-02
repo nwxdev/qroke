@@ -26,6 +26,7 @@ try {
     a.getByRole('heading', { name: 'Música e karaokê para sua festa.', level: 1 }),
   ).toBeVisible()
   await a.screenshot({ path: 'test-results/multisession-home-desktop.png', fullPage: true })
+  await a.getByRole('link', { name: 'CRIAR FESTA', exact: true }).click()
   await a.getByLabel('Nome da festa', { exact: true }).fill('Sextou na casa da Ana')
   await a.getByLabel('PIN do administrador', { exact: true }).fill('123456')
   await a.getByLabel('Confirmar PIN').fill('654321')
@@ -50,6 +51,7 @@ try {
   await expect(b.getByRole('heading', { name: 'Suas festas' })).toBeVisible()
   await expect(b.getByRole('link', { name: 'Retomar festa Sextou na casa da Ana' })).toBeVisible()
   await b.screenshot({ path: 'test-results/multisession-home-mobile.png', fullPage: true })
+  await b.getByRole('link', { name: 'CRIAR FESTA', exact: true }).click()
   await b.getByLabel('Nome da festa', { exact: true }).fill('Karaokê do sábado')
   await b.getByLabel('PIN do administrador', { exact: true }).fill('654321')
   await b.getByLabel('Confirmar PIN').fill('654321')

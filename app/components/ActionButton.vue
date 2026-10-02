@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type AppIcon from './AppIcon.vue'
-withDefaults(
+import { NuxtLink } from '#components'
+const props = withDefaults(
   defineProps<{
     icon?: InstanceType<typeof AppIcon>['$props']['name']
     variant?: 'primary' | 'secondary'
     type?: 'button' | 'submit'
+    to?: string
     disabled?: boolean
     busy?: boolean
   }>(),
@@ -15,6 +17,10 @@ const pulse = ref(0)
 const active = ref(false)
 let timer: ReturnType<typeof setTimeout> | undefined
 function activate(event: MouseEvent) {
+  if (props.disabled || props.busy) {
+    event.preventDefault()
+    return
+  }
   pulse.value++
   active.value = true
   clearTimeout(timer)
@@ -26,11 +32,14 @@ function activate(event: MouseEvent) {
 onBeforeUnmount(() => clearTimeout(timer))
 </script>
 <template>
-  <button
+  <component
+    :is="to ? NuxtLink : 'button'"
+    :to="to"
     class="action-button"
     :class="['action-button--' + variant, { 'action-button--busy': busy }]"
-    :type="type"
-    :disabled="disabled || busy"
+    :type="to ? undefined : type"
+    :disabled="to ? undefined : disabled || busy"
+    :aria-disabled="disabled || busy || undefined"
     :aria-busy="busy || undefined"
     @click="activate"
   >
@@ -42,10 +51,14 @@ onBeforeUnmount(() => clearTimeout(timer))
       <span><slot /></span>
       <AppIcon v-if="variant === 'primary'" class="action-arrow" name="arrow-right" />
     </span>
-  </button>
+  </component>
 </template>
 <style scoped>
 .action-button {
+  display: block;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
   position: relative;
   isolation: isolate;
   overflow: hidden;

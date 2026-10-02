@@ -1,0 +1,3 @@
+<template>
+  <CreateParty creating />
+</template>

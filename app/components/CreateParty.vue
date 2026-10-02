@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PartyInfo, MyParty } from '#shared/parties'
+const props = defineProps<{ creating?: boolean }>()
 const name = ref(''),
   pin = ref(''),
   confirmation = ref(''),
@@ -7,18 +8,6 @@ const name = ref(''),
   busy = ref(false)
 const joinOpen = useState('qroke:join-open', () => false)
 const nameInput = ref<HTMLInputElement | null>(null)
-function prepareParty() {
-  // Keep the button mounted and clickable; only its icon/overlay animate.
-  nameInput.value?.focus({ preventScroll: true })
-  nameInput.value?.scrollIntoView({
-    behavior:
-      matchMedia('(prefers-reduced-motion: reduce)').matches ||
-      document.documentElement.dataset.motion === 'off'
-        ? 'auto'
-        : 'smooth',
-    block: 'center',
-  })
-}
 const nameReady = computed(() => name.value.trim().length >= 2)
 const pinReady = computed(() => /^[0-9]{6}$/.test(pin.value))
 const confirmationReady = computed(() => pinReady.value && confirmation.value === pin.value)
@@ -85,6 +74,7 @@ const visible = () => {
   if (!document.hidden) void load()
 }
 onMounted(() => {
+  if (props.creating) nameInput.value?.focus({ preventScroll: true })
   void load()
   refreshTimer = setInterval(() => {
     if (!document.hidden) void load()
@@ -106,13 +96,14 @@ onBeforeUnmount(() => {
       <BrandLogo />
       <div class="home-preferences"><MotionToggle compact /><ThemeToggle /></div>
     </header>
-    <div class="home-grid">
-      <MotionReveal as="section" class="home-intro" immediate>
-        <span class="home-kicker"><AppIcon name="sparkles" /> SUA GALERA. SEU PALCO.</span>
+    <div class="home-grid" :class="{ 'home-grid--creating': creating }">
+      <MotionReveal v-if="!creating" as="section" class="home-intro" immediate>
+        <span class="home-kicker"><AppIcon name="sparkles" /> QRokê · SUA GALERA. SEU PALCO.</span>
         <h1>Música e karaokê<br /><span>para sua festa.</span></h1>
         <p>
-          Um QR Code, muitas boas escolhas. Junte a galera para pedir músicas, votar na fila e
-          soltar a voz. A próxima favorita pode vir de qualquer pessoa.
+          O QRokê é um aplicativo de música e karaokê para festas. Crie uma fila compartilhada,
+          convide pelo QR Code e deixe a galera pedir músicas e votar nas próximas. Funciona no
+          navegador do celular, computador ou TV.
         </p>
         <div class="home-actions">
           <ActionButton class="home-join" variant="secondary" icon="qr" @click="joinOpen = true">
@@ -121,12 +112,7 @@ onBeforeUnmount(() => {
           <small class="home-join-hint"
             >Já tem um convite? Escaneie o QR Code ou cole o link.</small
           >
-          <ActionButton
-            class="home-create"
-            icon="sparkles"
-            aria-controls="criar-festa"
-            @click="prepareParty"
-          >
+          <ActionButton class="home-create" icon="sparkles" to="/criar-festa" id="criar-festa">
             CRIAR FESTA
           </ActionButton>
           <small class="home-create-hint">Você cria o palco. A galera escolhe a trilha.</small>
@@ -157,9 +143,47 @@ onBeforeUnmount(() => {
         </section>
       </MotionReveal>
       <MotionReveal
+        v-if="!creating"
+        as="section"
+        class="party-preview"
+        immediate
+        aria-labelledby="preview-title"
+      >
+        <span class="create-card-icon"><AppIcon name="microphone" /></span>
+        <span class="eyebrow">UMA FESTA, MUITAS VOZES</span>
+        <h2 id="preview-title">A próxima música<br />é com vocês.</h2>
+        <ol class="party-steps">
+          <li>
+            <span class="step-number">1</span>
+            <div>
+              <h3>Crie e convide</h3>
+              <p>Dê um nome à festa e compartilhe o convite por QR Code.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">2</span>
+            <div>
+              <h3>Escolham as músicas</h3>
+              <p>Busquem no YouTube, adicionem à fila e votem nas favoritas.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">3</span>
+            <div>
+              <h3>Soltem a voz</h3>
+              <p>O anfitrião controla o player. A galera participa pelo celular.</p>
+            </div>
+          </li>
+        </ol>
+        <p class="preview-note">
+          <AppIcon name="sparkles" /> Para começar uma festa, não é preciso conectar uma conta
+          Google.
+        </p>
+      </MotionReveal>
+      <MotionReveal
+        v-if="creating"
         as="section"
         class="create-party-card"
-        id="criar-festa"
         immediate
         aria-labelledby="create-title"
       >
@@ -167,7 +191,8 @@ onBeforeUnmount(() => {
           <span class="create-card-icon"><AppIcon name="microphone" /></span>
           <span class="create-card-badge">O SHOW COMEÇA AQUI</span>
         </div>
-        <h2 id="create-title">Dê um nome à sua festa.</h2>
+        <NuxtLink class="create-back" to="/">← Conheça o QRokê</NuxtLink>
+        <h1 id="create-title">Dê um nome à sua festa.</h1>
         <p>Prepare o convite e chame a galera. A festa fica disponível por até 24 horas.</p>
         <PartySetupProgress
           :name-ready="nameReady"
@@ -221,7 +246,7 @@ onBeforeUnmount(() => {
         </form>
       </MotionReveal>
     </div>
-    <section class="home-about" aria-labelledby="home-about-title">
+    <section v-if="!creating" class="home-about" aria-labelledby="home-about-title">
       <span class="eyebrow">DO PRIMEIRO PEDIDO AO ÚLTIMO REFRÃO</span>
       <h2 id="home-about-title">Todo mundo ajuda a escolher a trilha.</h2>
       <p>
@@ -249,6 +274,39 @@ onBeforeUnmount(() => {
       <div class="home-about-links">
         <NuxtLink to="/karaoke-online">Prepare seu karaokê</NuxtLink
         ><NuxtLink to="/perguntas-frequentes">Tire suas dúvidas</NuxtLink>
+      </div>
+    </section>
+    <section v-if="!creating" class="home-google" aria-labelledby="google-title">
+      <div>
+        <span class="eyebrow">SUA CONTA, SUA ESCOLHA</span>
+        <h2 id="google-title">Por que conectar o Google?</h2>
+        <p>
+          A conexão é opcional e permite consultar suas playlists do YouTube e escolher músicas para
+          a festa. O QRokê solicita acesso de leitura ao YouTube; não altera suas playlists nem
+          publica vídeos na sua conta.
+        </p>
+        <p>
+          Usamos títulos, identificadores, canais e miniaturas para mostrar as playlists e seus
+          vídeos. Os itens que você decide adicionar aparecem na fila da festa. A busca de vídeos
+          públicos não exige que você conecte sua conta.
+        </p>
+      </div>
+      <div class="home-data-card">
+        <h3>Transparência sobre seus dados</h3>
+        <p>
+          A senha da sua conta é informada somente ao Google. As credenciais de autorização são
+          protegidas no servidor do QRokê. Não solicitamos acesso ao Gmail, Drive ou contatos.
+        </p>
+        <p>
+          O QRokê não oferece geração ou edição de imagens por inteligência artificial e não usa
+          dados das APIs do Google para treinar modelos de IA.
+        </p>
+        <p>
+          Saiba o que coletamos, como usamos e por quanto tempo guardamos os dados na
+          <NuxtLink to="/politica-de-privacidade">Política de Privacidade</NuxtLink>. Você pode
+          desconectar a conta e revogar a autorização seguindo as
+          <NuxtLink to="/exclusao-de-dados">instruções sobre seus dados</NuxtLink>.
+        </p>
       </div>
     </section>
     <PublicSiteLinks />
@@ -398,7 +456,7 @@ onBeforeUnmount(() => {
   letter-spacing: 1px;
   color: var(--muted);
 }
-.create-party-card h2 {
+.create-party-card h1 {
   font-size: 26px;
   margin: 18px 0 8px;
   letter-spacing: -0.8px;
@@ -575,6 +633,121 @@ onBeforeUnmount(() => {
   }
   .create-party-card {
     padding: 18px;
+  }
+}
+
+.home-grid--creating {
+  grid-template-columns: minmax(0, 540px);
+  justify-content: center;
+}
+.create-back {
+  display: inline-block;
+  margin-top: 20px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.party-preview {
+  padding: 30px;
+  border-radius: 28px;
+  border: 1px solid var(--line);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--accent) 10%, var(--surface)),
+    var(--surface) 65%
+  );
+  box-shadow: var(--shadow);
+}
+.party-preview > .eyebrow {
+  display: block;
+  margin-top: 28px;
+}
+.party-preview > h2 {
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.2;
+  margin: 14px 0 28px;
+}
+.party-steps {
+  display: grid;
+  gap: 24px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.party-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.step-number {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 800;
+}
+.party-steps h3 {
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+.party-steps p,
+.preview-note {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.preview-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 26px;
+}
+.preview-note .app-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+  margin-top: 2px;
+}
+.home-google {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  padding-top: 40px;
+  margin-top: 44px;
+  border-top: 1px solid var(--line);
+}
+.home-google h2 {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 16px 0;
+}
+.home-google p {
+  font-size: 14px;
+  line-height: 1.8;
+  margin-top: 14px;
+}
+.home-google a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.home-data-card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+@media (max-width: 760px) {
+  .home-google {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .party-preview {
+    padding: 24px;
   }
 }
 </style>
