@@ -60,7 +60,7 @@ A primeira instalação usa a VPS atual. Duas instâncias não protegem contra f
 
 ## Medição de visitas
 
-A tag GA4 só é carregada depois do aceite em “Ajude o QRokê a melhorar”.
+A tag GA4 só é carregada depois do aceite em “Cookies opcionais”. O aviso compacto fica centralizado na parte inferior, com aceitar/recusar lado a lado e detalhes expansíveis; a preferência pode ser revista pelo rodapé.
 O rodapé das páginas públicas permite reabrir “Preferências de medição”.
 A escolha é salva neste navegador e sincronizada entre abas; recusar interrompe
 a medição e remove os cookies host-only _ga. Isso não exclui dados já coletados.
