@@ -60,6 +60,9 @@ try {
   const searchPath = '/api/f/' + partyId + '/media/youtube/search'
   const nextResponse = () =>
     page.waitForResponse((response) => new URL(response.url()).pathname === searchPath)
+  // Icon names must never appear as text when icon fonts are unavailable.
+  await expect(submit).toHaveText('Buscar')
+  await expect(submit.locator('svg')).toBeVisible()
   await input.fill('cpm22')
 
   // No API mock here: this must reach the compiled server's real scoped YouTube route.

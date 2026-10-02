@@ -75,9 +75,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
         no-caps
         :loading="pending"
         :disable="occupied || pin.length < pinLength"
-        label="Liberar controles"
-        icon="lock_open"
-      />
+      >
+        <AppIcon name="unlock" class="on-left" /><span>Liberar controles</span>
+      </QBtn>
     </form>
     <small
       >O controle fica reservado por {{ adminLeaseSeconds }} segundos. Depois, qualquer anfitrião
