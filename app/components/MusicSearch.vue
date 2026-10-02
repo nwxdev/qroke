@@ -106,11 +106,11 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
           type="submit"
           color="primary"
           no-caps
-          label="Buscar"
-          icon="search"
           :loading="searching"
           :disable="query.trim().length < 2"
-        />
+        >
+          <AppIcon name="search" class="on-left" /><span>Buscar</span>
+        </QBtn>
       </form>
       <span class="sr-only" role="status">{{ addedId ? 'Música adicionada à fila.' : '' }}</span>
       <div class="search-options">
