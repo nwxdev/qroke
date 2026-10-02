@@ -17,10 +17,11 @@ try {
   })
   await page.goto(fixture.base)
   const join = page.getByRole('button', { name: 'Entrar na festa', exact: true })
-  const create = page.getByRole('button', { name: 'CRIAR FESTA', exact: true })
+  const create = page.getByRole('link', { name: 'CRIAR FESTA', exact: true })
   const progress = page.getByRole('progressbar', { name: 'Preparação da festa' })
   await expect(create).toBeVisible()
-  await expect(progress).toHaveAttribute('aria-valuenow', '0')
+  await expect(page.locator('form, input[type=password]')).toHaveCount(0)
+  await expect(create).toHaveAttribute('href', '/criar-festa')
   await expect(create.locator('.app-icon')).toHaveCount(2)
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 })
@@ -76,8 +77,11 @@ try {
     expect(during.y).toBeCloseTo(before.y, 1)
     expect(during.width).toBeCloseTo(before.width, 1)
     await page.mouse.up()
+    await expect(page).toHaveURL(fixture.base + '/criar-festa')
+    await expect(progress).toHaveAttribute('aria-valuenow', '0')
     await expect(page.getByLabel('Nome da festa', { exact: true })).toBeFocused()
-    await expect(create.locator('.action-flash')).toHaveCount(0, { timeout: 2000 })
+    await page.getByRole('link', { name: 'Conheça o QRokê' }).click()
+    await expect(create).toBeVisible()
     await page.evaluate(() => window.scrollTo(0, 0))
     await page.screenshot({ path: 'test-results/home-' + theme + '-desktop.png', fullPage: true })
   }
@@ -86,7 +90,7 @@ try {
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).not.toBeVisible()
   await create.focus()
-  await page.keyboard.press('Space')
+  await page.keyboard.press('Enter')
   await expect(page.getByLabel('Nome da festa', { exact: true })).toBeFocused()
   await page.getByLabel('Nome da festa', { exact: true }).fill('Noite da galera')
   await expect(progress).toHaveAttribute('aria-valuenow', '1')
@@ -99,33 +103,38 @@ try {
   await expect(progress).toHaveAttribute('aria-valuenow', '3')
   await page.getByLabel('PIN do administrador', { exact: true }).fill('12345')
   await expect(progress).toHaveAttribute('aria-valuenow', '1')
+  const submit = page.getByRole('button', { name: 'Começar a festa', exact: true })
+  await expect(submit.locator('.action-flash')).toHaveCount(0, { timeout: 2000 })
   await page.getByRole('button', { name: 'Desativar animações', exact: true }).click()
-  await create.click()
+  await submit.click()
   expect(
-    await create.locator('.action-icon').evaluate((el) => getComputedStyle(el).animationName),
+    await submit.locator('.action-icon').evaluate((el) => getComputedStyle(el).animationName),
   ).toBe('none')
-  expect(await create.locator('.action-flash').evaluate((el) => getComputedStyle(el).opacity)).toBe(
+  expect(await submit.locator('.action-flash').evaluate((el) => getComputedStyle(el).opacity)).toBe(
     '0',
   )
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'off')
   await page.getByRole('button', { name: 'Ativar animações', exact: true }).click()
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await create.click()
+  await submit.click()
   expect(
-    await create.locator('.action-icon').evaluate((el) => getComputedStyle(el).animationName),
+    await submit.locator('.action-icon').evaluate((el) => getComputedStyle(el).animationName),
   ).toBe('none')
-  expect(await create.locator('.action-flash').evaluate((el) => getComputedStyle(el).opacity)).toBe(
+  expect(await submit.locator('.action-flash').evaluate((el) => getComputedStyle(el).opacity)).toBe(
     '0',
   )
   await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({ path: 'test-results/create-party-mobile.png', fullPage: true })
+  await page.getByRole('link', { name: 'Conheça o QRokê' }).click()
+  await expect(create).toBeVisible()
   await page.evaluate(() => window.scrollTo(0, 0))
   await page.screenshot({ path: 'test-results/home-light-mobile.png', fullPage: true })
   await page.getByRole('button', { name: 'Usar tema escuro', exact: true }).click()
   await page.screenshot({ path: 'test-results/home-dark-mobile.png', fullPage: true })
   expect(errors).toEqual([])
   console.log(
-    'Home: CTA below QR, keyboard focus, stationary hit targets, hover contrast, field progress, PIN error, themes, reduced motion, preference and 320–1440px OK',
+    'Home: public presentation without login, creation link below QR, dedicated form, keyboard focus, stationary hit targets, hover contrast, field progress, PIN error, themes, reduced motion, preference and 320–1440px OK',
   )
 } finally {
   await browser.close()

@@ -5,7 +5,8 @@ const { enabled, opened } = useAnalyticsConsent()
   <footer class="public-footer">
     <strong>QRokê · A festa é de todo mundo.</strong>
     <nav aria-label="Conheça o QRokê">
-      <NuxtLink to="/">Criar festa</NuxtLink>
+      <NuxtLink to="/">Início</NuxtLink>
+      <NuxtLink to="/criar-festa">Criar festa</NuxtLink>
       <NuxtLink to="/como-funciona">Como funciona</NuxtLink>
       <NuxtLink to="/karaoke-online">Karaokê online</NuxtLink>
       <NuxtLink to="/perguntas-frequentes">Perguntas frequentes</NuxtLink>

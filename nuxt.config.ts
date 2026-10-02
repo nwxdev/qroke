@@ -83,6 +83,7 @@ export default defineNuxtConfig({
       headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' },
     },
     '/brand/qroke-share-v2.jpg': { headers: { 'Cache-Control': 'public, max-age=86400' } },
+    '/criar-festa': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/busca': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/host': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/player': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },

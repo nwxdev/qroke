@@ -56,7 +56,7 @@ try {
     expect(accept.height).toBeGreaterThanOrEqual(44)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     if (width === 390) {
-      const cta = page.getByRole('button', { name: 'CRIAR FESTA', exact: true })
+      const cta = page.getByRole('link', { name: 'CRIAR FESTA', exact: true })
       expect(
         await cta.evaluate((el) => {
           const rect = el.getBoundingClientRect()
@@ -177,6 +177,10 @@ try {
   expect(googleRequests).toHaveLength(1)
   // Accepted users still do not load the tag on private entry screens.
   await page.evaluate((key) => localStorage.setItem(key, 'accepted'), key)
+  await page.goto(fixture.base + '/criar-festa')
+  await expect(page.getByLabel('Nome da festa', { exact: true })).toBeVisible()
+  await expect(page.locator('iframe[src="/analytics-frame"]')).toHaveCount(0)
+  expect(googleRequests).toHaveLength(1)
   await page.goto(fixture.base + '/entrar?pin=987654#private-invite')
   await expect(page.locator('iframe[src="/analytics-frame"]')).toHaveCount(0)
   expect(googleRequests).toHaveLength(1)

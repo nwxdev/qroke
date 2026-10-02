@@ -142,6 +142,7 @@ try {
   }
   expect(await (await fetch(fixture.base + '/sitemap.xml?convite=ignorado')).text()).toBe(sitemap)
   expect(sitemap).not.toContain('/entrar')
+  expect(sitemap).not.toContain('/criar-festa')
   const robots = await (await fetch(fixture.base + '/robots.txt')).text()
   expect(robots).toContain('Allow: /')
   expect(robots).toContain('Disallow: /api/')
@@ -161,6 +162,51 @@ try {
       await get.arrayBuffer()
     }
   }
+  // OAuth review must see the real app purpose without login, cookies or JavaScript.
+  for (const agent of ['Mozilla/5.0', 'Googlebot', 'Google-InspectionTool']) {
+    for (const method of ['GET', 'HEAD']) {
+      const response = await fetch(fixture.base + '/', {
+        method,
+        redirect: 'manual',
+        headers: { 'user-agent': agent },
+      })
+      expect(response.status).toBe(200)
+      expect(response.headers.get('location')).toBeNull()
+      expect(response.headers.get('x-robots-tag')).toBeNull()
+      if (method === 'GET') {
+        const html = await response.text()
+        expect(html).toContain('O QRokê é um aplicativo de música e karaokê para festas.')
+        expect(html).toContain('Por que conectar o Google?')
+        expect(html).toContain('não usa dados das APIs do Google para treinar modelos de IA')
+        expect(html).not.toMatch(/<form[\s>]|<input[^>]*type="password"/i)
+      }
+    }
+  }
+  const noScriptContext = await browser.newContext({
+    javaScriptEnabled: false,
+    reducedMotion: 'reduce',
+  })
+  const publicHome = await noScriptContext.newPage()
+  await publicHome.goto(fixture.base)
+  await expect(
+    publicHome.getByRole('heading', { name: 'Por que conectar o Google?' }),
+  ).toBeVisible()
+  await expect(publicHome.locator('form, input[type=password]')).toHaveCount(0)
+  await expect(
+    publicHome
+      .locator('footer')
+      .getByRole('link', { name: 'Política de Privacidade', exact: true }),
+  ).toBeVisible()
+  await publicHome.getByRole('link', { name: 'CRIAR FESTA', exact: true }).click()
+  await expect(publicHome).toHaveURL(fixture.base + '/criar-festa')
+  await expect(
+    publicHome.getByRole('heading', { name: 'Dê um nome à sua festa.', level: 1 }),
+  ).toBeVisible()
+  await noScriptContext.close()
+  const creation = await fetch(fixture.base + '/criar-festa', { redirect: 'manual' })
+  expect(creation.status).toBe(200)
+  expect(creation.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+  expect(await creation.text()).toContain('<title>Crie sua festa | QRokê</title>')
   // Share previews must be in HTML for crawlers without scripts, cookies or invitation tokens.
   for (const agent of [
     'facebookexternalhit/1.1',

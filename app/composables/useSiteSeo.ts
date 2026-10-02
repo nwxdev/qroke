@@ -17,6 +17,7 @@ export function useSiteSeo() {
     () => !!publicMeta.value && isProductionSite(String(config.public.partyUrl)),
   )
   const titles: Record<string, string> = {
+    '/criar-festa': 'Crie sua festa | QRokê',
     '/entrar': 'Você recebeu um convite para a festa | QRokê',
     '/busca': 'Buscar músicas e ver a fila | QRokê',
     '/host': 'Controles do anfitrião | QRokê',
