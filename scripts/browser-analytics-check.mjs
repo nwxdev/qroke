@@ -35,26 +35,88 @@ try {
   page.on('pageerror', (error) => errors.push(error.message))
   const views = () => commands.filter((c) => c[0] === 'event' && c[1] === 'page_view')
   await page.goto(fixture.base + '/?token=private-query#private-hash')
-  await expect(page.getByRole('heading', { name: 'Ajude o QRokê a melhorar' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Cookies opcionais' })).toBeVisible()
   expect(googleRequests).toHaveLength(0)
   await expect(page.locator('iframe[src="/analytics-frame"]')).toHaveCount(0)
+  const notice = page.getByRole('complementary', { name: 'Cookies opcionais' })
+  const details = page.getByRole('button', { name: 'Detalhes sobre cookies', exact: true })
+  await expect(details).toHaveAttribute('aria-expanded', 'false')
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 844 })
+    await expect(notice).toBeInViewport()
+    const box = await notice.boundingBox()
+    expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThan(1)
+    expect(box.height).toBeLessThan(width <= 720 ? 200 : 135)
+    expect(box.y + box.height).toBeLessThanOrEqual(832)
+    expect(box.y + box.height).toBeGreaterThan(820)
+    const refuse = await page.getByRole('button', { name: 'Recusar medição' }).boundingBox()
+    const accept = await page.getByRole('button', { name: 'Aceitar medição' }).boundingBox()
+    expect(accept.y).toBeCloseTo(refuse.y, 1)
+    expect(accept.width).toBeCloseTo(refuse.width, 1)
+    expect(accept.height).toBeGreaterThanOrEqual(44)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    if (width === 390) {
+      const cta = page.getByRole('button', { name: 'CRIAR FESTA', exact: true })
+      expect(
+        await cta.evaluate((el) => {
+          const rect = el.getBoundingClientRect()
+          return el.contains(
+            document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2),
+          )
+        }),
+      ).toBe(true)
+    }
   }
+  await page.screenshot({ path: 'test-results/analytics-consent-dark-desktop.png' })
+  // The notice occupies document space at the bottom, keeping the whole footer reachable.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  await expect
+    .poll(async () => {
+      const footer = await page.locator('.public-footer').boundingBox()
+      const card = await notice.boundingBox()
+      return footer.y + footer.height <= card.y
+    })
+    .toBe(true)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.setViewportSize({ width: 320, height: 568 })
+  await details.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('#analytics-details')).toBeVisible()
+  expect(googleRequests).toHaveLength(0)
+  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull()
+  const expandedBox = await notice.boundingBox()
+  expect(expandedBox.y).toBeGreaterThanOrEqual(0)
+  expect(expandedBox.y + expandedBox.height).toBeLessThanOrEqual(556)
+  await expect(
+    page.getByRole('link', { name: 'Política de Privacidade do QRokê', exact: true }),
+  ).toHaveAttribute('href', '/politica-de-privacidade')
+  await page.keyboard.press('Escape')
+  await expect(details).toHaveAttribute('aria-expanded', 'false')
+  await expect(details).toBeFocused()
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: 'test-results/analytics-consent-dark.png' })
   await page.evaluate(() => localStorage.setItem('qroke:theme:/', 'light'))
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Ajude o QRokê a melhorar' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Cookies opcionais' })).toBeVisible()
   await page.screenshot({ path: 'test-results/analytics-consent-light.png' })
+  await page.setViewportSize({ width: 1440, height: 844 })
+  await page.screenshot({ path: 'test-results/analytics-consent-light-desktop.png' })
+  await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: 'Recusar medição', exact: true }).click()
   await page.reload()
   await expect(page.getByRole('button', { name: 'Preferências de medição' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Ajude o QRokê a melhorar' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Cookies opcionais' })).toHaveCount(0)
   expect(googleRequests).toHaveLength(0)
   await page.getByRole('button', { name: 'Preferências de medição' }).click()
-  await expect(page.getByRole('complementary', { name: 'Ajude o QRokê a melhorar' })).toBeFocused()
+  await expect(page.getByRole('complementary', { name: 'Cookies opcionais' })).toBeFocused()
+  await page.getByRole('button', { name: 'Fechar preferências de medição' }).click()
+  await expect(notice).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'Preferências de medição', exact: true }),
+  ).toBeFocused()
+  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBe('declined')
+  expect(googleRequests).toHaveLength(0)
+  await page.getByRole('button', { name: 'Preferências de medição', exact: true }).click()
   await page.getByRole('button', { name: 'Aceitar medição', exact: true }).click()
   await expect.poll(() => views().length).toBe(1)
   expect(views()[0][2].page_location).toBe('https://qroke.com.br/')
@@ -139,7 +201,7 @@ try {
   expect(errors).toEqual([])
   await context.close()
   console.log(
-    'Analytics: opt-in, refusal, persisted choice, revocation across tabs, single SPA page views, sanitized URLs/referrers, private screens excluded and responsive themes OK',
+    'Analytics: opt-in, refusal, persisted choice, revocation across tabs, single SPA page views, sanitized URLs/referrers, private screens excluded responsive themes, compact centered notice, footer clearance, details without collection and close/focus OK',
   )
 } finally {
   await browser.close()
