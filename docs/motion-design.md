@@ -33,4 +33,8 @@ Implementado em 1º de outubro de 2026 nos fluxos existentes. A publicação é 
 - MotionToggle e useMotionPreference: preferência persistida no navegador e sincronizada entre abas.
 - usePartyMotion: sinais de ações confirmadas, isolados por festa, sem reexecução por polling.
 
-Os tokens em app/assets/motion.css recebem cores do tema existente. Um tema ancestral pode sobrescrever --motion-color, --motion-glow, --motion-fast, --motion-enter, --motion-celebrate, --motion-show, --motion-distance, --motion-ease e --motion-spring. Componentes não escolhem uma marca própria.
+Os tokens em app/assets/motion.css recebem cores do tema existente. Um tema ancestral pode sobrescrever --motion-color, --motion-glow, --motion-shine, --motion-fast, --motion-enter, --motion-celebrate, --motion-show, --motion-distance, --motion-ease e --motion-spring. Componentes não escolhem uma marca própria.
+
+## Ajustes da home — 2 de outubro de 2026
+
+ActionButton mantém a área clicável estável e anima somente ícone/conteúdo e uma camada de brilho finita. O hover primário preserva preenchimento e contraste. Foi removida a segunda animação de escala do botão de adicionar música, que competia com MotionCue. A home posiciona CRIAR FESTA abaixo da entrada por QR Code e leva o foco ao nome da festa; o formulário mantém envio e validação separados. PartySetupProgress acompanha nome, PIN de seis dígitos e confirmação, sem conceder pontos ou anunciar criação antes da resposta do servidor. Todas as cores vêm do tema, e a preferência de movimento também está disponível na home.

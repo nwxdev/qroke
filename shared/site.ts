@@ -18,7 +18,7 @@ export const PUBLIC_PAGES: Record<string, PublicPage> = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     label: 'Início',
-    lastModified: '2026-10-01',
+    lastModified: '2026-10-02',
   },
   '/como-funciona': {
     title: 'Como funciona o QRokê: música para festas por QR Code',
