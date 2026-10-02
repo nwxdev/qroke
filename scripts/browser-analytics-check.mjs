@@ -2,7 +2,7 @@ import { chromium, expect } from '@playwright/test'
 import { startFixture } from '../tests/helpers/server.mjs'
 import { mkdir } from 'node:fs/promises'
 const key = 'qroke:analytics-consent:v1'
-const id = 'G-TEST123456'
+const id = 'G-16BRNZ1KP8'
 const fixture = await startFixture(3267, {
   NUXT_ACCESS_REQUIRED: 'true',
   NUXT_PUBLIC_GA_MEASUREMENT_ID: id,

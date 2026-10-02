@@ -115,8 +115,7 @@ button,
     background 0.15s,
     transform 0.15s;
 }
-button:hover:not(:disabled),
-a.primary-button:hover {
+:where(button:hover:not(:disabled), a.primary-button:hover) {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 }
@@ -1605,18 +1604,6 @@ button {
   background: var(--accent);
   color: var(--on-accent);
   border-color: var(--accent);
-  animation: added-pop 420ms ease;
-}
-@keyframes added-pop {
-  0% {
-    transform: scale(1);
-  }
-  45% {
-    transform: scale(1.18);
-  }
-  100% {
-    transform: scale(1);
-  }
 }
 @keyframes dialog-in {
   from {

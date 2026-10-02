@@ -3,6 +3,7 @@
 :root {
   --motion-color: var(--accent);
   --motion-glow: color-mix(in srgb, var(--accent) 24%, transparent);
+  --motion-shine: rgb(255 255 255 / 35%);
   --motion-fast: 160ms;
   --motion-enter: 380ms;
   --motion-celebrate: 620ms;
@@ -53,10 +54,11 @@ summary {
     border-color var(--motion-fast),
     color var(--motion-fast);
 }
-button:active:not(:disabled),
-a.primary-button:active,
-summary:active {
-  transform: translateY(1px) scale(0.97);
+/* Keep hit targets stationary: moving a button while pressed can lose edge clicks.
+   Feedback belongs to the icon/content, not the clickable element. */
+button:active:not(:disabled) > .app-icon,
+a.primary-button:active > .app-icon {
+  transform: scale(0.92);
 }
 .theme-toggle .app-icon {
   transition: transform var(--motion-enter) var(--motion-spring);
@@ -96,7 +98,8 @@ dialog[open] {
 [data-motion='off'] button:active,
 [data-motion='off'] summary:active,
 [data-motion='off'] a.primary-button:active,
-[data-motion='off'] .theme-toggle .app-icon {
+[data-motion='off'] button .app-icon,
+[data-motion='off'] a.primary-button .app-icon {
   transform: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -110,7 +113,8 @@ dialog[open] {
   button:active,
   summary:active,
   a.primary-button:active,
-  .theme-toggle .app-icon {
+  button .app-icon,
+  a.primary-button .app-icon {
     transform: none !important;
   }
 }

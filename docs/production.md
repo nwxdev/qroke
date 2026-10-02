@@ -17,7 +17,7 @@ Para verificar a configuração externa, executar `npm run test:youtube:key` no 
 - QROKE_MONGODB_URI e QROKE_MONGODB_DATABASE: conexão e banco exclusivos.
 - QROKE_DRAGONFLY_URL: serviço existente pela rede privada.
 - QROKE_PUBLIC_URL=https://qroke.com.br.
-- NUXT_PUBLIC_GA_MEASUREMENT_ID: ID público do fluxo GA4. O fluxo informado é G-ZMWF4HFBV4. Vazio desativa a integração; o .env local não é enviado ao servidor.
+- NUXT_PUBLIC_GA_MEASUREMENT_ID: ID público do fluxo GA4. O fluxo informado é G-16BRNZ1KP8. Vazio desativa a integração; o .env local não é enviado ao servidor.
 - QROKE_ACCESS_REQUIRED=true e QROKE_TRUST_PROXY=true na stack privada atrás do Nginx.
 - QROKE_HOST_PIN: PIN com 4 a 8 dígitos da festa original. Festas novas exigem PIN próprio de 6 dígitos.
 - QROKE_SESSION_SECRET: segredo aleatório de pelo menos 32 caracteres.

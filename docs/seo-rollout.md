@@ -1,6 +1,6 @@
 O QRokê precisa publicar as melhorias de SEO e concluir a configuração das plataformas para acompanhar a descoberta e o uso do produto. Esta issue é o roteiro operacional: preparar o site, verificar o domínio, enviar o sitemap, integrar GA4 e validar as prévias sociais.
 
-**Implementação:** animações, páginas públicas com HTML no servidor, metadados, sitemap e cartão social publicados. O sitemap inclui as quatro páginas de conteúdo e o mapa navegável em /mapa-do-site. O estado da publicação e das verificações externas é acompanhado na [issue #12](https://github.com/nwxdev/qroke/issues/12). Em 1º de outubro de 2026, o responsável informou que o site já foi verificado no Google Search Console. A integração de Analytics usa o fluxo informado G-ZMWF4HFBV4, com preferência de medição e page_view das páginas públicas. Publicação e recebimento na conta são acompanhados na issue.
+**Implementação:** animações, páginas públicas com HTML no servidor, metadados, sitemap e cartão social publicados. O sitemap inclui as quatro páginas de conteúdo e o mapa navegável em /mapa-do-site. O estado da publicação e das verificações externas é acompanhado na [issue #12](https://github.com/nwxdev/qroke/issues/12). Em 1º de outubro de 2026, o responsável informou que o site já foi verificado no Google Search Console. A integração de Analytics usa o fluxo informado G-16BRNZ1KP8, com preferência de medição e page_view das páginas públicas. Publicação e recebimento na conta são acompanhados na issue.
 
 ## 1. Publicar a base técnica
 
@@ -27,7 +27,7 @@ Referências: [propriedade de domínio](https://support.google.com/webmasters/an
 ## 3. Google Analytics 4: criar e integrar
 
 1. [ ] Em [Google Analytics](https://analytics.google.com), criar ou selecionar a conta do QRokê; criar uma propriedade GA4 com fuso de São Paulo e moeda BRL. O responsável pela conta deve revisar os termos e o compartilhamento de dados.
-2. [ ] Criar um fluxo **Web** para `https://qroke.com.br` e registrar o ID de medição `G-...`. Fluxo informado pelo responsável: `G-ZMWF4HFBV4`; substitui o identificador anterior. A conta, o fuso e a moeda ainda devem ser conferidos no painel.
+2. [ ] Criar um fluxo **Web** para `https://qroke.com.br` e registrar o ID de medição `G-...`. Fluxo informado pelo responsável: `G-16BRNZ1KP8`; substitui o identificador anterior. A conta, o fuso e a moeda ainda devem ser conferidos no painel.
 3. [x] Implementar uma única integração, com um plugin Nuxt no cliente e `gtag.js` em um documento isolado, e uma configuração pública `NUXT_PUBLIC_GA_MEASUREMENT_ID`. ID vazio deve desativar a integração. Não instalar a mesma propriedade simultaneamente por plugin e Google Tag Manager.
 4. [x] Antes de coletar, oferecer uma preferência de medição com aceitar, recusar e rever a escolha; documentar o uso dos dados. Como padrão inicial do projeto, carregar Analytics somente após aceite, manter recursos de publicidade desativados e respeitar a recusa.
 5. [x] Implementar visualizações manuais `page_view` para as páginas públicas, com `send_page_view: false`, sem parâmetros ou fragmentos e com título do cadastro. A tag fica em /analytics-frame, sem observar o histórico ou os formulários do app. Os testes verificam um evento por navegação. No painel do fluxo, ainda conferir/desativar a medição otimizada automática.

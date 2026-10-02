@@ -6,6 +6,22 @@ const name = ref(''),
   failure = ref(''),
   busy = ref(false)
 const joinOpen = useState('qroke:join-open', () => false)
+const nameInput = ref<HTMLInputElement | null>(null)
+function prepareParty() {
+  // Keep the button mounted and clickable; only its icon/overlay animate.
+  nameInput.value?.focus({ preventScroll: true })
+  nameInput.value?.scrollIntoView({
+    behavior:
+      matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      document.documentElement.dataset.motion === 'off'
+        ? 'auto'
+        : 'smooth',
+    block: 'center',
+  })
+}
+const nameReady = computed(() => name.value.trim().length >= 2)
+const pinReady = computed(() => /^[0-9]{6}$/.test(pin.value))
+const confirmationReady = computed(() => pinReady.value && confirmation.value === pin.value)
 const ready = ref(false),
   parties = ref<MyParty[]>([]),
   now = ref(Date.now()),
@@ -86,19 +102,43 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <main class="party-home">
-    <header><BrandLogo /></header>
+    <header>
+      <BrandLogo />
+      <div class="home-preferences"><MotionToggle compact /><ThemeToggle /></div>
+    </header>
     <div class="home-grid">
       <MotionReveal as="section" class="home-intro" immediate>
-        <h1>Música e karaokê<br />para sua festa.</h1>
+        <span class="home-kicker"><AppIcon name="sparkles" /> SUA GALERA. SEU PALCO.</span>
+        <h1>Música e karaokê<br /><span>para sua festa.</span></h1>
         <p>
-          Com o QRokê, a galera entra pelo QR Code, escolhe músicas e vota em uma fila
-          compartilhada. Crie, compartilhe e dê o play no navegador.
+          Um QR Code, muitas boas escolhas. Junte a galera para pedir músicas, votar na fila e
+          soltar a voz. A próxima favorita pode vir de qualquer pessoa.
         </p>
-        <NuxtLink class="home-guide-link" to="/como-funciona">Veja como funciona ↗</NuxtLink>
-        <button type="button" class="home-join" :disabled="!ready" @click="joinOpen = true">
-          <AppIcon name="qr" /> Entrar na festa
-        </button>
-        <small class="home-join-hint">Cole o link ou escaneie o QR Code.</small>
+        <div class="home-actions">
+          <ActionButton class="home-join" variant="secondary" icon="qr" @click="joinOpen = true">
+            Entrar na festa
+          </ActionButton>
+          <small class="home-join-hint"
+            >Já tem um convite? Escaneie o QR Code ou cole o link.</small
+          >
+          <ActionButton
+            class="home-create"
+            icon="sparkles"
+            aria-controls="criar-festa"
+            @click="prepareParty"
+          >
+            CRIAR FESTA
+          </ActionButton>
+          <small class="home-create-hint">Você cria o palco. A galera escolhe a trilha.</small>
+        </div>
+        <NuxtLink class="home-guide-link" to="/como-funciona"
+          >Veja como funciona <AppIcon name="arrow-right"
+        /></NuxtLink>
+        <div class="home-feature-strip" aria-label="Recursos da festa">
+          <span><AppIcon name="qr" /> Convide</span>
+          <span><AppIcon name="like" /> Vote</span>
+          <span><AppIcon name="microphone" /> Cante</span>
+        </div>
         <section v-if="active.length" class="my-parties" aria-labelledby="my-parties-title">
           <h2 id="my-parties-title">Suas festas</h2>
           <ul>
@@ -120,15 +160,24 @@ onBeforeUnmount(() => {
         as="section"
         class="create-party-card"
         id="criar-festa"
-        :delay="100"
-        glow
+        immediate
         aria-labelledby="create-title"
       >
-        <h2 id="create-title">Criar festa</h2>
-        <p>Disponível por 24 horas ou até você encerrar.</p>
+        <div class="create-card-heading">
+          <span class="create-card-icon"><AppIcon name="microphone" /></span>
+          <span class="create-card-badge">O SHOW COMEÇA AQUI</span>
+        </div>
+        <h2 id="create-title">Dê um nome à sua festa.</h2>
+        <p>Prepare o convite e chame a galera. A festa fica disponível por até 24 horas.</p>
+        <PartySetupProgress
+          :name-ready="nameReady"
+          :pin-ready="pinReady"
+          :confirmation-ready="confirmationReady"
+        />
         <form @submit.prevent="create">
           <label for="party-name">Nome da festa</label>
           <input
+            ref="nameInput"
             id="party-name"
             v-model="name"
             required
@@ -166,9 +215,9 @@ onBeforeUnmount(() => {
           <small>Guarde o PIN para administrar a festa.</small>
           <p v-if="failure" class="notice" role="alert">{{ failure }}</p>
           <LegalNotice action="criar uma festa" />
-          <button class="create-party-button" :disabled="busy">
-            {{ busy ? 'Criando sua festa…' : 'Criar festa' }}
-          </button>
+          <ActionButton class="create-party-button" type="submit" icon="play" :busy="busy">
+            {{ busy ? 'Criando sua festa…' : 'Começar a festa' }}
+          </ActionButton>
         </form>
       </MotionReveal>
     </div>
@@ -180,6 +229,23 @@ onBeforeUnmount(() => {
         do karaokê, escolha uma versão para cantar e convide uma dupla. O anfitrião mantém os
         controles e escolhe o aparelho que vai tocar o som.
       </p>
+      <div class="home-how">
+        <article>
+          <span class="home-how-icon"><AppIcon name="qr" /></span>
+          <h3>Convide com um QR</h3>
+          <p>Todo mundo entra pelo próprio celular.</p>
+        </article>
+        <article>
+          <span class="home-how-icon"><AppIcon name="like" /></span>
+          <h3>A fila é da galera</h3>
+          <p>Peça suas favoritas e vote nas próximas.</p>
+        </article>
+        <article>
+          <span class="home-how-icon"><AppIcon name="microphone" /></span>
+          <h3>Chegou seu refrão</h3>
+          <p>Escolha o karaokê e chame uma dupla.</p>
+        </article>
+      </div>
       <div class="home-about-links">
         <NuxtLink to="/karaoke-online">Prepare seu karaokê</NuxtLink
         ><NuxtLink to="/perguntas-frequentes">Tire suas dúvidas</NuxtLink>
@@ -192,113 +258,163 @@ onBeforeUnmount(() => {
 .party-home {
   max-width: 1200px;
   margin: auto;
-  padding: 32px 5% 56px;
+  padding: 24px 5% 48px;
 }
 .party-home header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding-bottom: 28px;
+  gap: 16px;
+  padding-bottom: 20px;
   border-bottom: 1px solid var(--line);
 }
-.home-guide-link {
-  display: inline-block;
-  margin-top: 8px;
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.home-about {
-  margin-top: 80px;
-  max-width: 760px;
-}
-.home-about h2 {
-  font-size: clamp(28px, 4vw, 40px);
-  line-height: 1.2;
-  margin: 18px 0;
-}
-.home-about p {
-  line-height: 1.75;
-  font-size: 18px;
-}
-.home-about-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  margin-top: 24px;
-}
-.home-about-links a {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.home-join {
+.home-preferences {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 48px;
-  margin-top: 24px;
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.home-join-hint {
-  display: block;
-  margin-top: 10px;
-  font-size: 12px;
-}
-.home-label {
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--muted);
+  gap: 8px;
 }
 .home-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: 8%;
-  padding-top: 64px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 7%;
+  padding-top: 48px;
   align-items: start;
 }
+.home-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+.home-kicker .app-icon {
+  width: 18px;
+  height: 18px;
+}
 .home-intro h1 {
-  font-size: clamp(40px, 5vw, 68px);
-  margin: 22px 0;
+  font-size: clamp(40px, 4.8vw, 62px);
+  margin: 18px 0 22px;
   max-width: 580px;
+  line-height: 1.1;
+}
+.home-intro h1 > span {
+  color: var(--accent);
 }
 .home-intro > p {
-  font-size: 18px;
-  max-width: 480px;
+  font-size: 17px;
+  line-height: 1.75;
+  max-width: 470px;
 }
-.home-features {
+.home-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+  max-width: 430px;
+}
+.home-join-hint,
+.home-create-hint {
+  text-align: center;
+  font-size: 11px;
+}
+.home-create {
+  margin-top: 8px;
+  font-size: 16px;
+  letter-spacing: 0.6px;
+}
+.home-create-hint {
+  margin-top: 4px;
+}
+.home-guide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 18px;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.home-guide-link .app-icon {
+  width: 16px;
+  height: 16px;
+}
+.home-feature-strip {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 28px;
+  margin-top: 20px;
 }
-.home-features span {
-  padding: 6px 12px;
+.home-feature-strip > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 8px 12px;
   border-radius: 24px;
-  font-size: 12px;
   color: var(--muted);
+  font-size: 12px;
+}
+.home-feature-strip .app-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
 }
 .create-party-card {
+  position: relative;
   padding: 28px;
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-top: 3px solid var(--accent);
+  border-radius: 24px;
   background: var(--surface);
+  box-shadow: var(--shadow);
+  scroll-margin-top: 32px;
+}
+.create-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.create-card-icon {
+  display: grid;
+  place-items: center;
+  height: 48px;
+  width: 48px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+  rotate: -6deg;
+}
+.create-card-icon .app-icon {
+  width: 26px;
+  height: 26px;
+}
+.create-card-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--muted);
 }
 .create-party-card h2 {
-  font-size: 28px;
-  margin: 8px 0 12px;
+  font-size: 26px;
+  margin: 18px 0 8px;
+  letter-spacing: -0.8px;
+}
+.create-party-card > p {
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 22px;
 }
 .create-party-card form {
   display: grid;
-  gap: 10px;
-  margin-top: 24px;
+  gap: 8px;
+  margin-top: 20px;
 }
 .create-party-card label {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 13px;
   font-weight: 600;
 }
@@ -306,24 +422,24 @@ onBeforeUnmount(() => {
   width: 100%;
   min-width: 0;
   background: var(--bg);
+  min-height: 48px;
+  border-radius: 12px;
+}
+.create-party-card form > small {
+  font-size: 11px;
 }
 .create-party-button {
-  margin-top: 12px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 700;
-  min-height: 50px;
+  margin-top: 10px;
 }
 .my-parties {
-  margin-top: 44px;
+  margin-top: 28px;
 }
-.my-parties > p {
-  font-size: 13px;
-  margin-top: 6px;
+.my-parties h2 {
+  font-size: 17px;
 }
 .my-parties ul {
   list-style: none;
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   padding: 0;
   display: grid;
   gap: 10px;
@@ -336,6 +452,7 @@ onBeforeUnmount(() => {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 14px;
+  background: var(--surface);
 }
 .my-parties li div {
   min-width: 0;
@@ -353,31 +470,111 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   padding-block: 10px;
 }
+.home-about {
+  margin-top: 64px;
+  border-top: 1px solid var(--line);
+  padding-top: 40px;
+}
+.home-about h2 {
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.25;
+  margin: 16px 0;
+  max-width: 650px;
+}
+.home-about > p {
+  line-height: 1.75;
+  font-size: 16px;
+  max-width: 760px;
+}
+.home-how {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+.home-how article {
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.home-how-icon {
+  display: inline-grid;
+  place-items: center;
+  height: 38px;
+  width: 38px;
+  border-radius: 12px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  margin-bottom: 14px;
+}
+.home-how-icon .app-icon {
+  width: 22px;
+  height: 22px;
+}
+.home-how h3 {
+  margin-bottom: 8px;
+}
+.home-how p {
+  font-size: 13px;
+}
+.home-about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 24px;
+}
+.home-about-links a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  padding-block: 8px;
+}
 @media (max-width: 760px) {
-  .home-grid {
-    grid-template-columns: 1fr;
-    gap: 24px;
-    padding-top: 32px;
-  }
-  .home-label {
-    display: none;
+  .party-home {
+    padding-top: 18px;
   }
   .party-home header {
-    padding-bottom: 20px;
+    padding-bottom: 16px;
+  }
+  .party-home header :deep(.brand-logo) {
+    --brand-logo-width: 165px;
+  }
+  .home-preferences {
+    gap: 4px;
+  }
+  .home-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding-top: 28px;
   }
   .home-intro h1 {
-    font-size: 32px;
-    margin: 0 0 8px;
+    font-size: clamp(34px, 8.5vw, 48px);
+    margin: 14px 0 16px;
   }
   .home-intro > p {
-    margin: 0;
-    font-size: 14px;
+    font-size: 15px;
   }
-  .my-parties {
-    margin-top: 20px;
+  .home-actions {
+    max-width: none;
+    margin-top: 24px;
   }
   .create-party-card {
     padding: 22px;
+  }
+  .home-how {
+    grid-template-columns: 1fr;
+  }
+  .home-about {
+    margin-top: 44px;
+  }
+}
+@media (max-width: 360px) {
+  .party-home header :deep(.brand-logo) {
+    --brand-logo-width: 140px;
+  }
+  .create-party-card {
+    padding: 18px;
   }
 }
 </style>
