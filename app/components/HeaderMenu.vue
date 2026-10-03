@@ -60,6 +60,12 @@ function select(event: MouseEvent) {
     close()
 }
 function key(event: KeyboardEvent) {
+  if (
+    event.target instanceof Element &&
+    event.target.closest('input,textarea,[contenteditable=true]') &&
+    event.key !== 'Escape'
+  )
+    return
   if (['Escape', 'Backspace'].includes(event.key) || [10009, 461].includes(event.keyCode)) {
     event.preventDefault()
     close()

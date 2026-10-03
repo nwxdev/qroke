@@ -1,10 +1,117 @@
 <script setup lang="ts">
 const { state, isPlayer, adminDialogOpen, soundDevice, device } = useParty()
-const { href } = usePartyRoute()
+const { href, page: partyPage } = usePartyRoute()
+const { waiting: karaokeWaiting } = useKaraokeCountdown()
+const cinema = useState('qroke:karaoke-cinema', () => false)
 const menuOpen = useState('qroke:menu-open', () => false)
 const joinOpen = useState('qroke:join-open', () => false)
 const root = ref<HTMLElement | null>(null)
-const media = ref<{ activate: () => Promise<void> } | null>(null)
+const media = ref<{
+  activate: () => Promise<void>
+  prepareRelocation: () => void
+  finishRelocation: () => Promise<void>
+} | null>(null)
+const playerWindow = shallowRef<Window | null>(null)
+const miniSupported = ref(false)
+const opening = ref(false)
+const miniError = ref('')
+let disposed = false
+let themeObserver: MutationObserver | undefined
+const awake = useScreenAwake(
+  computed(
+    () =>
+      isPlayer.value &&
+      soundDevice.value === device.value?.id &&
+      !!state.value?.current &&
+      !state.value?.paused &&
+      !state.value?.playbackIssue?.halted,
+  ),
+  playerWindow,
+)
+const screenStatus = computed(
+  () =>
+    ({
+      active: 'Tela ligada',
+      off: 'Tela livre',
+      released: 'Tela pode apagar',
+      unavailable: 'Tela automática',
+    })[awake.status.value],
+)
+type PipWindow = Window & {
+  documentPictureInPicture?: {
+    requestWindow: (options: { width: number; height: number }) => Promise<Window>
+  }
+}
+async function relocate(target: Window | null) {
+  media.value?.prepareRelocation()
+  playerWindow.value = target
+  await nextTick()
+  if (!disposed) await media.value?.finishRelocation()
+  place()
+}
+function restorePlayer() {
+  themeObserver?.disconnect()
+  if (!disposed) void relocate(null)
+}
+async function toggleMini() {
+  if (playerWindow.value) {
+    playerWindow.value.close()
+    return
+  }
+  const api = (window as PipWindow).documentPictureInPicture
+  if (!api || opening.value || !isPlayer.value) return
+  opening.value = true
+  miniError.value = ''
+  let popup: Window | undefined
+  try {
+    const opened: Window = await api.requestWindow({ width: 480, height: 360 })
+    popup = opened
+    if (disposed || !isPlayer.value) {
+      opened.close()
+      return
+    }
+    const doc = opened.document
+    doc.title = 'QRokê · Mini player'
+    doc.documentElement.lang = 'pt-BR'
+    const base = doc.createElement('base')
+    base.href = location.origin + '/'
+    doc.head.append(base)
+    for (const sheet of document.styleSheets) {
+      try {
+        const style = doc.createElement('style')
+        style.textContent = Array.from(sheet.cssRules, (rule) => rule.cssText).join('\n')
+        doc.head.append(style)
+      } catch {
+        if (!sheet.href) continue
+        const link = doc.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = sheet.href
+        doc.head.append(link)
+      }
+    }
+    const copyTheme = () => {
+      doc.documentElement.dataset.theme = document.documentElement.dataset.theme || 'dark'
+      doc.documentElement.dataset.motion = document.documentElement.dataset.motion || 'on'
+    }
+    copyTheme()
+    themeObserver = new MutationObserver(copyTheme)
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'data-motion'],
+    })
+    opened.addEventListener('pagehide', restorePlayer, { once: true })
+    await relocate(opened)
+  } catch {
+    popup?.close()
+    miniError.value =
+      'Não foi possível abrir o mini player. Mantenha esta aba visível e tente novamente.'
+  } finally {
+    opening.value = false
+  }
+}
+watch(isPlayer, (selected) => {
+  if (!selected) playerWindow.value?.close()
+})
 const docked = ref(true)
 const bounds = ref<Record<string, string>>({})
 const route = useRoute()
@@ -13,6 +120,11 @@ let observedStage: HTMLElement | null = null
 let frame = 0
 let timer: ReturnType<typeof setInterval>
 function updatePlacement() {
+  if (playerWindow.value) {
+    bounds.value = {}
+    document.documentElement.style.setProperty('--qroke-dock-space', '0px')
+    return
+  }
   const stage = document.querySelector<HTMLElement>('[data-player-stage]')
   if (stage !== observedStage) {
     if (observedStage) resize?.unobserve(observedStage)
@@ -27,7 +139,7 @@ function updatePlacement() {
     !!adminDialogOpen.value ||
     !box ||
     // The fixed header lives in the page stacking context; dock before the video overlaps it.
-    (!!header && box.top < header.bottom) ||
+    (!cinema.value && !!header && box.top < header.bottom) ||
     box.bottom < 220 ||
     box.top > innerHeight - 180
   bounds.value =
@@ -53,7 +165,7 @@ async function returnToPlayer() {
   place()
 }
 watch(
-  [() => route.path, isPlayer, menuOpen, joinOpen, adminDialogOpen],
+  [() => route.path, isPlayer, menuOpen, joinOpen, adminDialogOpen, cinema],
   async () => {
     await nextTick()
     place()
@@ -61,6 +173,8 @@ watch(
   { flush: 'post' },
 )
 onMounted(() => {
+  miniSupported.value = !!(window as PipWindow).documentPictureInPicture
+  window.addEventListener('qroke:mini-player', toggleMini)
   // Follow animated stage dimensions before paint without remounting the media.
   resize = new ResizeObserver(updatePlacement)
   resize.observe(document.body)
@@ -70,6 +184,10 @@ onMounted(() => {
   place()
 })
 onBeforeUnmount(() => {
+  disposed = true
+  themeObserver?.disconnect()
+  playerWindow.value?.close()
+  window.removeEventListener('qroke:mini-player', toggleMini)
   cancelAnimationFrame(frame)
   clearInterval(timer)
   resize?.disconnect()
@@ -79,30 +197,64 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <section
-    v-show="isPlayer"
-    ref="root"
-    class="persistent-player"
-    :class="{ 'is-docked': docked }"
-    :style="bounds"
-    aria-label="Player da festa"
-  >
-    <MediaPlayer ref="media" />
-    <div class="persistent-controls">
-      <div>
-        <strong>{{ state?.current?.title || 'Player pronto' }}</strong
-        ><small>{{ state?.current?.artist }}</small>
+  <Teleport :to="playerWindow?.document.body || 'body'" :disabled="!playerWindow">
+    <section
+      v-show="isPlayer"
+      ref="root"
+      class="persistent-player"
+      :class="{
+        'is-docked': docked && !playerWindow,
+        'in-mini-window': !!playerWindow,
+        'in-cinema': cinema && partyPage === '/player' && !playerWindow && !docked,
+        'preparing-karaoke': karaokeWaiting && partyPage === '/player' && !playerWindow,
+      }"
+      :style="bounds"
+      aria-label="Player da festa"
+    >
+      <MediaPlayer ref="media" :player-window="playerWindow" />
+      <KaraokeCountdown v-if="playerWindow" compact />
+      <div class="persistent-controls">
+        <div>
+          <strong>{{ state?.current?.title || 'Player pronto' }}</strong
+          ><small :title="state?.current?.artist">{{ screenStatus }}</small>
+        </div>
+        <button
+          v-if="soundDevice !== device?.id"
+          aria-label="Ativar som"
+          @click="media?.activate()"
+        >
+          Ativar som
+        </button>
+        <button v-if="miniSupported" :disabled="opening" @click="toggleMini">
+          {{ playerWindow ? 'Voltar à aba' : 'Mini player' }}
+        </button>
+        <button
+          v-if="docked && !playerWindow"
+          aria-label="Voltar ao player na página"
+          @click="returnToPlayer"
+        >
+          Abrir player ↗
+        </button>
       </div>
-      <button v-if="soundDevice !== device?.id" aria-label="Ativar som" @click="media?.activate()">
-        Ativar som
-      </button>
-      <button v-if="docked" aria-label="Voltar ao player na página" @click="returnToPlayer">
-        Abrir player ↗
-      </button>
-    </div>
-  </section>
+      <p v-if="miniError" class="mini-error" role="status">{{ miniError }}</p>
+    </section>
+  </Teleport>
 </template>
 <style scoped>
+.persistent-player.preparing-karaoke {
+  z-index: 20;
+  pointer-events: none;
+}
+.in-mini-window {
+  inset: 0 !important;
+  width: 100%;
+  height: 100%;
+  border-radius: 0 !important;
+}
+.mini-error {
+  padding: 8px;
+  font-size: 12px;
+}
 .persistent-player {
   position: fixed;
   z-index: 25;
@@ -135,6 +287,11 @@ onBeforeUnmount(() => {
 }
 .persistent-player :deep(.local-player .vinyl) {
   display: none;
+}
+.in-mini-window .persistent-controls {
+  position: relative;
+  z-index: 3;
+  background: var(--surface);
 }
 .persistent-controls {
   flex-shrink: 0;
@@ -189,5 +346,16 @@ onBeforeUnmount(() => {
     width: 220px;
     right: 8px;
   }
+}
+
+.in-cinema {
+  border: 0;
+  border-radius: 0;
+  background: #000;
+}
+.in-cinema .persistent-controls {
+  min-height: 40px;
+  background: #111;
+  color: #fff;
 }
 </style>

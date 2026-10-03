@@ -64,6 +64,8 @@ onBeforeUnmount(() => {
         mantenha o player visível.
       </p>
     </details>
+    <TvPairingCode v-if="admin" />
+    <PlayerBackgroundHelp />
     <p v-if="notice" class="hint">{{ notice }}</p>
     <div v-for="item in devices" :key="item.id" class="managed-device">
       <div class="managed-device-title">

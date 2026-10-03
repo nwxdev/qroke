@@ -2,12 +2,20 @@ export function useKaraokeCountdown() {
   const { state, clockOffset } = useParty()
   const now = ref(Date.now())
   let timer: ReturnType<typeof setInterval>
+  const tick = () => {
+    now.value = Date.now()
+  }
   onMounted(() => {
+    tick()
+    document.addEventListener('visibilitychange', tick)
     timer = setInterval(() => {
       now.value = Date.now()
     }, 100)
   })
-  onBeforeUnmount(() => clearInterval(timer))
+  onBeforeUnmount(() => {
+    clearInterval(timer)
+    document.removeEventListener('visibilitychange', tick)
+  })
   const waiting = computed(
     () =>
       !!state.value?.current?.karaoke &&

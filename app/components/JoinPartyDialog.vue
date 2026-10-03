@@ -218,6 +218,9 @@ onBeforeUnmount(() => {
           </button>
         </form>
         <p v-if="failure" id="join-party-error" class="notice" role="alert">{{ failure }}</p>
+        <NuxtLink class="join-tv" to="/tv" @click="close"
+          ><AppIcon name="tv" /> Entrar com a TV / Código</NuxtLink
+        >
         <span class="join-or">ou</span>
         <button type="button" class="join-scan" :disabled="busy" @click="openCamera">
           <AppIcon name="qr" /> Escanear QR Code
@@ -316,5 +319,13 @@ button {
     width: calc(100vw - 252px);
     max-height: calc(100dvh - 32px);
   }
+}
+.join-tv {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  margin-top: 12px;
 }
 </style>

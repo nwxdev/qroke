@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const cinema = useState('qroke:karaoke-cinema', () => false)
+const tv = ref(false)
 const installed = useState('pwa-installed', () => false)
 const dismissed = ref(false),
   help = ref(false),
@@ -25,11 +27,12 @@ function measure() {
     (bar.value?.offsetHeight || 0) + 'px',
   )
 }
-watch([dismissed, installed, help], async () => {
+watch([dismissed, installed, help, cinema, tv], async () => {
   await nextTick()
   measure()
 })
 onMounted(() => {
+  tv.value = /AFT|SmartTV|HbbTV/i.test(navigator.userAgent)
   ios.value =
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
@@ -51,7 +54,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="pwa-install-slot" :class="{ pending: !ready }">
     <aside
-      v-if="ready && !installed && !dismissed"
+      v-if="ready && !installed && !dismissed && !cinema && !tv"
       ref="bar"
       class="pwa-install"
       aria-label="Instalar aplicativo"

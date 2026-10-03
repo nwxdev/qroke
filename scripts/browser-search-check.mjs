@@ -81,6 +81,26 @@ try {
   ).toBeEnabled()
   await expect(alert).toHaveCount(0)
 
+  // Backspace and arrows edit text without closing the mobile keyboard on the player page.
+  await page.goto(fixture.base + '/f/' + partyId + '/player')
+  await input.fill('cpm22')
+  await submit.click()
+  await expect(results).toHaveCount(1)
+  await input.focus()
+  await input.press('Backspace')
+  await expect(input).toHaveValue('cpm2')
+  await expect(input).toBeFocused()
+  await input.press('ArrowLeft')
+  await expect(input).toBeFocused()
+  expect(await input.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none')
+  expect(await input.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('none')
+  await search.getByRole('button', { name: 'Limpar busca', exact: true }).click()
+  await expect(input).toHaveValue('')
+  await expect(input).toBeFocused()
+  await expect(results).toHaveCount(0)
+  await expect(submit).toBeDisabled()
+  await input.fill('cpm22')
+
   // Simulate only the API error response for the UI recovery scenario.
   const pattern = '**' + searchPath + '?*'
   const message =

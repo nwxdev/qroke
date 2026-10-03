@@ -94,7 +94,7 @@ describe('sequência de karaokê', () => {
       s.queue[2]!.karaoke = true
       finishTrack(s, outcome)
       expect(s.current?.title).toBe('Faixa 3')
-      expect(s.karaokeLeadSeconds).toBe(5)
+      expect(s.karaokeLeadSeconds).toBe(10)
       expect(s.queue.map((item) => item.title)).toEqual(['Faixa 4', 'Faixa 2'])
       finishTrack(s, 'ended')
       expect(s.current?.title).toBe('Faixa 4')
@@ -113,7 +113,7 @@ describe('sequência de karaokê', () => {
       Object.assign(s.queue[0]!, { manualOrder: 0 })
       finishTrack(s, outcome)
       expect(s.current?.title).toBe('Faixa 3')
-      expect(s.karaokeLeadSeconds).toBe(5)
+      expect(s.karaokeLeadSeconds).toBe(10)
       expect(s.queue.map((item) => item.title)).toEqual(['Faixa 2', 'Faixa 4'])
       finishTrack(s, 'ended')
       expect(s.current?.title).toBe('Faixa 2')

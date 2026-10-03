@@ -6,6 +6,8 @@ const scripts = [
   'browser-seo-check.mjs',
   'browser-analytics-check.mjs',
   'browser-continuity-check.mjs',
+  'browser-background-check.mjs',
+  'browser-tv-check.mjs',
   'browser-join-check.mjs',
   'browser-access-check.mjs',
   'browser-multisession-check.mjs',

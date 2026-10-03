@@ -4,7 +4,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (PUBLIC_PAGES[to.path] || to.path === '/criar-festa' || !to.matched.length) return
   const id = partyIdFromPath(to.path),
     page = partyPage(to.path)
-  if (['/entrar', '/encerrada'].includes(page)) return
+  if (['/entrar', '/encerrada'].includes(page) || to.path === '/tv') return
   const prefix = id ? '/f/' + id : ''
   try {
     const request = import.meta.server ? useRequestFetch() : $fetch

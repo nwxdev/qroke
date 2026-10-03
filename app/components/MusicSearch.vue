@@ -42,6 +42,15 @@ async function requestAdd(track: Track) {
 onBeforeUnmount(() => clearTimeout(feedbackTimer))
 const searchInput = ref<{ focus: () => void } | null>(null)
 let request = 0
+function clearSearch() {
+  request++
+  query.value = ''
+  results.value = []
+  searched.value = false
+  searching.value = false
+  searchError.value = ''
+  searchInput.value?.focus()
+}
 async function search() {
   if (searching.value || query.value.trim().length < 2) return
   const seq = ++request
@@ -100,8 +109,16 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
           @keydown.enter.prevent="search"
           maxlength="120"
           :autofocus="!embedded"
-          :disable="searching"
           ><template #prepend><AppIcon name="search" /></template></QInput
+        ><button
+          type="button"
+          class="clear-search"
+          aria-label="Limpar busca"
+          :disabled="!query && !searched"
+          @pointerdown.prevent
+          @click="clearSearch"
+        >
+          <AppIcon name="close" /><span>Limpar</span></button
         ><QBtn
           type="submit"
           color="primary"
@@ -200,5 +217,27 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
 }
 .search-section {
   scroll-margin-top: 100px;
+}
+.clear-search {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 10px;
+}
+@media (max-width: 500px) {
+  .search-form {
+    flex-wrap: wrap;
+  }
+  .search-form > .q-field {
+    flex: 1 1 calc(100% - 62px);
+  }
+  .clear-search {
+    width: 48px;
+  }
+  .clear-search span {
+    display: none;
+  }
 }
 </style>

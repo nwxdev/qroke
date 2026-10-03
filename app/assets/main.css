@@ -1759,3 +1759,15 @@ body {
   min-width: 0;
   scroll-snap-align: start;
 }
+
+/* Quasar draws focus on the field shell; its native input must not draw a second ring. */
+.q-field__native:focus,
+.q-field__native:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.q-field__native {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}

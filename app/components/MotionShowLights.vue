@@ -17,18 +17,14 @@
   height: 125%;
   transform-origin: top center;
   transform: rotate(-18deg);
-  background: linear-gradient(180deg, var(--motion-glow), transparent 85%);
+  background: linear-gradient(180deg, rgba(196, 243, 50, 0.24), transparent 85%);
   clip-path: polygon(48% 0, 52% 0, 100% 100%, 0 100%);
-  animation: motion-spotlight var(--motion-show) var(--motion-ease) both;
+  animation: motion-spotlight 4s ease-in-out infinite alternate;
 }
 .motion-show-lights i:nth-child(2) {
   left: auto;
   right: 0;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--coral) 22%, transparent),
-    transparent 85%
-  );
+  background: linear-gradient(180deg, rgba(255, 90, 36, 0.22), transparent 85%);
   transform: rotate(18deg);
   animation-name: motion-spotlight-right;
 }
@@ -39,7 +35,7 @@
   inset: 20% auto auto 28%;
   border: 1px solid var(--motion-glow);
   border-radius: 50%;
-  animation: motion-stage-ring var(--motion-show) var(--motion-ease) both;
+  animation: motion-stage-ring 5s ease-out infinite;
 }
 @keyframes motion-spotlight {
   from {

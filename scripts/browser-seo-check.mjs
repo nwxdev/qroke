@@ -235,11 +235,15 @@ try {
   }
   const entry = await fetch(fixture.base + '/entrar')
   expect(entry.headers.get('x-robots-tag')).toBe('noindex, nofollow')
-  for (const path of ['/host', '/busca', '/player', '/qr', '/tv']) {
+  for (const path of ['/host', '/busca', '/player', '/qr']) {
     const r = await fetch(fixture.base + path, { redirect: 'manual' })
     expect(r.headers.get('x-robots-tag')).toBe('noindex, nofollow')
     expect([302, 307]).toContain(r.status)
   }
+  const tvEntry = await fetch(fixture.base + '/tv', { redirect: 'manual' })
+  expect(tvEntry.status).toBe(200)
+  expect(tvEntry.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+  expect(await tvEntry.text()).toContain('id="tv-room-code"')
   expect((await fetch(fixture.base + '/pagina-inexistente')).status).toBe(404)
   expect((await fetch(fixture.base + '/api/state')).status).toBe(401)
   const asset = await fetch(fixture.base + '/brand/qroke-share-v2.jpg')

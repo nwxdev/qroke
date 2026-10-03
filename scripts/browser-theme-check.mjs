@@ -164,7 +164,7 @@ try {
   state.playerId = null
   state.revision++
   await db.writeState(JSON.stringify(state))
-  await page.goto(fixture.base + '/tv')
+  await page.goto(fixture.base + '/player')
   await page.getByRole('button', { name: 'Usar tema claro' }).click()
   await expect(page.locator('.tv-backdrop')).toBeVisible()
   expect(await contrast(page, '.tv-placeholder h1', true)).toBeGreaterThanOrEqual(4.5)

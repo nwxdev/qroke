@@ -12,6 +12,12 @@ export function useSpatialNav(
       (el) => el.getClientRects().length > 0 && el.getAttribute('aria-hidden') !== 'true',
     )
   function update() {
+    if (
+      document.activeElement instanceof HTMLElement &&
+      root.value?.contains(document.activeElement) &&
+      document.activeElement.matches('[data-preserve-focus]')
+    )
+      return
     const items = elements()
     const active = items.includes(document.activeElement as HTMLElement)
       ? (document.activeElement as HTMLElement)
@@ -27,6 +33,15 @@ export function useSpatialNav(
       previous = document.activeElement as HTMLElement
   }
   function key(event: KeyboardEvent) {
+    if (event.defaultPrevented || event.isComposing) return
+    const target = event.target instanceof Element ? event.target : null
+    // Text editing belongs to the native keyboard, including Backspace and caret arrows.
+    if (
+      target?.closest(
+        'input:not([type=range]):not([type=checkbox]):not([type=radio]),textarea,[contenteditable]:not([contenteditable=false])',
+      )
+    )
+      return
     if (
       event.key === 'Backspace' ||
       event.key === 'Escape' ||
