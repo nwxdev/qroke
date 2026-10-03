@@ -90,6 +90,7 @@ useSpatialNav(root, back, () => {})
     :class="{
       'karaoke-expanded': expanded,
       'karaoke-cinema': cinema,
+      'karaoke-preparing': karaokeWaiting,
       'karaoke-active': karaoke,
       'music-mode': musicMode,
       'video-mode': !musicMode && !karaoke,
@@ -605,6 +606,10 @@ useSpatialNav(root, back, () => {})
 .stage-actions small {
   color: var(--text);
   font-size: 12px;
+}
+.tv-screen.karaoke-preparing {
+  /* O contador deve compartilhar as camadas do PLAYER, que fica fora desta página. */
+  isolation: auto;
 }
 .tv-screen.karaoke-cinema {
   --qroke-stage-rail: clamp(112px, 16vw, 210px);

@@ -118,6 +118,18 @@ try {
   await expect(countdown).toBeVisible({ timeout: 30000 })
   await expect(page.locator('.countdown-number')).toHaveText('10')
   await expect(countdown).toBeFocused()
+  // Include the noninteractive iframe in hit testing: pointer-events:none alone can hide an overlap.
+  expect(
+    await page.evaluate(() => {
+      const frame = document.querySelector('.persistent-player')
+      const digit = document.querySelector('.countdown-number').getBoundingClientRect()
+      const previous = frame.style.pointerEvents
+      frame.style.pointerEvents = 'auto'
+      const top = document.elementFromPoint(digit.x + digit.width / 2, digit.y + digit.height / 2)
+      frame.style.pointerEvents = previous
+      return !!top?.closest('.karaoke-countdown')
+    }),
+  ).toBe(true)
   await expect(page.locator('.karaoke-qr .qr-plate svg')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   const animation = await countdown.evaluate((el) => ({

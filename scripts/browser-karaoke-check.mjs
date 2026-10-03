@@ -124,8 +124,13 @@ try {
   expect(await countdown.boundingBox()).toEqual(fixedBefore)
   expect(
     await countdown.evaluate((el) => {
-      const r = el.getBoundingClientRect()
-      return el.contains(document.elementFromPoint(r.left + 40, r.top + 150))
+      const r = el.querySelector('.countdown-number').getBoundingClientRect()
+      const player = document.querySelector('.persistent-player')
+      const previous = player.style.pointerEvents
+      player.style.pointerEvents = 'auto'
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+      player.style.pointerEvents = previous
+      return el.contains(top)
     }),
   ).toBe(true)
   expect(

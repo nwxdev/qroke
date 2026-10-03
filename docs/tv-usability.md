@@ -27,7 +27,7 @@ A tela cheia solicitada é a do documento QRokê, que inclui vídeo e convite. A
 
 Em 3 de outubro de 2026, o roteiro passou em um Fire TV Stick AFTSSS (Android 9), comprado em 2022, usando Silk 138.18.2 e viewport de 960 × 540. Foram verificados o teclado nativo e Backspace, conexão por código, seleção do PLAYER, foco na contagem de dez segundos, animação, tela cheia por gesto, vídeo real do YouTube após a contagem, QR sem sobreposição ao vídeo e saída de volta à fila. O teste usou uma festa local descartável, sem alterar a produção.
 
-No Silk, `visibility: hidden` no iframe impedia o YouTube de concluir a preparação. O PLAYER agora permanece montado e pausado atrás da contagem opaca. Este teste valida o fluxo de início e reprodução; não constitui uma sessão contínua de várias horas.
+No Silk, `visibility: hidden` no iframe impedia o YouTube de concluir a preparação. O PLAYER agora permanece montado e pausado atrás da contagem opaca. Durante a preparação, a página não isola suas camadas: o contador deve ficar acima do PLAYER persistente, que vive fora dela. Este teste valida o fluxo de início e reprodução; não constitui uma sessão contínua de várias horas.
 
 ## Repetir os testes
 
