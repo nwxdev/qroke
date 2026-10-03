@@ -1,9 +1,59 @@
 <script setup lang="ts">
 const { state, queue, isPlayer } = useParty()
+const route = useRoute()
+const cinema = useState('qroke:karaoke-cinema', () => false)
+const stageDismissed = ref(false)
+const fullscreen = ref(false)
+const fullscreenHint = ref('')
+const stageButton = ref<HTMLButtonElement | null>(null)
+function syncFullscreen() {
+  fullscreen.value = !!document.fullscreenElement
+}
+async function enterFullscreen() {
+  stageDismissed.value = false
+  fullscreenHint.value = ''
+  if (document.fullscreenElement) return
+  try {
+    if (!document.documentElement.requestFullscreen) throw new Error('unsupported')
+    await document.documentElement.requestFullscreen()
+  } catch {
+    fullscreenHint.value = 'Toque em Tela cheia na TV para ampliar o palco.'
+  }
+}
+async function exitStage() {
+  stageDismissed.value = true
+  if (document.fullscreenElement) await document.exitFullscreen().catch(() => {})
+}
+function activatePresentation() {
+  if (karaoke.value || route.query.tv === '1') void enterFullscreen()
+}
+watch(
+  () => state.value?.current?.queueId,
+  async () => {
+    stageDismissed.value = false
+    if (!karaoke.value) return
+    await nextTick()
+    window.scrollTo(0, 0)
+    if (!document.fullscreenElement) void enterFullscreen()
+  },
+)
+onMounted(() => {
+  syncFullscreen()
+  document.addEventListener('fullscreenchange', syncFullscreen)
+  window.addEventListener('qroke:activate-media', activatePresentation)
+})
+onBeforeUnmount(() => {
+  cinema.value = false
+  document.removeEventListener('fullscreenchange', syncFullscreen)
+  window.removeEventListener('qroke:activate-media', activatePresentation)
+})
 const root = ref<HTMLElement | null>(null)
 const { active: soundActive } = usePlayerSound()
 const { waiting: karaokeWaiting } = useKaraokeCountdown()
 const karaoke = computed(() => !!state.value?.current?.karaoke)
+watchEffect(() => {
+  cinema.value = karaoke.value && !stageDismissed.value
+})
 const musicMode = computed(
   () =>
     !karaoke.value &&
@@ -16,6 +66,10 @@ const closing = computed(
 )
 const expanded = computed(() => karaoke.value && !closing.value)
 function back() {
+  if (cinema.value) {
+    void exitStage()
+    return
+  }
   const header = root.value?.querySelector('header')
   const trigger = header?.querySelector<HTMLButtonElement>('.menu-toggle')
   const target = trigger?.getClientRects().length
@@ -35,6 +89,8 @@ useSpatialNav(root, back, () => {})
     }"
     :class="{
       'karaoke-expanded': expanded,
+      'karaoke-cinema': cinema,
+      'karaoke-preparing': karaokeWaiting,
       'karaoke-active': karaoke,
       'music-mode': musicMode,
       'video-mode': !musicMode && !karaoke,
@@ -54,11 +110,24 @@ useSpatialNav(root, back, () => {})
         </template>
       </HeaderMenu>
     </header>
+    <div
+      v-if="karaoke || route.query.tv === '1'"
+      class="stage-actions"
+      :class="{ 'in-cinema': cinema }"
+    >
+      <button ref="stageButton" type="button" @click="fullscreen ? exitStage() : enterFullscreen()">
+        {{ fullscreen ? 'Sair da tela cheia' : 'Tela cheia' }}
+      </button>
+      <button v-if="cinema" type="button" @click="exitStage">Sair do palco</button>
+      <PlayerSoundButton v-if="cinema && !soundActive" />
+      <small v-if="fullscreenHint && !fullscreen" role="status">{{ fullscreenHint }}</small>
+    </div>
     <PartyNotice />
     <div class="tv-stage">
       <section class="tv-main">
-        <KaraokeCountdown />
+        <KaraokeCountdown :embedded="!cinema" />
         <PlayerStage />
+        <PlayerBackgroundHelp />
         <MusicSearch v-if="!karaoke" :allow-karaoke="false" embedded class="player-discovery" />
         <PartyLink v-else to="/busca?karaoke=1#busca" class="karaoke-search-link"
           >Buscar karaokê ↗</PartyLink
@@ -514,5 +583,101 @@ useSpatialNav(root, back, () => {})
 .tv-screen:not(.karaoke-active) .tv-main {
   display: block;
   min-height: 0;
+}
+
+.stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.stage-actions button {
+  min-height: 44px;
+  font-size: 13px;
+}
+.stage-actions.in-cinema {
+  position: fixed;
+  top: 14px;
+  right: 12px;
+  width: calc(var(--qroke-stage-rail) - 24px);
+  z-index: 45;
+  display: grid;
+}
+.stage-actions small {
+  color: var(--text);
+  font-size: 12px;
+}
+.tv-screen.karaoke-preparing {
+  /* O contador deve compartilhar as camadas do PLAYER, que fica fora desta página. */
+  isolation: auto;
+}
+.tv-screen.karaoke-cinema {
+  isolation: auto;
+  --qroke-stage-rail: clamp(112px, 16vw, 210px);
+  --karaoke-qr-width: calc(var(--qroke-stage-rail) - 24px);
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+.karaoke-cinema .player-header,
+.karaoke-cinema .player-queue,
+.karaoke-cinema .karaoke-search-link,
+.karaoke-cinema .next-strip {
+  display: none;
+}
+.karaoke-cinema .tv-stage {
+  display: block;
+  height: 100%;
+  margin: 0;
+}
+.karaoke-cinema .tv-main {
+  height: 100%;
+  overflow: hidden;
+}
+.karaoke-cinema .tv-main :deep(.player-stage) {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  aspect-ratio: auto;
+}
+.karaoke-cinema .player-invite {
+  position: fixed;
+  z-index: 40;
+  right: 12px;
+  bottom: max(64px, calc(env(safe-area-inset-bottom) + 16px));
+  width: calc(var(--qroke-stage-rail) - 24px);
+}
+.tv-screen.karaoke-cinema .tv-aside :deep(.karaoke-qr) {
+  position: static;
+  width: 100%;
+  margin: 0;
+}
+.tv-screen.karaoke-cinema :deep(.karaoke-qr .qr-plate) {
+  width: 100%;
+  margin: 0;
+}
+.karaoke-cinema :deep(.karaoke-qr .qr-actions),
+.karaoke-cinema :deep(.karaoke-qr .invite-link),
+.karaoke-cinema :deep(.karaoke-qr .invite-brand) {
+  display: none;
+}
+.karaoke-cinema :deep(.countdown-fullscreen) {
+  --qroke-stage-rail: clamp(112px, 16vw, 210px);
+}
+@media (max-width: 500px) {
+  .stage-actions.in-cinema {
+    top: 8px;
+    right: 8px;
+    width: calc(var(--qroke-stage-rail) - 16px);
+  }
+  .stage-actions button {
+    padding: 8px 3px;
+    font-size: 11px;
+  }
 }
 </style>

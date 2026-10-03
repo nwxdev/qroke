@@ -1,17 +1,32 @@
 <script setup lang="ts">
 const partyRoute = usePartyRoute()
-const { state } = useParty()
-const route = useRoute()
+const { state, device, soundDevice, isPlayer } = useParty()
+const stage = ref<HTMLElement | null>(null)
+defineProps<{ compact?: boolean; embedded?: boolean }>()
 const { waiting, remaining } = useKaraokeCountdown()
+watch(
+  () => waiting.value && state.value?.current?.queueId,
+  async (visible) => {
+    if (!visible || partyRoute.page.value !== '/player') return
+    await nextTick()
+    window.scrollTo(0, 0)
+    stage.value?.focus({ preventScroll: true })
+  },
+  { immediate: true, flush: 'post' },
+)
 const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || [])
 </script>
 <template>
   <Transition name="karaoke-stage">
     <section
       v-if="waiting && state?.current"
+      ref="stage"
+      tabindex="-1"
+      data-preserve-focus
       class="karaoke-countdown"
       :class="{
-        'countdown-fullscreen': partyRoute.page.value === '/player',
+        'countdown-fullscreen': partyRoute.page.value === '/player' && !compact && !embedded,
+        'countdown-compact': compact,
         'is-paused': state.paused,
       }"
       aria-label="Preparação do karaokê"
@@ -27,7 +42,13 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
           </svg>
         </div>
         <p class="countdown-status" role="status">
-          {{ state.karaokeStartsAt ? 'A música vai começar' : 'Aguardando o PLAYER ativar o som' }}
+          {{
+            state.karaokeStartsAt
+              ? 'A música vai começar'
+              : isPlayer && soundDevice === device?.id
+                ? 'Preparando o vídeo…'
+                : 'Aguardando o PLAYER ativar o som'
+          }}
         </p>
         <h1 :key="state.current.queueId" class="countdown-song" :aria-label="state.current.title">
           <span
@@ -50,7 +71,6 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
 .karaoke-countdown {
   position: relative;
   isolation: isolate;
-  position: relative;
   display: grid;
   place-items: center;
   text-align: center;
@@ -74,30 +94,75 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
   justify-content: center;
 }
 .countdown-fullscreen {
+  --karaoke-qr-width: clamp(84px, 14vw, 180px);
   position: fixed;
   inset: 0;
-  z-index: 15;
+  z-index: 35;
   margin: 0;
   border: 0;
   border-radius: 0;
-  padding: calc(var(--player-header-space, 98px) + 8px)
+  padding: calc(var(--qroke-install-space, 0px) + var(--player-header-space, 98px) + 8px)
     calc(5vw + var(--karaoke-qr-width, 180px) + 24px) var(--player-footer-space, 24px) 5vw;
-  overflow: auto;
+  overflow: hidden;
+  background-color: #141520;
   background:
-    radial-gradient(
-      ellipse at 18% 25%,
-      color-mix(in srgb, var(--brand-lime) 13%, transparent),
-      transparent 55%
-    ),
-    radial-gradient(
-      ellipse at 82% 85%,
-      color-mix(in srgb, var(--brand-orange) 8%, transparent),
-      transparent 55%
-    ),
-    var(--bg);
+    radial-gradient(ellipse at 18% 25%, rgba(196, 243, 50, 0.13), transparent 55%),
+    radial-gradient(ellipse at 82% 85%, rgba(255, 90, 36, 0.08), transparent 55%), var(--bg);
+}
+.karaoke-countdown::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 25% 30%, rgba(196, 243, 50, 0.3), transparent 55%),
+    radial-gradient(ellipse at 75% 70%, rgba(255, 90, 36, 0.28), transparent 55%);
+  animation: countdown-atmosphere 6s ease-in-out infinite alternate;
+}
+.is-paused::before {
+  animation-play-state: paused;
+}
+@keyframes countdown-atmosphere {
+  from {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1.3);
+    opacity: 0.95;
+  }
+}
+.countdown-compact {
+  position: absolute;
+  inset: 0 0 56px;
+  z-index: 2;
+  margin: 0;
+  padding: 8px;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+.countdown-compact .countdown-content {
+  gap: 4px;
+}
+.countdown-compact .countdown-number {
+  height: min(26vh, 95px);
+}
+.countdown-compact .countdown-song {
+  font-size: 18px;
+}
+.countdown-compact .countdown-performers {
+  padding: 4px;
+}
+.countdown-compact .countdown-performers :deep(.karaoke-singers) {
+  font-size: 12px;
+}
+.countdown-compact .countdown-cue {
+  display: none;
 }
 .countdown-number {
   width: min(400px, 100%);
+  height: clamp(110px, 27vh, 290px);
   height: clamp(110px, 27dvh, 290px);
   color: var(--accent);
 }
@@ -122,6 +187,8 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
   font-size: clamp(26px, 4vw, 56px);
   line-height: 1.15;
   max-width: 100%;
+  max-height: 3.5em;
+  overflow: hidden;
   color: var(--text);
   text-wrap: balance;
 }
@@ -137,6 +204,9 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
   padding: 14px 20px;
   background: var(--surface);
   max-width: 100%;
+  max-height: 8em;
+  overflow: auto;
+  pointer-events: auto;
 }
 .countdown-performers :deep(.karaoke-singers) {
   justify-content: center;
@@ -220,7 +290,37 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
     font-size: 18px;
   }
 }
+@media (min-width: 1024px) {
+  .countdown-fullscreen {
+    --karaoke-qr-width: clamp(240px, 24vw, 320px);
+  }
+}
+@media (max-height: 600px) {
+  .countdown-fullscreen {
+    padding-top: calc(var(--qroke-install-space, 0px) + 88px);
+    padding-bottom: 12px;
+  }
+  .countdown-content {
+    gap: 4px;
+  }
+  .countdown-number {
+    height: 90px;
+  }
+  .countdown-song {
+    font-size: 22px;
+  }
+  .countdown-cue {
+    display: none;
+  }
+  .countdown-performers {
+    padding: 6px;
+    max-height: 4em;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
+  .karaoke-countdown::before {
+    animation: none;
+  }
   .countdown-digit text,
   .countdown-song > span {
     animation: none;
@@ -229,5 +329,15 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
   .karaoke-stage-leave-active {
     transition: none;
   }
+}
+
+.karaoke-countdown:focus {
+  outline: none;
+}
+:global(.karaoke-cinema) .countdown-fullscreen {
+  padding: 20px calc(var(--qroke-stage-rail, 180px) + 16px) 20px 24px;
+}
+:global(html[data-motion='off']) .karaoke-countdown::before {
+  animation: none;
 }
 </style>

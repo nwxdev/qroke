@@ -2,7 +2,7 @@ import type { PartyState } from '../../shared/types'
 export const initialState = (): PartyState => ({
   schemaVersion: 2,
   revision: 0,
-  karaokeDelaySeconds: 5,
+  karaokeDelaySeconds: 10,
   karaokeTransitionMusic: true,
   karaokeLeadSeconds: 0,
   karaokeStartsAt: null,

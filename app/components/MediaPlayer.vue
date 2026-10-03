@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { describeMedia } from '#shared/media'
+import type { YoutubeWindow } from '../composables/useYoutube'
+const props = defineProps<{ playerWindow?: Window | null }>()
 const { storageKey, id: activePartyId } = usePartyRoute()
 /// <reference types="youtube" />
 const { state, isPlayer, api, refresh, lastContact, device, soundDevice, armSound, clockOffset } =
@@ -19,6 +21,8 @@ const armed = computed(() => !!device.value && soundDevice.value === device.valu
   clock = ref(Date.now())
 let loadedId: string | undefined
 let seekOnStart = true
+let relocation: { id: string; position: number } | undefined
+let startPosition: number | undefined
 let localFinish: { id: string; at: number } | undefined
 let yt: YT.Player | undefined,
   timer: ReturnType<typeof setInterval>,
@@ -167,7 +171,7 @@ async function sync() {
   }
   applyVolume()
   if (seekOnStart && loadedId === current.value?.queueId) {
-    const position = state.value?.position || 0
+    const position = startPosition ?? state.value?.position ?? 0
     yt?.seekTo?.(position, true)
     if (audio.value && audio.value.readyState >= 1)
       audio.value.currentTime = Math.min(
@@ -198,7 +202,11 @@ async function mountTrack() {
             0,
             Math.min(
               86400,
-              yt?.getCurrentTime?.() ?? audio.value?.currentTime ?? state.value?.position ?? 0,
+              yt?.getCurrentTime?.() ??
+                audio.value?.currentTime ??
+                (relocation?.id === transfer.queueId ? relocation.position : undefined) ??
+                state.value?.position ??
+                0,
             ),
           ),
         }
@@ -212,6 +220,8 @@ async function mountTrack() {
       .then(refresh)
       .catch(() => {})
   loadedId = undefined
+  startPosition = relocation && relocation.id === track?.queueId ? relocation.position : undefined
+  relocation = undefined
   seekOnStart = true
   localFinish = undefined
   terminalId = undefined
@@ -230,12 +240,41 @@ async function mountTrack() {
     return
   }
   try {
-    await loadYoutube()
+    let owner = window as YoutubeWindow
+    if (props.playerWindow && frame.value) {
+      const wrapper = props.playerWindow.document.createElement('iframe')
+      wrapper.title = 'Vídeo da festa'
+      wrapper.dataset.youtubeWindow = ''
+      wrapper.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'
+      wrapper.allowFullscreen = true
+      wrapper.referrerPolicy = 'strict-origin-when-cross-origin'
+      wrapper.style.cssText = 'display:block;width:100%;height:100%;border:0;min-height:200px'
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Não foi possível abrir o vídeo. Tente novamente.')),
+          10000,
+        )
+        wrapper.onload = () => {
+          clearTimeout(timeout)
+          resolve()
+        }
+        wrapper.onerror = () => {
+          clearTimeout(timeout)
+          reject(new Error('Não foi possível abrir o vídeo.'))
+        }
+        wrapper.src = location.origin + '/player-frame'
+        frame.value!.replaceChildren(wrapper)
+      })
+      if (seq !== generation || !wrapper.contentWindow) return
+      owner = wrapper.contentWindow as YoutubeWindow
+    }
+    await loadYoutube(owner)
     if (seq !== generation || !frame.value) return
-    const node = document.createElement('div')
-    frame.value.replaceChildren(node)
-    const start = state.value?.position || 0
-    yt = new YT.Player(node, {
+    const node = owner.document.createElement('div')
+    if (props.playerWindow) owner.document.body.replaceChildren(node)
+    else frame.value.replaceChildren(node)
+    const start = startPosition ?? state.value?.position ?? 0
+    yt = new owner.YT!.Player(node, {
       host: 'https://www.youtube.com',
       width: '100%',
       height: '100%',
@@ -252,7 +291,7 @@ async function mountTrack() {
           void sync()
         },
         onStateChange(event) {
-          if (event.data === YT.PlayerState.ENDED && seq === generation) ended(track.queueId)
+          if (event.data === owner.YT!.PlayerState.ENDED && seq === generation) ended(track.queueId)
         },
         onError(event) {
           if (seq !== generation) return
@@ -273,6 +312,7 @@ async function mountTrack() {
       },
     })
   } catch (error) {
+    if (seq !== generation) return
     warningKind.value = 'load'
     warning.value = errorText(error)
   }
@@ -280,8 +320,8 @@ async function mountTrack() {
 function localReady(element: HTMLAudioElement) {
   if (element.dataset.queueId !== current.value?.queueId) return
   loadedId = element.dataset.queueId
-  if (state.value?.position)
-    element.currentTime = Math.min(state.value.position, Math.max(0, element.duration - 0.1))
+  const position = startPosition ?? state.value?.position ?? 0
+  if (position) element.currentTime = Math.min(position, Math.max(0, element.duration - 0.1))
   applyVolume()
   if (sink.value) void changeSink()
   void sync()
@@ -298,11 +338,32 @@ async function activate() {
   await sync()
 }
 function pageVisibility() {
-  pageVisible.value = !document.hidden
-  if (document.hidden) {
+  pageVisible.value = !(props.playerWindow || window).document.hidden
+  if (!pageVisible.value) {
     yt?.pauseVideo?.()
   } else void sync()
 }
+function prepareRelocation() {
+  if (current.value)
+    relocation = {
+      id: current.value.queueId,
+      position: yt?.getCurrentTime?.() ?? audio.value?.currentTime ?? state.value?.position ?? 0,
+    }
+  generation++
+  yt?.destroy()
+  yt = undefined
+}
+async function finishRelocation() {
+  pageVisible.value = !(props.playerWindow || window).document.hidden
+  await mountTrack()
+}
+watch(
+  () => props.playerWindow,
+  (next, previous) => {
+    previous?.document.removeEventListener('visibilitychange', pageVisibility)
+    next?.document.addEventListener('visibilitychange', pageVisibility)
+  },
+)
 async function retryWarning() {
   if (!isPlayer.value) return
   if (warningKind.value === 'activate') return activate()
@@ -410,11 +471,12 @@ onBeforeUnmount(() => {
   releaseAudio(audio.value)
   clearInterval(timer)
   document.removeEventListener('visibilitychange', pageVisibility)
+  props.playerWindow?.document.removeEventListener('visibilitychange', pageVisibility)
   window.removeEventListener('qroke:retry-media', retryWarning)
   window.removeEventListener('qroke:activate-media', activate)
   warning.value = ''
 })
-defineExpose({ activate })
+defineExpose({ activate, prepareRelocation, finishRelocation })
 </script>
 <template>
   <section v-if="isPlayer" class="media-player">

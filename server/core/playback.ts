@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { orderQueue } from './rules'
 import type { PartyState } from '../../shared/types'
 export function prepareKaraoke(state: PartyState) {
-  state.karaokeLeadSeconds = state.current?.karaoke ? (state.karaokeDelaySeconds ?? 5) : 0
+  state.karaokeLeadSeconds = state.current?.karaoke ? (state.karaokeDelaySeconds ?? 10) : 0
   state.karaokeStartsAt = null
 }
 export function startNext(state: PartyState) {

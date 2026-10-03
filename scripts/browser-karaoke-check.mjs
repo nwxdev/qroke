@@ -47,6 +47,14 @@ try {
   await bia.request('/api/guest', { name: 'Bia' })
   await caio.request('/api/guest', { name: 'Caio' })
   const page = await context.newPage()
+  async function viewport(size) {
+    await page.evaluate(() => (document.fullscreenElement ? document.exitFullscreen() : undefined))
+    const session = await context.newCDPSession(page)
+    const { windowId } = await session.send('Browser.getWindowForTarget')
+    await session.send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } })
+    await session.detach()
+    await page.setViewportSize(size)
+  }
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto(fixture.base)
   await page.locator('.queue-search-target').click()
@@ -64,26 +72,28 @@ try {
   expect((await state()).queue[0].singers.map((p) => p.name)).toEqual(['Ana', 'Bia', 'Caio'])
   await expect(page.locator('.queue-card').first()).toContainText('Ana · Bia · Caio')
   await context.request.post(fixture.base + '/api/auth', { data: { action: 'login', pin: '4321' } })
-  await page.goto(fixture.base + '/tv')
+  await page.goto(fixture.base + '/player')
   await expect(page).toHaveURL(fixture.base + '/player')
   const device = await page.evaluate(() => JSON.parse(sessionStorage.getItem('qroke:device')))
   await context.request.post(fixture.base + '/api/control', {
     data: { action: 'assign', deviceId: device.id },
   })
   await expect(page.locator('.karaoke-countdown')).toContainText('Ana · Bia · Caio')
-  await expect(page.locator('.countdown-number')).toHaveText('5')
+  await expect(page.locator('.countdown-number')).toHaveText('10')
+  await page.getByRole('button', { name: 'Sair do palco', exact: true }).click()
   await expect(page.locator('.player-karaoke-group')).toBeVisible()
   await expect(page.locator('.karaoke-queue-heading')).toContainText('prioridade agora')
   await expect(page.locator('.player-karaoke-group .player-playlist-card')).toHaveCount(1)
   await expect(page.locator('.karaoke-countdown')).toContainText('Aguardando o PLAYER')
+  await page.getByRole('button', { name: 'Tela cheia', exact: true }).click()
+  await expect(page.locator('.tv-screen')).toHaveClass(/karaoke-cinema/)
   const countdown = page.locator('.karaoke-countdown')
   for (const width of [1440, 320]) {
-    await page.setViewportSize({ width, height: 900 })
+    await viewport({ width, height: 900 })
     for (const theme of ['dark', 'light']) {
-      if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== theme)
-        await page
-          .getByRole('button', { name: theme === 'light' ? 'Usar tema claro' : 'Usar tema escuro' })
-          .click()
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value
+      }, theme)
       const bounds = await countdown.boundingBox()
       expect(bounds).toEqual({ x: 0, y: 0, width, height: 900 })
       const singers = await page.locator('.countdown-performers').boundingBox()
@@ -96,6 +106,7 @@ try {
         await Promise.all(
           element
             .getAnimations({ subtree: true })
+            .filter((animation) => Number.isFinite(animation.effect.getComputedTiming().endTime))
             .map((animation) => animation.finished.catch(() => {})),
         )
       })
@@ -105,33 +116,67 @@ try {
       })
     }
   }
+  // Scrolling must not bring the docked iframe over the fixed preparation screen.
+  await viewport({ width: 390, height: 844 })
+  const fixedBefore = await countdown.boundingBox()
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.waitForTimeout(600)
+  expect(await countdown.boundingBox()).toEqual(fixedBefore)
+  expect(
+    await countdown.evaluate((el) => {
+      const r = el.querySelector('.countdown-number').getBoundingClientRect()
+      const player = document.querySelector('.persistent-player')
+      const previous = player.style.pointerEvents
+      player.style.pointerEvents = 'auto'
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+      player.style.pointerEvents = previous
+      return el.contains(top)
+    }),
+  ).toBe(true)
+  expect(
+    await page.locator('.countdown-number').evaluate((el) => {
+      const box = el.getBoundingClientRect()
+      return box.top >= 0 && box.bottom <= innerHeight
+    }),
+  ).toBe(true)
+  expect(await countdown.evaluate((el) => getComputedStyle(el, '::before').animationName)).toMatch(
+    /^countdown-atmosphere/,
+  )
+  await page.screenshot({ path: 'test-results/karaoke-countdown-scrolled.png' })
+  await page.evaluate(() => window.scrollTo(0, 0))
   await page.emulateMedia({ reducedMotion: 'reduce' })
   expect(
     await page
       .locator('.countdown-digit text')
       .evaluate((el) => getComputedStyle(el).animationName),
   ).toBe('none')
+  expect(await countdown.evaluate((el) => getComputedStyle(el, '::before').animationName)).toBe(
+    'none',
+  )
   await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await page.locator('.header-persistent .screen-sound-button').click()
+  await viewport({ width: 1440, height: 900 })
+  await page.locator('.stage-actions .screen-sound-button').click()
   await expect.poll(async () => !!(await state()).karaokeStartsAt).toBe(true)
   await expect.poll(async () => page.evaluate(() => window.toneStarts)).toBeGreaterThan(0)
   expect(await page.evaluate(() => !!window.fake.playing)).toBe(false)
   for (const width of [1440, 768, 360, 320]) {
-    await page.setViewportSize({ width, height: 900 })
+    await viewport({ width, height: 900 })
     await expect(page.locator('.karaoke-qr .qr-plate svg')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await page.screenshot({ path: 'test-results/karaoke-countdown-mobile.png', fullPage: true })
   await expect
-    .poll(async () => page.evaluate(() => !!window.fake.playing), { timeout: 10000 })
+    .poll(async () => page.evaluate(() => !!window.fake.playing), { timeout: 15000 })
     .toBe(true)
   await expect(page.locator('.karaoke-countdown')).toHaveCount(0)
+  await expect(page.locator('.persistent-player')).toBeVisible()
   const tones = await page.evaluate(() => window.toneStarts)
   await page.waitForTimeout(600)
   expect(await page.evaluate(() => window.toneStarts)).toBe(tones)
+  await page.getByRole('button', { name: 'Sair do palco', exact: true }).click()
   for (const width of [1440, 768, 320]) {
-    await page.setViewportSize({ width, height: 900 })
+    await viewport({ width, height: 900 })
     const group = page.locator('.player-karaoke-group')
     await expect(group).toBeVisible()
     const playlist = group.locator('.player-playlist-card')
@@ -226,7 +271,7 @@ try {
   expect((await state()).current.playlist.title).toBe('Playlist de fundo')
   expect(errors).toEqual([])
   console.log(
-    'Karaokê: 3 cantores via playlist, entrada /tv→/player, contagem padrão/configurável, vinheta interrompida ao iniciar, QR 320–1440px, busca por alvo e administração restrita ao host e pedido de karaokê como próximo durante playlist comum OK',
+    'Karaokê: 3 cantores via playlist, palco em tela cheia, contagem padrão/configurável, vinheta interrompida ao iniciar, QR 320–1440px, busca por alvo e administração restrita ao host e pedido de karaokê como próximo durante playlist comum OK',
   )
 } finally {
   await browser.close()

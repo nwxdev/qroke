@@ -72,7 +72,7 @@ describe('rádio da última faixa', () => {
     })
     expect(db.state().current?.playlist).toBeUndefined()
     expect(db.state().current?.singers).toBeUndefined()
-    expect(db.state().karaokeLeadSeconds).toBe(5)
+    expect(db.state().karaokeLeadSeconds).toBe(10)
     db.mutate((state) => finishTrack(state, 'ended'))
     await radio.run()
     expect(deps.related).toHaveBeenNthCalledWith(2, 'k1', true)

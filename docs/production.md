@@ -54,6 +54,10 @@ O CI valida código e dependências reais, publica ghcr.io/nwxdev/qroke com o SH
 
 A reversão troca a imagem; não apaga nem desfaz o banco. Migrações devem manter compatibilidade entre versões. Backups devem incluir qroke_prod, com restauração ensaiada em banco separado.
 
+## Reprodução e segundo plano
+
+Consulte [Reprodução durante a festa](player-background.md) para mini player de computador, tela ligada, contagem de karaokê e limites de Chrome no celular/PWA. YouTube exige vídeo visível; a biblioteca local usa áudio nativo e precisa ser provisionada no servidor.
+
 ## Limitações operacionais
 
 A primeira instalação usa a VPS atual. Duas instâncias não protegem contra falha do host. Escalar entre servidores exige redundância do MongoDB e do Dragonfly, backups externos e nova autenticação no registry ao adicionar nós. Os testes de API e navegador simulam YouTube; o login Google real e áudio em celular/TV devem ser verificados após configurar o callback de produção.
@@ -92,3 +96,7 @@ interceptam a coleta e não alimentam a propriedade real.
 Teste: node scripts/browser-analytics-check.mjs. Inclui ausência de tag antes do
 aceite, recusa persistida, contagem por navegação, URL privada rejeitada, referência
 limpa, revogação entre abas, cookies removidos, ID vazio e layouts claro/escuro.
+
+## TV e códigos de conexão
+
+Consulte [TV e usabilidade do karaokê](tv-usability.md) para conexão por quatro caracteres, contagem de 10 segundos e teste físico no Silk. A pesquisa para evolução do catálogo está em [Música licenciada no Brasil](music-licensing-br.md); o provedor permanece YouTube.

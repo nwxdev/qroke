@@ -42,7 +42,7 @@ try {
     }),
   )
   await context.request.post(fixture.base + '/api/auth', { data: { action: 'login', pin: '4321' } })
-  await page.goto(fixture.base + '/tv')
+  await page.goto(fixture.base + '/player')
   await expect
     .poll(async () => page.evaluate(() => sessionStorage.getItem('qroke:device')))
     .not.toBe(null)

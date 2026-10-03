@@ -1,9 +1,9 @@
 <script setup lang="ts">
 const { state, control, pending } = useParty()
-const seconds = ref(state.value?.karaokeDelaySeconds ?? 5),
+const seconds = ref(state.value?.karaokeDelaySeconds ?? 10),
   music = ref(state.value?.karaokeTransitionMusic ?? true)
 watch([() => state.value?.karaokeDelaySeconds, () => state.value?.karaokeTransitionMusic], () => {
-  seconds.value = state.value?.karaokeDelaySeconds ?? 5
+  seconds.value = state.value?.karaokeDelaySeconds ?? 10
   music.value = state.value?.karaokeTransitionMusic ?? true
 })
 const save = () =>
@@ -26,8 +26,8 @@ const save = () =>
     >
     <button type="submit" :disabled="pending">Salvar karaokê</button>
     <small
-      >De 0 a 30 segundos; padrão 5. O tempo vale para a próxima faixa. A vinheta acompanha o volume
-      do PLAYER.</small
+      >De 0 a 30 segundos; padrão 10. O tempo vale para a próxima faixa. A vinheta acompanha o
+      volume do PLAYER.</small
     >
   </form>
 </template>

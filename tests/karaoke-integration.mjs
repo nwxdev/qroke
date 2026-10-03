@@ -30,7 +30,7 @@ test('karaokê: cantores, configuração, preparação confirmada e votos negati
     400,
   )
   const read = () => db.readState()
-  assert.equal((await read()).karaokeDelaySeconds, 5)
+  assert.equal((await read()).karaokeDelaySeconds, 10)
   await host.request('/api/control', { action: 'karaoke-settings', seconds: 2, music: false })
   const tracks = (await a.request('/api/search?q=Faixa&source=local')).data.tracks
   // Biblioteca não muda metadados confiáveis: não é possível forjar karaoke no corpo.

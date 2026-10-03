@@ -56,7 +56,7 @@ try {
     })
   })
   await host.goto(fixture.base + '/host')
-  await player.goto(fixture.base + '/tv')
+  await player.goto(fixture.base + '/player')
   await expect
     .poll(async () => player.evaluate(() => sessionStorage.getItem('qroke:device')))
     .not.toBe(null)

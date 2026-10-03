@@ -117,6 +117,9 @@ onBeforeUnmount(() => {
           </ActionButton>
           <small class="home-create-hint">Você cria o palco. A galera escolhe a trilha.</small>
         </div>
+        <NuxtLink class="home-tv-link" to="/tv"
+          ><AppIcon name="tv" /> Entrar com a TV / Código</NuxtLink
+        >
         <NuxtLink class="home-guide-link" to="/como-funciona"
           >Veja como funciona <AppIcon name="arrow-right"
         /></NuxtLink>
@@ -749,5 +752,14 @@ onBeforeUnmount(() => {
   .party-preview {
     padding: 24px;
   }
+}
+.home-tv-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  margin: 12px 16px 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
 }
 </style>
