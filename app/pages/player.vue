@@ -612,6 +612,7 @@ useSpatialNav(root, back, () => {})
   isolation: auto;
 }
 .tv-screen.karaoke-cinema {
+  isolation: auto;
   --qroke-stage-rail: clamp(112px, 16vw, 210px);
   --karaoke-qr-width: calc(var(--qroke-stage-rail) - 24px);
   height: 100vh;
@@ -639,7 +640,7 @@ useSpatialNav(root, back, () => {})
   position: fixed;
   left: 0;
   top: 0;
-  width: calc(100vw - var(--qroke-stage-rail));
+  width: 100vw;
   height: 100vh;
   height: 100dvh;
   aspect-ratio: auto;
@@ -648,7 +649,7 @@ useSpatialNav(root, back, () => {})
   position: fixed;
   z-index: 40;
   right: 12px;
-  bottom: max(16px, env(safe-area-inset-bottom));
+  bottom: max(64px, calc(env(safe-area-inset-bottom) + 16px));
   width: calc(var(--qroke-stage-rail) - 24px);
 }
 .tv-screen.karaoke-cinema .tv-aside :deep(.karaoke-qr) {

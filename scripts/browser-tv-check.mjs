@@ -168,11 +168,20 @@ try {
   expect(qr.x).toBeGreaterThan(dimensions.width * 0.75)
   expect(qr.y + qr.height).toBeLessThanOrEqual(dimensions.height)
   expect(qr.y + qr.height).toBeGreaterThan(dimensions.height * 0.85)
-  expect(video.x + video.width).toBeLessThanOrEqual(qr.x)
+  expect(video).toEqual({ x: 0, y: 0, width: dimensions.width, height: dimensions.height })
+  const iframe = await page.locator('.persistent-player iframe').boundingBox()
+  expect(iframe).toEqual(video)
+  await expect(page.locator('.persistent-player .persistent-controls')).toBeHidden()
+  expect(
+    await page.locator('.karaoke-qr .qr-plate').evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2))
+    }),
+  ).toBe(true)
   await page.screenshot({ path: 'test-results/' + prefix + '-playing.png' })
   report.dimensions = dimensions
   report.checks.push(
-    'Vídeo toca depois da contagem; QR permanece no canto inferior direito e não cobre o iframe',
+    'Vídeo ocupa toda a tela após a contagem; QR fica sobre o vídeo no canto inferior direito',
   )
   await page.getByRole('button', { name: 'Sair do palco', exact: true }).click()
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false)

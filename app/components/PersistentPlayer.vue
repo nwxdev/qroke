@@ -354,8 +354,6 @@ onBeforeUnmount(() => {
   background: #000;
 }
 .in-cinema .persistent-controls {
-  min-height: 40px;
-  background: #111;
-  color: #fff;
+  display: none;
 }
 </style>

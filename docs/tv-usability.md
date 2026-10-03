@@ -19,13 +19,13 @@ Backspace e setas dentro de campos de texto pertencem ao teclado. A navegação 
 
 Novas festas usam **10 segundos** de preparação; o anfitrião continua podendo ajustar de 0 a 30 segundos. Configurações já salvas são preservadas. O prazo começa quando o PLAYER está conectado, autorizado e com a mídia preparada. O vídeo fica pausado durante a contagem; o servidor rejeita avanço/progresso antes do prazo.
 
-A contagem ocupa a janela, recebe foco e usa o relógio do servidor. O fundo tem gradientes e luzes em movimento; a preferência de movimento reduzido é respeitada. Sair do palco devolve a contagem à página e libera os controles. O vídeo começa depois do prazo, com o QR no canto inferior direito. A lateral reservada ao QR evita cobrir imagem, legendas e controles do YouTube.
+A contagem ocupa a janela, recebe foco e usa o relógio do servidor. O fundo tem gradientes e luzes em movimento; a preferência de movimento reduzido é respeitada. Sair do palco devolve a contagem à página e libera os controles. O vídeo começa depois do prazo e ocupa toda a janela, sem a barra inferior do QRokê. O QR fica sobreposto ao vídeo no canto inferior direito, com uma margem inferior para os controles do YouTube.
 
 A tela cheia solicitada é a do documento QRokê, que inclui vídeo e convite. A entrada automática depende da permissão do navegador; **Tela cheia** permite concedê-la por gesto. O botão de fullscreen do próprio YouTube não inclui elementos externos ao iframe. Na TV e no palco, o aviso de instalação PWA fica oculto.
 
 ## Validação em aparelho físico
 
-Em 3 de outubro de 2026, o roteiro passou em um Fire TV Stick AFTSSS (Android 9), comprado em 2022, usando Silk 138.18.2 e viewport de 960 × 540. Foram verificados o teclado nativo e Backspace, conexão por código, seleção do PLAYER, foco na contagem de dez segundos, animação, tela cheia por gesto, vídeo real do YouTube após a contagem, QR sem sobreposição ao vídeo e saída de volta à fila. O teste usou uma festa local descartável, sem alterar a produção.
+Em 3 de outubro de 2026, o roteiro passou em um Fire TV Stick AFTSSS (Android 9), comprado em 2022, usando Silk 138.18.2 e viewport de 960 × 540. Foram verificados o teclado nativo e Backspace, conexão por código, seleção do PLAYER, foco na contagem de dez segundos, animação, tela cheia por gesto, vídeo real do YouTube após a contagem, vídeo ocupando toda a janela com QR sobreposto no canto inferior direito e saída de volta à fila. O teste usou uma festa local descartável, sem alterar a produção.
 
 No Silk, `visibility: hidden` no iframe impedia o YouTube de concluir a preparação. O PLAYER agora permanece montado e pausado atrás da contagem opaca. Durante a preparação, a página não isola suas camadas: o contador deve ficar acima do PLAYER persistente, que vive fora dela. Este teste valida o fluxo de início e reprodução; não constitui uma sessão contínua de várias horas.
 
