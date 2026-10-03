@@ -138,7 +138,7 @@ try {
   const tvContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const tv = await tvContext.newPage()
   watch(tv)
-  await tv.goto(server.base + '/tv')
+  await tv.goto(server.base + '/player')
   await tv.locator('.header-persistent .screen-sound-button').focus()
   await tv.keyboard.press('Enter')
   await expect(tv.getByRole('dialog')).toHaveCount(0)
