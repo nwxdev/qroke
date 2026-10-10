@@ -1,5 +1,6 @@
 import { randomUUID, randomInt } from 'node:crypto'
 import { z } from 'zod'
+import { PARTY_THEME_IDS } from '../../shared/themes'
 import { rateLimit } from '../core/connections'
 import { hashToken } from '../core/mongo-database'
 import { PARTY_LIFETIME, hashPin } from '../core/party-lifecycle'
@@ -12,6 +13,7 @@ export default defineEventHandler(async (event) => {
         .string()
         .regex(/^\d{6}$/, 'Use um PIN de 6 dígitos.')
         .optional(),
+      theme: z.enum(PARTY_THEME_IDS).default('classic'),
       ownerName: z.string().trim().min(2).max(20).optional(),
       idempotencyKey: z.string().uuid(),
     }).parse,
@@ -37,15 +39,18 @@ export default defineEventHandler(async (event) => {
       })
     const now = Date.now()
     try {
-      await target.create({
-        name: input.name,
-        pinHash: await hashPin(input.pin || String(randomInt(100000, 1000000))),
-        createdAt: new Date(now),
-        expiresAt: new Date(now + PARTY_LIFETIME),
-        purgeAt: new Date(now + 2 * PARTY_LIFETIME),
-        createdBy,
-        creationKey,
-      })
+      await target.create(
+        {
+          name: input.name,
+          pinHash: await hashPin(input.pin || String(randomInt(100000, 1000000))),
+          createdAt: new Date(now),
+          expiresAt: new Date(now + PARTY_LIFETIME),
+          purgeAt: new Date(now + 2 * PARTY_LIFETIME),
+          createdBy,
+          creationKey,
+        },
+        input.theme,
+      )
     } catch (error) {
       if ((error as { code?: number }).code !== 11000) throw error
       const duplicate = await database.db.collection('parties').findOne({ creationKey, createdBy })

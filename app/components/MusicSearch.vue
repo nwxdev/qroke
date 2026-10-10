@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { fieldProps, buttonProps, toggleProps } = useThemeTokens()
 const $fetch = usePartyFetch()
 import type { Track } from '#shared/types'
 import { MEDIA_PROVIDER_INFO, type MediaProviderId } from '#shared/media'
@@ -157,6 +158,7 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
       </div>
       <form class="search-form" @submit.prevent="search">
         <QInput
+          v-bind="fieldProps"
           ref="searchInput"
           v-model="query"
           outlined
@@ -188,6 +190,7 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
         >
           <AppIcon name="close" /><span>Limpar</span></button
         ><QBtn
+          v-bind="buttonProps"
           type="submit"
           color="primary"
           no-caps
@@ -230,6 +233,7 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
           </button>
         </div>
         <QToggle
+          v-bind="toggleProps"
           v-if="allowKaraoke && source === 'youtube'"
           v-model="karaoke"
           color="primary"

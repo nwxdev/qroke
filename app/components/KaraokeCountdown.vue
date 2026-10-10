@@ -104,10 +104,19 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
   padding: calc(var(--qroke-install-space, 0px) + var(--player-header-space, 98px) + 8px)
     calc(5vw + var(--karaoke-qr-width, 180px) + 24px) var(--player-footer-space, 24px) 5vw;
   overflow: hidden;
-  background-color: #141520;
+  background-color: var(--surface);
   background:
-    radial-gradient(ellipse at 18% 25%, rgba(196, 243, 50, 0.13), transparent 55%),
-    radial-gradient(ellipse at 82% 85%, rgba(255, 90, 36, 0.08), transparent 55%), var(--bg);
+    radial-gradient(
+      ellipse at 18% 25%,
+      color-mix(in srgb, var(--accent) 13%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 82% 85%,
+      color-mix(in srgb, var(--highlight) 8%, transparent),
+      transparent 55%
+    ),
+    var(--bg);
 }
 .karaoke-countdown::before {
   content: '';
@@ -115,8 +124,16 @@ const titleWords = computed(() => state.value?.current?.title.split(/\s+/) || []
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 25% 30%, rgba(196, 243, 50, 0.3), transparent 55%),
-    radial-gradient(ellipse at 75% 70%, rgba(255, 90, 36, 0.28), transparent 55%);
+    radial-gradient(
+      ellipse at 25% 30%,
+      color-mix(in srgb, var(--accent) 30%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 75% 70%,
+      color-mix(in srgb, var(--highlight) 28%, transparent),
+      transparent 55%
+    );
   animation: countdown-atmosphere 6s ease-in-out infinite alternate;
 }
 .is-paused::before {

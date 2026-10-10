@@ -41,6 +41,7 @@ export async function startFixture(port = 3197, extraEnv = {}) {
         NUXT_ENCRYPTION_KEY: 'ab'.repeat(32),
         NUXT_SESSION_SECRET: 'test-only-session-secret-with-32-characters',
         NUXT_ACCESS_REQUIRED: 'false',
+        NUXT_RADIO_DEFAULT: 'false',
         NUXT_MUSIC_DIR: music,
         NUXT_YOUTUBE_API_KEY: '',
         NUXT_YOUTUBE_CLIENT_ID: '',

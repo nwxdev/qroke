@@ -5,7 +5,8 @@ withDefaults(defineProps<{ guide: SiteGuide; showCta?: boolean }>(), { showCta: 
 <template>
   <div class="public-guide">
     <header>
-      <NuxtLink to="/" aria-label="QRokê, início"><BrandLogo /></NuxtLink><ThemeToggle />
+      <NuxtLink to="/" aria-label="QRokê, início"><BrandLogo /></NuxtLink>
+      <div class="guide-preferences"><ThemeToggle /><FullscreenToggle /></div>
     </header>
     <main>
       <MotionReveal as="section" class="guide-intro">
@@ -41,6 +42,25 @@ header {
   gap: 24px;
   border-bottom: 1px solid var(--line);
   padding-bottom: 28px;
+}
+.guide-preferences {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+header > a {
+  min-width: 0;
+}
+header :deep(.brand-logo) {
+  max-width: 100%;
+}
+@media (max-width: 420px) {
+  header {
+    gap: 12px;
+  }
+  header > a {
+    max-width: 158px;
+  }
 }
 .guide-intro {
   max-width: 800px;

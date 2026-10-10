@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { fieldProps, buttonProps, toggleProps } = useThemeTokens()
 const $fetch = usePartyFetch()
 const { id: activePartyId } = usePartyRoute()
 const pinLength = computed(() => (activePartyId.value.startsWith('f1.') ? 6 : 4))
@@ -69,6 +70,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
         ><button type="submit" :disabled="pending || occupied || pin.length < pinLength">OK</button>
       </div>
       <QBtn
+        v-bind="buttonProps"
         v-else
         type="submit"
         color="primary"

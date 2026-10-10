@@ -2,8 +2,10 @@ import { assignPlayer } from '../core/handoff'
 import { previousTrack } from '../core/previous'
 import { clearPlaybackIssue, skipTrack, retryTrack } from '../core/playback'
 import { z } from 'zod'
+import { PARTY_THEME_IDS } from '../../shared/themes'
 import { reorderQueue } from '../core/rules'
 const command = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('theme'), theme: z.enum(PARTY_THEME_IDS) }),
   z.object({
     action: z.literal('karaoke-settings'),
     seconds: z.number().int().min(0).max(30),
@@ -35,7 +37,7 @@ export default defineEventHandler(async (event) => {
   await requireAdmin(event)
   const cmd = await readValidatedBody(event, command.parse)
   await requireAdmin(event)
-  if (cmd.action === 'set-dj') await requirePartyOwner(event)
+  if (cmd.action === 'set-dj' || cmd.action === 'theme') await requirePartyOwner(event)
   if (cmd.action === 'assign' && !(await party(event).deviceOnline(cmd.deviceId)))
     throw createError({ statusCode: 409, statusMessage: 'Dispositivo desconectado.' })
   let stale = false
@@ -44,6 +46,10 @@ export default defineEventHandler(async (event) => {
     if (cmd.action === 'assign' && !(await party(event).deviceOnline(cmd.deviceId)))
       throw createError({ statusCode: 409, statusMessage: 'Dispositivo desconectado.' })
     switch (cmd.action) {
+      case 'theme':
+        await requirePartyOwner(event)
+        s.theme = cmd.theme
+        break
       case 'set-dj':
         await requirePartyOwner(event)
         try {

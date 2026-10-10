@@ -69,6 +69,7 @@ export class MongoPartyDatabase {
     public organizationId: string,
     public partyId: string,
     private notify: (scope: string) => Promise<unknown> = async () => {},
+    private defaultRadio = true,
   ) {
     this.scope = organizationId + ':' + partyId
   }
@@ -86,7 +87,7 @@ export class MongoPartyDatabase {
         $setOnInsert: {
           organizationId: this.organizationId,
           partyId: this.partyId,
-          state: initialState(),
+          state: initialState(this.defaultRadio),
           version: 0,
         },
       },
@@ -116,13 +117,14 @@ export class MongoPartyDatabase {
         'name' | 'pinHash' | 'createdAt' | 'expiresAt' | 'purgeAt' | 'creationKey' | 'createdBy'
       >
     >,
+    theme: import('../../shared/themes').PartyTheme = 'classic',
   ) {
     await this.db.collection<PartyRow>('parties').insertOne({
       _id: this.scope,
       organizationId: this.organizationId,
       partyId: this.partyId,
       version: 0,
-      state: initialState(),
+      state: { ...initialState(this.defaultRadio), theme },
       ...details,
     })
   }

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 defineProps<{
   name:
+    | 'fullscreen'
+    | 'fullscreen-exit'
     | 'sparkles'
     | 'warning'
     | 'refresh'
@@ -35,6 +37,8 @@ defineProps<{
     | 'link'
 }>()
 const paths = {
+  fullscreen: 'M8 3H3v5 M16 3h5v5 M21 16v5h-5 M3 16v5h5',
+  'fullscreen-exit': 'M3 8h5V3 M16 3v5h5 M21 16h-5v5 M8 21v-5H3',
   sparkles: 'M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z M20 2v4 M18 4h4',
   warning: 'M12 3l10 18H2z M12 9v5 M12 17v1',
   refresh: 'M20 7v5h-5 M4 17v-5h5 M5 8a8 8 0 0 1 13-3l2 3 M4 16l2 3a8 8 0 0 0 13-3',

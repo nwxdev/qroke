@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 const scripts = [
   'browser-home-check.mjs',
   'browser-party-improvements-check.mjs',
+  'browser-party-themes-check.mjs',
   'browser-search-check.mjs',
   'browser-motion-check.mjs',
   'browser-seo-check.mjs',

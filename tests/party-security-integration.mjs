@@ -92,6 +92,21 @@ test(
       200,
     )
     assert.equal((await guest.request(a + '/session')).data.role, 'dj')
+    assert.equal(
+      (await guest.request(a + '/control', { action: 'theme', theme: 'sonic-day' })).status,
+      403,
+    )
+    assert.equal(
+      (await owner.request(a + '/control', { action: 'theme', theme: 'sonic-day' })).status,
+      200,
+    )
+    assert.equal((await owner.request(a + '/state')).data.theme, 'sonic-day')
+    assert.equal((await another.request(b + '/state')).data.theme, 'classic')
+    assert.equal((await guest.request(a + '/party')).data.party.theme, 'sonic-day')
+    assert.equal(
+      (await owner.request(a + '/control', { action: 'theme', theme: 'invalid' })).status,
+      400,
+    )
     const tracks = (await owner.request(a + '/search?q=Faixa&source=local')).data.tracks
     await guest.request(a + '/queue', tracks[0])
     const queued = (await owner.request(a + '/state')).data.queue[0].queueId

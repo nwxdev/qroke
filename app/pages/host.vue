@@ -85,7 +85,7 @@ watch(admin, (value, previous) => {
         </section>
         <section v-else-if="tab === 'party'" class="panel">
           <h2>Convite e participantes</h2>
-          <SessionLink /><HostInvitation /><PartyPeople /><EndParty />
+          <PartyAppearance /><SessionLink /><HostInvitation /><PartyPeople /><EndParty />
         </section>
         <section v-else class="panel">
           <div class="section-heading">
