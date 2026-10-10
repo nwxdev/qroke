@@ -108,6 +108,7 @@ useSpatialNav(root, back, () => {})
       <BrandLogo class="player-brand" />
       <HeaderMenu />
     </header>
+    <SonicThemeBanner compact />
     <div
       v-if="karaoke || route.query.tv === '1'"
       class="stage-actions"

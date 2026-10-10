@@ -4,6 +4,7 @@ import type { PartyInfo } from '#shared/parties'
 const { id, page } = usePartyRoute()
 const { state } = useParty()
 const { light, syncTokens } = useTheme()
+const cinema = useState('qroke:karaoke-cinema', () => false)
 const preview = useState<import('#shared/themes').PartyTheme | null>(
   'qroke:theme-preview',
   () => null,
@@ -35,7 +36,7 @@ watch(
   { immediate: true },
 )
 useHead(() => ({
-  htmlAttrs: { 'data-party-theme': theme.value },
+  htmlAttrs: { 'data-party-theme': theme.value, 'data-party-cinema': String(cinema.value) },
   meta: [
     {
       name: 'theme-color',

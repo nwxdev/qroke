@@ -59,9 +59,11 @@ withDefaults(defineProps<{ tone?: 'auto' | 'dark' | 'light'; decorative?: boolea
   object-fit: contain;
 }
 .brand-logo .brand-logo-dark {
+  filter: var(--brand-filter-dark, none);
   display: block;
 }
 .brand-logo .brand-logo-light {
+  filter: var(--brand-filter-light, none);
   display: none;
 }
 :global([data-theme='light'] .brand-logo--auto .brand-logo-dark),

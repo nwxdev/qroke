@@ -6,7 +6,10 @@ const fixture = await startFixture(3290, {
   NUXT_RADIO_DEFAULT: 'true',
   NUXT_PUBLIC_PARTY_URL: 'http://127.0.0.1:3290',
 })
-const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] })
+const browser = await chromium.launch({
+  headless: true,
+  args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
+})
 try {
   await mkdir('test-results', { recursive: true })
   const owner = await browser.newContext({ viewport: { width: 390, height: 844 } })
@@ -14,7 +17,7 @@ try {
     errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto(fixture.base + '/criar-festa')
-  await page.getByText('Dia das Crianças · Supervelocidade', { exact: true }).click()
+  await page.getByText('Sonic · Neon Festival', { exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('data-party-theme', 'sonic-day')
   await page.getByLabel('Nome da festa', { exact: true }).fill('Velocidade e música')
   await page.getByLabel('Seu nome', { exact: true }).fill('Ana')
@@ -39,6 +42,27 @@ try {
   await expect(g.getByRole('combobox', { name: 'Buscar música', exact: true })).toBeVisible()
   await expect(g.locator('html')).toHaveAttribute('data-party-theme', 'sonic-day')
   await expect(g.locator('.party-atmosphere')).toHaveCount(1)
+  await expect(g.locator('.sonic-banner')).toBeVisible()
+  await expect
+    .poll(() =>
+      g.locator('.sonic-character').evaluate((image) => image.complete && image.naturalWidth > 0),
+    )
+    .toBe(true)
+  expect(await g.locator('.sonic-character').evaluate((image) => image.currentSrc)).toContain(
+    'sonic-480-v1.webp',
+  )
+  await expect(g.locator('.sonic-ring-canvas')).toHaveClass(/ready/)
+  await g.getByRole('button', { name: 'Girar argola do Sonic' }).click()
+  const brandFilter = () =>
+    g.locator('.brand-header .brand-logo img:visible').evaluate((el) => getComputedStyle(el).filter)
+  await expect.poll(brandFilter).toBe('brightness(0) invert(1)')
+  expect(await g.evaluate(() => getComputedStyle(document.body).backgroundImage)).toContain(
+    'city-dark-960-v1.webp',
+  )
+  await g.screenshot({ path: 'test-results/sonic-search-dark-mobile.png', fullPage: true })
+  await g.setViewportSize({ width: 1440, height: 1000 })
+  await g.screenshot({ path: 'test-results/sonic-search-dark-desktop.png', fullPage: true })
+  await g.setViewportSize({ width: 390, height: 844 })
   const tokens = () =>
     g.evaluate(() => ({
       root: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
@@ -94,20 +118,32 @@ try {
   await g.getByRole('button', { name: 'Usar tema claro', exact: true }).click()
   await expect(g.locator('html')).toHaveAttribute('data-theme', 'light')
   await expect.poll(tokens).toMatchObject({ root: '#155ac3', quasar: '#155ac3' })
+  await expect.poll(brandFilter).toBe('brightness(0)')
+  expect(await g.evaluate(() => getComputedStyle(document.body).backgroundImage)).toContain(
+    'city-light-960-v1.webp',
+  )
   await checkContrast()
   await g.screenshot({ path: 'test-results/sonic-search-light-mobile.png', fullPage: true })
   await g.emulateMedia({ reducedMotion: 'reduce' })
   await expect(g.locator('.party-atmosphere')).toHaveCount(0)
   await g.emulateMedia({ reducedMotion: 'no-preference' })
+  // Devices that lose their GPU context keep a visible ring and usable controls.
+  await g.locator('.sonic-ring-canvas').evaluate((canvas) => {
+    canvas.getContext('webgl').getExtension('WEBGL_lose_context').loseContext()
+  })
+  await expect(g.locator('.sonic-ring-fallback')).toBeVisible()
+  await g.getByRole('button', { name: 'Girar argola do Sonic' }).click()
+
   const tabs = page.getByRole('navigation', { name: 'Gerenciar festa' })
   await tabs.getByRole('button', { name: 'Festa', exact: true }).click()
   const appearance = page.getByRole('region', { name: 'Aparência da festa' })
   await appearance.getByText('QRokê original', { exact: true }).click()
   await appearance.getByRole('button', { name: 'Aplicar tema à festa' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-party-theme', 'classic')
+  await expect(page.locator('.sonic-banner')).toHaveCount(0)
   await expect(g.locator('html')).toHaveAttribute('data-party-theme', 'classic', { timeout: 10000 })
   await expect(g.locator('html')).toHaveAttribute('data-theme', 'light')
-  await appearance.getByText('Dia das Crianças · Supervelocidade', { exact: true }).click()
+  await appearance.getByText('Sonic · Neon Festival', { exact: true }).click()
   await appearance.getByRole('button', { name: 'Aplicar tema à festa' }).click()
   await expect(g.locator('html')).toHaveAttribute('data-party-theme', 'sonic-day', {
     timeout: 10000,
@@ -136,6 +172,11 @@ try {
       await guest.request.post(api + '/control', { data: { action: 'theme', theme: 'classic' } })
     ).status(),
   ).toBe(403)
+  await page.goto(fixture.base + '/f/' + id + '/player')
+  await expect(page.locator('.sonic-banner')).toBeVisible()
+  await expect(page.locator('.sonic-ring-canvas')).toHaveClass(/ready/)
+  await page.screenshot({ path: 'test-results/sonic-player-mobile.png', fullPage: true })
+  await page.goto(fixture.base + '/f/' + id + '/host')
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.getByRole('button', { name: 'Expandir tela', exact: true }).click()
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true)
@@ -152,6 +193,13 @@ try {
   expect((await state()).autoContinue).toBe(false)
   await page.goto(fixture.base + '/')
   await expect(page.locator('html')).toHaveAttribute('data-party-theme', 'classic')
+  await expect(page.locator('.sonic-banner')).toHaveCount(0)
+  expect(
+    await page
+      .locator('.brand-logo img:visible')
+      .first()
+      .evaluate((el) => getComputedStyle(el).filter),
+  ).toBe('none')
   expect(errors).toEqual([])
   console.log(
     'Tema da festa: criação/SSR, dono/DJ, sincronização entre aparelhos, Quasar claro/escuro, fontes legíveis, movimento reduzido, fullscreen, 320–1440px e rádio padrão/persistência OK',

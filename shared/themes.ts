@@ -9,9 +9,9 @@ export const PARTY_THEMES = [
   },
   {
     id: 'sonic-day',
-    name: 'Dia das Crianças · Supervelocidade',
+    name: 'Sonic · Neon Festival',
     description:
-      'Inspirado no Sonic: azul elétrico, anéis dourados e energia de arcade, para todas as idades.',
+      'Sonic, cidade neon e argolas douradas. Uma festa cheia de ritmo nos modos claro e escuro.',
     colors: ['#63b4ff', '#ffd166', '#091c38'],
   },
 ] satisfies { id: PartyTheme; name: string; description: string; colors: string[] }[]

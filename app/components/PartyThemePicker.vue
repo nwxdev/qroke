@@ -24,6 +24,16 @@ const groupId = useId()
           :checked="modelValue === theme.id"
           @change="emit('update:modelValue', theme.id)"
         />
+        <img
+          v-if="theme.id === 'sonic-day'"
+          class="theme-art"
+          src="/themes/sonic/sonic-480-v1.webp"
+          width="480"
+          height="320"
+          alt=""
+          loading="lazy"
+          aria-hidden="true"
+        />
         <span class="theme-swatch" aria-hidden="true"
           ><i v-for="color in theme.colors" :key="color" :style="{ '--swatch': color }"
         /></span>
@@ -76,6 +86,18 @@ legend {
   width: 1px;
   height: 1px;
   opacity: 0;
+}
+.theme-art {
+  position: absolute;
+  right: 6px;
+  top: 0;
+  width: 90px;
+  height: 74px;
+  object-fit: contain;
+  pointer-events: none;
+}
+.theme-option[data-preview='sonic-day'] .theme-swatch {
+  padding-right: 84px;
 }
 .theme-option small {
   color: var(--muted);
