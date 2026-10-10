@@ -1,7 +1,12 @@
 import { partyIdFromPath, partyPage } from '#shared/parties'
 import { PUBLIC_PAGES } from '#shared/site'
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (PUBLIC_PAGES[to.path] || to.path === '/criar-festa' || !to.matched.length) return
+  if (
+    PUBLIC_PAGES[to.path] ||
+    ['/criar-festa', '/vincular'].includes(to.path) ||
+    !to.matched.length
+  )
+    return
   const id = partyIdFromPath(to.path),
     page = partyPage(to.path)
   if (['/entrar', '/encerrada'].includes(page) || to.path === '/tv') return

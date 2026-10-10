@@ -9,14 +9,14 @@ export async function authenticateBrowserParty(browser: string | undefined, part
   const config = useRuntimeConfig(),
     database = await openParty(config.organizationId, partyId)
   await database.assertActive()
-  const member = await new BrowserSessions(database.db, config.encryptionKey).get(
-    browser,
-    database.scope,
-  )
+  const sessions = new BrowserSessions(database.db, config.encryptionKey)
+  const member = await sessions.get(browser, database.scope)
   if (!member) return
-  if (member.role === 'guest') {
+  const principal = await sessions.principal(member)
+  if (!principal) return
+  if (principal.role === 'guest') {
     const invite = await database.inviteVersion()
-    if (!invite || invite.version !== member.version || invite.expiresAt <= Date.now()) return
+    if (!invite || invite.version !== principal.version || invite.expiresAt <= Date.now()) return
   }
   return { database, member }
 }

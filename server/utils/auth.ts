@@ -2,10 +2,21 @@ import { createError, getHeader, type H3Event } from 'h3'
 export function cookieOptions() {
   return { httpOnly: true, sameSite: 'strict' as const, secure: secureCookie(), path: '/' }
 }
+export async function isPartyAdmin(event: H3Event, touch = true) {
+  if ((await party(event).details()).createdBy)
+    return ['owner', 'dj'].includes(await partyRole(event))
+  return party(event).admin(partyCredential(event, 'qroke_admin'), touch)
+}
 export async function requireAdmin(event: H3Event, touch = true) {
-  requireOwner(event)
-  if (!(await party(event).admin(partyCredential(event, 'qroke_admin'), touch)))
-    throw createError({ statusCode: 401, statusMessage: 'Destrave com o PIN do anfitrião.' })
+  const managed = !!(await party(event).details()).createdBy
+  if (!managed) requireOwner(event)
+  if (!(await isPartyAdmin(event, touch)))
+    throw createError({
+      statusCode: managed ? 403 : 401,
+      statusMessage: managed
+        ? 'Peça ao dono da festa acesso de DJ.'
+        : 'Destrave com o PIN do anfitrião.',
+    })
 }
 export async function requireGuest(event: H3Event) {
   const guest = await party(event).guest(partyCredential(event, 'qroke_guest'))

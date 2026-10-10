@@ -31,8 +31,8 @@ try {
   await page.getByRole('button', { name: 'Salvar nome', exact: true }).click()
   await expect(page.locator('.guest-identity')).toContainText('Aninha')
   await page.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Buscar música' }).fill('Faixa')
-  await page.getByRole('textbox', { name: 'Buscar música' }).press('Enter')
+  await page.getByRole('combobox', { name: 'Buscar música' }).fill('Faixa')
+  await page.getByRole('combobox', { name: 'Buscar música' }).press('Enter')
   await expect(page.locator('.results .queued-label')).toHaveCount(3)
   await expect(page.locator('.results li').first()).toContainText('Na fila · #1')
   await expect(page.locator('.results li').first().getByRole('button')).toBeDisabled()
@@ -132,8 +132,8 @@ try {
   await host.request('/api/control', { action: 'assign', deviceId: device.id })
   await expect(page.locator('.results')).toHaveCount(0)
   await page.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Buscar música' }).fill('Faixa')
-  await page.getByRole('textbox', { name: 'Buscar música' }).press('Enter')
+  await page.getByRole('combobox', { name: 'Buscar música' }).fill('Faixa')
+  await page.getByRole('combobox', { name: 'Buscar música' }).press('Enter')
   await expect(page.locator('.results')).toContainText('Tocando agora')
   await host.request('/api/control', {
     action: 'skip',

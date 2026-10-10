@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import type { ClientSession, Db, MongoClient } from 'mongodb'
 import { normalizeName, uniqueName, orderQueue } from './rules'
+import type { Membership } from './browser-sessions'
 import type { EncryptedStore } from './shared-store'
 import { normalizePartyMedia } from '../../shared/media'
 import { initialState } from './initial-state'
@@ -31,6 +32,11 @@ type DeviceRow = {
   scope: string
   tokenHash: string
   label: string
+  connectedAt?: number
+  guestId?: string
+  guestName?: string
+  membershipId?: string
+  owner?: boolean
   lastSeen: number
   info: Device['info']
 }
@@ -257,6 +263,23 @@ export class MongoPartyDatabase {
       )
     return row ? { id: row._id, name: row.name } : undefined
   }
+  async ensureMemberGuest(member: Membership, name: string, encode: (token: string) => string) {
+    await this.write(async () => {
+      const memberships = this.db.collection<Membership>('memberships')
+      const current = await memberships.findOne(
+        { _id: member._id, scope: this.scope },
+        this.options,
+      )
+      if (!current) throw new Error('Sessão não encontrada.')
+      if (current.credentials.qroke_guest) return
+      const guest = await this.createGuest(name)
+      await memberships.updateOne(
+        { _id: member._id, scope: this.scope },
+        { $set: { 'credentials.qroke_guest': encode(guest.token) } },
+        this.options,
+      )
+    })
+  }
   async createGuest(value: string) {
     return this.write(async () => {
       const guests = this.db.collection<GuestRow>('guests')
@@ -312,6 +335,9 @@ export class MongoPartyDatabase {
           { $set: { name, lastSeen: Date.now() } },
           this.options,
         )
+      await this.db
+        .collection<DeviceRow>('devices')
+        .updateMany({ scope: this.scope, guestId: id }, { $set: { guestName: name } }, this.options)
       for (const item of [
         ...state.queue,
         ...state.history,
@@ -409,7 +435,11 @@ export class MongoPartyDatabase {
       if (row.admin?.tokenHash === hashToken(token)) delete row.admin
     })
   }
-  async createDevice(label: string, info: Device['info']) {
+  async createDevice(
+    label: string,
+    info: Device['info'],
+    identity: { guestId?: string; guestName?: string; membershipId?: string; owner?: boolean } = {},
+  ) {
     return this.write(async (row) => {
       const devices = this.db.collection<DeviceRow>('devices')
       await devices.deleteMany(
@@ -431,6 +461,8 @@ export class MongoPartyDatabase {
           tokenHash: hashToken(token),
           label,
           info,
+          ...identity,
+          connectedAt: Date.now(),
           lastSeen: Date.now(),
         },
         this.options,
@@ -463,9 +495,47 @@ export class MongoPartyDatabase {
     const rows = await this.db
       .collection<DeviceRow>('devices')
       .find({ scope: this.scope }, this.options)
-      .sort({ lastSeen: -1 })
+      .sort({ connectedAt: -1, lastSeen: -1, _id: -1 })
       .toArray()
-    return rows.map((d) => ({ id: d._id, label: d.label, lastSeen: d.lastSeen, info: d.info }))
+    const members = await this.db
+      .collection<Membership>('memberships')
+      .find(
+        {
+          scope: this.scope,
+          _id: { $in: rows.flatMap((d) => (d.membershipId ? [d.membershipId] : [])) },
+          expiresAt: { $gt: new Date() },
+        },
+        this.options,
+      )
+      .toArray()
+    const linked = await this.db
+      .collection<Membership>('memberships')
+      .find(
+        {
+          scope: this.scope,
+          _id: { $in: members.flatMap((m) => (m.linkedFrom ? [m.linkedFrom] : [])) },
+          expiresAt: { $gt: new Date() },
+        },
+        this.options,
+      )
+      .toArray()
+    const linkedDj = new Set(linked.filter((m) => m.dj).map((m) => m._id))
+    const djs = new Set(
+      members.filter((m) => (m.linkedFrom ? linkedDj.has(m.linkedFrom) : m.dj)).map((m) => m._id),
+    )
+    return rows.map((d) => ({
+      id: d._id,
+      label: d.label,
+      lastSeen: d.lastSeen,
+      info: d.info,
+      connectedAt: d.connectedAt,
+      guestName: d.guestName,
+      role: d.owner
+        ? ('owner' as const)
+        : d.membershipId && djs.has(d.membershipId)
+          ? ('dj' as const)
+          : ('guest' as const),
+    }))
   }
   async renameDevice(id: string, label: string) {
     return (
@@ -474,7 +544,59 @@ export class MongoPartyDatabase {
         .updateOne({ scope: this.scope, _id: id }, { $set: { label } }, this.options)
     ).matchedCount
   }
+  async setDeviceDj(id: string, enabled: boolean) {
+    const device = await this.db
+      .collection<DeviceRow>('devices')
+      .findOne({ scope: this.scope, _id: id }, this.options)
+    if (!device?.membershipId || device.owner)
+      throw new Error('Escolha um participante desta festa.')
+    const member = await this.db
+      .collection<Membership>('memberships')
+      .findOne({ _id: device.membershipId, scope: this.scope }, this.options)
+    const principal = member?.linkedFrom
+      ? await this.db
+          .collection<Membership>('memberships')
+          .findOne({ _id: member.linkedFrom, scope: this.scope }, this.options)
+      : member
+    if (principal?.browserHash === (await this.details()).createdBy)
+      throw new Error('O dono da festa já possui todos os controles.')
+    const result = await this.db.collection<Membership>('memberships').updateOne(
+      {
+        _id: member?.linkedFrom || device.membershipId,
+        scope: this.scope,
+        expiresAt: { $gt: new Date() },
+      },
+      { $set: { dj: enabled } },
+      this.options,
+    )
+    if (!result.matchedCount) throw new Error('Participante desconectado ou expirado.')
+  }
+  async linkDeviceGuest(id: string, guest: Guest) {
+    await this.db
+      .collection<DeviceRow>('devices')
+      .updateOne(
+        { scope: this.scope, _id: id },
+        { $set: { guestId: guest.id, guestName: guest.name } },
+        this.options,
+      )
+  }
   async removeDevice(id: string) {
+    const device = await this.db
+      .collection<DeviceRow>('devices')
+      .findOne({ scope: this.scope, _id: id }, this.options)
+    if (device?.membershipId && !device.owner) {
+      const member = await this.db
+        .collection<Membership>('memberships')
+        .findOne({ _id: device.membershipId, scope: this.scope }, this.options)
+      await this.db
+        .collection<Membership>('memberships')
+        .updateOne(
+          { _id: member?.linkedFrom || device.membershipId, scope: this.scope },
+          { $unset: { dj: '' } },
+          this.options,
+        )
+    }
+
     await this.db
       .collection<DeviceRow>('devices')
       .deleteOne({ scope: this.scope, _id: id }, this.options)

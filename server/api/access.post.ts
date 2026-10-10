@@ -34,6 +34,15 @@ export default defineEventHandler(async (event) => {
   if (details.pinHash) event.context.qrokeScoped = true
   let access: Access
   if (input.pin) {
+    if (
+      details.createdBy &&
+      details.createdBy !==
+        (await import('../core/mongo-database')).hashToken(browserIdentity(event) || '')
+    )
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Entre pelo convite. O dono concede acesso de DJ nos dispositivos.',
+      })
     await verifyPartyPin(event, input.pin)
     await ensurePartyInvite(event)
     access = {

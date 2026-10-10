@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     return
   }
   event.context.qrokeParty = await openParty(config.organizationId, config.partyId)
-  if (['/api/parties', '/api/tv/connect'].includes(path)) return
+  if (['/api/parties', '/api/tv/connect', '/api/session-link/accept'].includes(path)) return
   if (path === '/api/youtube/callback') {
     const state = getQuery(event).state
     const route =

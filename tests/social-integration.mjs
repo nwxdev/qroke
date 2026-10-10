@@ -71,6 +71,7 @@ test('participantes: votos simultâneos, identidade, dedupe global, anterior e p
     'POST',
     { 'x-qroke-device-key': device.token },
   )
+  assert.equal(delayed.status, 200, JSON.stringify(delayed.data))
   assert.equal(delayed.data.stale, true)
   assert.equal((await a.request('/api/state')).data.current.queueId, state.current.queueId)
   const target = state.queue.at(-1).queueId

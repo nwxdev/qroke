@@ -3,7 +3,7 @@ const $fetch = usePartyFetch()
 import QRCode from 'qrcode'
 import type { InviteStatus } from '../../shared/network'
 import { partyUrl } from '../utils/party-url'
-defineProps<{ large?: boolean; presentation?: boolean }>()
+defineProps<{ large?: boolean; presentation?: boolean; fullscreenCaption?: boolean }>()
 const url = ref(''),
   svg = ref(''),
   ready = ref(false),
@@ -132,6 +132,9 @@ onBeforeUnmount(() => {
 <template>
   <div class="qr-card" :class="{ large, presentation }">
     <template v-if="svg">
+      <p v-if="fullscreenCaption" class="fullscreen-qr-caption">
+        Seu próximo refrão começa aqui.<span>Escaneie e escolha a música.</span>
+      </p>
       <div class="qr-plate" role="img" :aria-label="'QR para ' + url" v-html="svg" />
       <BrandLogo class="invite-brand" />
       <p v-if="!presentation">Escaneie o convite. Escolha sua música. Cante.</p>
@@ -173,6 +176,20 @@ onBeforeUnmount(() => {
   </div>
 </template>
 <style scoped>
+.fullscreen-qr-caption {
+  margin: 0 0 10px;
+  padding: 0;
+  font-size: clamp(10px, 0.9vw, 13px);
+  line-height: 1.45;
+  text-align: center;
+  color: #fff;
+  opacity: 0.85;
+  text-shadow: 0 1px 4px #000;
+}
+.fullscreen-qr-caption span {
+  display: block;
+}
+
 .invite-brand {
   --brand-logo-width: 164px;
   margin: 0 auto 8px;

@@ -6,7 +6,7 @@ export function useMotionPreference() {
     if (!import.meta.client) return
     reduced.value = !!media?.matches
     try {
-      enabled.value = localStorage.getItem('qroke:motion') !== 'off'
+      enabled.value = true
     } catch {}
     document.documentElement.dataset.motion = enabled.value ? 'on' : 'off'
   }

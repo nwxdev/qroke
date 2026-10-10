@@ -7,9 +7,16 @@ export default defineEventHandler(async (event) => {
     event,
     z.object({ label: z.string().trim().min(1).max(60), info: deviceInfoSchema.optional() }).parse,
   )
+  const guest = await party(event).guest(partyCredential(event, 'qroke_guest'))
   const device = await party(event).createDevice(
     label,
     info ? JSON.parse(storedDeviceInfo(info)) : {},
+    {
+      guestId: guest?.id,
+      guestName: guest?.name,
+      membershipId: event.context.qrokeMembership?._id,
+      owner: (await partyRole(event)) === 'owner',
+    },
   )
   await touchPresence(party(event), 'device', device.id)
   return device

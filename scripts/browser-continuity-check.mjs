@@ -89,7 +89,7 @@ try {
     ).toBe(true)
   }
   await page.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Buscar música', exact: true }).fill('Faixa')
+  await page.getByRole('combobox', { name: 'Buscar música', exact: true }).fill('Faixa')
   await page.getByRole('button', { name: 'Buscar', exact: true }).click()
   await expect(page.locator('.results li')).toHaveCount(7)
   await page.setViewportSize({ width: 390, height: 844 })
@@ -155,13 +155,16 @@ try {
     .poll(() => page.locator('.queue-rail').evaluate((el) => el.scrollLeft))
     .toBeGreaterThan(0)
   await page.locator('.queue-card-empty').getByRole('link', { name: 'Buscar músicas' }).click()
-  await expect(page.getByRole('textbox', { name: 'Buscar música', exact: true })).toBeFocused()
+  await expect(page.getByRole('combobox', { name: 'Buscar música', exact: true })).toBeFocused()
   expect(await page.evaluate(() => window.qrokeStarts)).toBe(1)
   // A second prepared screen takes over at the stopped position before the fallback timeout.
   const target = await context.newPage()
   target.on('pageerror', (error) => errors.push(error.message))
   await target.goto(fixture.base + '/player')
-  await target.locator('.header-persistent .screen-sound-button').click()
+  await expect
+    .poll(() => target.evaluate(() => sessionStorage.getItem('qroke:device')))
+    .not.toBe(null)
+  await expect(target.locator('.screen-sound-button')).toHaveCount(0)
   const device = await target.evaluate(() => JSON.parse(sessionStorage.getItem('qroke:device')))
   await page.evaluate(() => {
     window.qrokePosition = 48.75

@@ -27,6 +27,62 @@ const query = ref(''),
   searched = ref(false),
   searchError = ref(''),
   addedId = ref('')
+const suggestions = ref<string[]>([])
+const suggestionFocus = ref(false)
+const suggestionIndex = ref(-1)
+const suggestionsId = useId()
+const suggestionsVisible = computed(() => suggestionFocus.value && suggestions.value.length > 0)
+let suggestionTimer: ReturnType<typeof setTimeout>
+let suggestionRequest = 0
+let suggestionAbort: AbortController | undefined
+function dismissSuggestions() {
+  suggestionRequest++
+  clearTimeout(suggestionTimer)
+  suggestionAbort?.abort()
+  suggestions.value = []
+  suggestionIndex.value = -1
+}
+watch([query, karaoke, source, suggestionFocus], () => {
+  dismissSuggestions()
+  if (!suggestionFocus.value || source.value !== 'youtube' || query.value.trim().length < 2) return
+  const seq = suggestionRequest
+  suggestionTimer = setTimeout(async () => {
+    suggestionAbort = new AbortController()
+    try {
+      const result = await $fetch<{ suggestions: string[] }>('/api/suggestions', {
+        query: { q: query.value, karaoke: karaoke.value },
+        signal: suggestionAbort.signal,
+        timeout: 4000,
+      })
+      if (seq === suggestionRequest) suggestions.value = result.suggestions
+    } catch {
+      /* Suggestions are optional; Enter still performs the normal search. */
+    }
+  }, 350)
+})
+async function chooseSuggestion(value: string) {
+  query.value = value
+  await nextTick()
+  dismissSuggestions()
+  await search()
+}
+function searchKey(event: KeyboardEvent) {
+  if (['ArrowDown', 'ArrowUp'].includes(event.key) && suggestionsVisible.value) {
+    event.preventDefault()
+    const step = event.key === 'ArrowDown' ? 1 : -1
+    suggestionIndex.value =
+      (suggestionIndex.value + step + suggestions.value.length) % suggestions.value.length
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
+    dismissSuggestions()
+  } else if (event.key === 'Enter') {
+    event.preventDefault()
+    const value = suggestionsVisible.value ? suggestions.value[suggestionIndex.value] : undefined
+    if (value) void chooseSuggestion(value)
+    else void search()
+  }
+}
+onBeforeUnmount(dismissSuggestions)
 const singers = ref<string[]>([])
 let feedbackTimer: ReturnType<typeof setTimeout>
 async function requestAdd(track: Track) {
@@ -53,6 +109,7 @@ function clearSearch() {
 }
 async function search() {
   if (searching.value || query.value.trim().length < 2) return
+  dismissSuggestions()
   const seq = ++request
   searching.value = true
   searchError.value = ''
@@ -106,7 +163,18 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
           placeholder="Música, artista ou aquele refrão…"
           aria-label="Buscar música"
           enterkeyhint="search"
-          @keydown.enter.prevent="search"
+          role="combobox"
+          aria-autocomplete="list"
+          :aria-expanded="suggestionsVisible"
+          :aria-controls="suggestionsId"
+          :aria-activedescendant="
+            suggestionIndex >= 0 && suggestionsVisible
+              ? suggestionsId + '-' + suggestionIndex
+              : undefined
+          "
+          @focus="suggestionFocus = true"
+          @blur="suggestionFocus = false"
+          @keydown="searchKey"
           maxlength="120"
           :autofocus="!embedded"
           ><template #prepend><AppIcon name="search" /></template></QInput
@@ -129,6 +197,26 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
           <AppIcon name="search" class="on-left" /><span>Buscar</span>
         </QBtn>
       </form>
+      <ul
+        v-if="suggestionsVisible"
+        :id="suggestionsId"
+        class="search-suggestions"
+        role="listbox"
+        aria-label="Sugestões de busca"
+      >
+        <li
+          v-for="(value, index) in suggestions"
+          :id="suggestionsId + '-' + index"
+          :key="value"
+          role="option"
+          :aria-selected="suggestionIndex === index"
+          @pointerdown.prevent
+          @click="chooseSuggestion(value)"
+        >
+          <AppIcon name="search" /><span>{{ value }}</span>
+          <small v-if="karaoke">Karaokê</small>
+        </li>
+      </ul>
       <span class="sr-only" role="status">{{ addedId ? 'Música adicionada à fila.' : '' }}</span>
       <div class="search-options">
         <div class="segmented">
@@ -212,6 +300,31 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
   </div>
 </template>
 <style scoped>
+.search-suggestions {
+  list-style: none;
+  padding: 6px;
+  margin: 8px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.search-suggestions li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  min-height: 44px;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.search-suggestions li[aria-selected='true'],
+.search-suggestions li:hover {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.search-suggestions span {
+  flex: 1;
+}
 .music-search {
   min-width: 0;
 }

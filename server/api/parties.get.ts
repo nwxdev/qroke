@@ -31,12 +31,16 @@ export default defineEventHandler(async (event) => {
     const member = members.find((item) => item.scope === row._id)!
     const info = partyInfo(row)
     if (info.status !== 'active') continue
+    const principal = await browserSessions(event).principal(member)
+    if (!principal) continue
     if (
-      member.role === 'guest' &&
-      (!row.invite || row.invite.version !== member.version || row.invite.expiresAt <= Date.now())
+      principal.role === 'guest' &&
+      (!row.invite ||
+        row.invite.version !== principal.version ||
+        row.invite.expiresAt <= Date.now())
     )
       continue
-    parties.push({ ...info, role: member.role })
+    parties.push({ ...info, role: principal.role })
   }
   return {
     parties: parties.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),

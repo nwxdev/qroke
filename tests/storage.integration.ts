@@ -275,7 +275,19 @@ describe('Ciclo de vida das festas', () => {
         expiresAt: new Date(Date.now() + 60000),
       })
     }
-    expect(await cleanupParties(db)).toBe(1)
+    await expect(
+      cleanupParties(db, new Date(), 25, async () => {
+        throw new Error('Redis unavailable')
+      }),
+    ).rejects.toThrow('Redis unavailable')
+    expect(await db.collection('parties').findOne({ _id: ended.scope })).toBeTruthy()
+    const cleaned: string[] = []
+    expect(
+      await cleanupParties(db, new Date(), 25, async (scope) => {
+        cleaned.push(scope)
+      }),
+    ).toBe(1)
+    expect(cleaned).toEqual([ended.scope])
     expect(await cleanupParties(db)).toBe(0)
     expect(await db.collection('parties').findOne({ _id: ended.scope })).toBeNull()
     expect(await db.collection('parties').findOne({ _id: recent.scope })).toBeTruthy()

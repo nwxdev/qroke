@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { admin, state } = useParty()
+const { owner, state } = useParty()
 const { id, href } = usePartyRoute()
 const request = usePartyFetch()
 const dialog = ref<HTMLDialogElement | null>(null),
@@ -20,7 +20,7 @@ async function closeParty() {
 onBeforeUnmount(() => dialog.value?.close())
 </script>
 <template>
-  <section v-if="id && admin" class="end-party">
+  <section v-if="id && owner" class="end-party">
     <button @click="dialog?.showModal()">Encerrar festa</button>
     <Teleport to="body"
       ><dialog ref="dialog" class="end-party-dialog" aria-labelledby="end-party-title">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const $fetch = usePartyFetch()
 import type { Device } from '../../shared/types'
-const { state, device, pending, control, playHere, admin } = useParty()
+const { state, device, pending, control, playHere, admin, owner } = useParty()
 const devices = ref<Device[]>([])
 const names = reactive<Record<string, string>>({})
 const editing = ref(''),
@@ -13,7 +13,9 @@ async function load() {
   try {
     const result = await $fetch<{ devices: Device[] }>('/api/devices', { timeout: 4000 })
     if (!disposed) {
-      devices.value = result.devices
+      devices.value = result.devices.sort(
+        (a, b) => (b.connectedAt || b.lastSeen) - (a.connectedAt || a.lastSeen),
+      )
       notice.value = ''
     }
   } catch {
@@ -51,7 +53,7 @@ onBeforeUnmount(() => {
       <summary>Adicionar aparelho / Bluetooth / PWA</summary>
       <p>
         Abra o endereço da festa no Chrome do outro aparelho e entre em <strong>Player</strong>. Ele
-        aparecerá aqui; selecione-o e toque em <strong>Ativar som</strong> na tela dele.
+        aparecerá aqui com o nome de quem entrou; selecione onde o som deve tocar.
       </p>
       <PartyLink to="/player">Abrir player e QR ↗</PartyLink>
       <p>
@@ -69,12 +71,21 @@ onBeforeUnmount(() => {
     <p v-if="notice" class="hint">{{ notice }}</p>
     <div v-for="item in devices" :key="item.id" class="managed-device">
       <div class="managed-device-title">
-        <strong>{{ item.label }}</strong
+        <strong>{{ item.guestName || item.label }}</strong
         ><span class="tag">{{ online(item) ? 'Online' : 'Offline' }}</span
         ><span v-if="state?.playerId === item.id" class="tag">PLAYER</span
         ><small v-if="item.id === device?.id">este aparelho</small>
       </div>
       <div class="device-details">
+        <span
+          >{{ item.label }} ·
+          {{
+            item.role === 'owner' ? 'Dono da festa' : item.role === 'dj' ? 'DJ' : 'Participante'
+          }}</span
+        >
+        <time v-if="item.connectedAt" :datetime="new Date(item.connectedAt).toISOString()">
+          Conectado em {{ new Date(item.connectedAt).toLocaleString('pt-BR') }}
+        </time>
         <span v-if="item.info?.platform">
           {{
             {
@@ -127,6 +138,15 @@ onBeforeUnmount(() => {
         >
           {{ state?.playerId === item.id ? '● PLAYER' : 'Usar como PLAYER' }}
         </button>
+        <button
+          v-if="owner && item.role !== 'owner'"
+          :disabled="pending || !item.guestName"
+          @click="
+            control({ action: 'set-dj', deviceId: item.id, enabled: item.role !== 'dj' }).then(load)
+          "
+        >
+          {{ item.role === 'dj' ? 'Remover DJ' : 'Tornar DJ' }}
+        </button>
         <button :disabled="pending" @click="edit(item)">Renomear</button>
         <button
           :disabled="pending"
@@ -145,7 +165,7 @@ onBeforeUnmount(() => {
     </p>
     <p class="hint">
       Modelo e versões dependem do que o navegador informa. Renomeie para identificar o aparelho na
-      festa; cada aba tem seu próprio ID.
+      festa. O acesso de DJ vale para a sessão da pessoa neste navegador.
     </p>
     <small
       >Remover revoga o acesso deste aparelho e interrompe seu som se ele for o PLAYER. Reabrir a

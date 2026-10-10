@@ -30,7 +30,12 @@ const links = [
     label: 'Player',
     hint: 'Música, vídeo, karaokê e convite QR.',
   },
-  { to: '/host', icon: 'person' as const, label: 'Anfitrião', hint: 'Cuide da festa com seu PIN.' },
+  {
+    to: '/host',
+    icon: 'person' as const,
+    label: 'Anfitrião',
+    hint: 'Gerencie a fila, os dispositivos e o player.',
+  },
 ]
 function open() {
   if (!dialog.value || isOpen.value) return
@@ -143,7 +148,7 @@ onBeforeUnmount(() => {
         </section>
       </div>
     </Teleport>
-    <ThemeToggle /><MotionToggle compact />
+    <ThemeToggle />
     <button
       ref="trigger"
       type="button"
@@ -186,8 +191,8 @@ onBeforeUnmount(() => {
           <div ref="menuContent" class="menu-content">
             <h2>Menu</h2>
           </div>
-          <LegalLinks new-tab class="menu-legal-links" />
-          <MotionToggle class="menu-motion-control" />
+          <SessionLink /><LegalLinks new-tab class="menu-legal-links" />
+
           <p class="menu-connection" :class="{ offline: !connected }" role="status">
             <i aria-hidden="true" />{{ connected ? 'A festa está online' : 'Reconectando…' }}
           </p>

@@ -2,7 +2,7 @@
 import { VueDraggable } from 'vue-draggable-plus'
 import type { QueueItem } from '../../shared/types'
 const { href } = usePartyRoute()
-const { state, admin, pending, reorder, isPlayer, sessionReady } = useParty()
+const { state, admin, pending, reorder, isPlayer, sessionReady, managed } = useParty()
 const { enabled: motionEnabled, reduced: motionReduced } = useMotionPreference()
 const dragged = ref<QueueItem[]>([])
 const dragging = ref(false)
@@ -18,11 +18,18 @@ async function endDrag() {
   await reorder(dragged.value)
   dragged.value = [...(state.value?.queue || [])]
 }
+const tab = ref('queue')
+const tabs = [
+  { id: 'queue', label: 'Fila', icon: 'playlist' as const },
+  { id: 'devices', label: 'Dispositivos', icon: 'tv' as const },
+  { id: 'settings', label: 'Player', icon: 'play' as const },
+  { id: 'party', label: 'Festa', icon: 'person' as const },
+]
 const unlock = ref(false)
 watch(
   sessionReady,
   (ready) => {
-    if (ready) unlock.value = !admin.value
+    if (ready) unlock.value = !admin.value && !managed.value
   },
   { immediate: true },
 )
@@ -35,47 +42,57 @@ watch(admin, (value, previous) => {
 })
 </script>
 <template>
-  <div class="page-shell">
+  <div class="page-shell host-page">
     <BrandHeader
-      ><button v-if="!admin" class="header-control" @click="unlock = true">
+      ><button v-if="!admin && !managed" class="header-control" @click="unlock = true">
         <AppIcon name="lock" />Liberar controles</button
-      ><AdminExit /></BrandHeader
-    ><PartyNotice />
+      ><AdminExit
+    /></BrandHeader>
+    <PartyNotice />
     <GuestIdentity />
-    <QueueCarousel />
     <main>
       <div class="page-title">
         <h1>Sua festa</h1>
       </div>
-      <div class="host-layout">
-        <section>
-          <div v-if="!admin" class="panel">
-            <h2>O controle é seu por alguns minutos.</h2>
-            <p>Use Liberar controles no cabeçalho ou no menu para entrar com o PIN.</p>
+      <p v-if="!admin" class="panel">
+        Peça ao dono da festa para tornar você DJ no painel de dispositivos.
+      </p>
+      <section v-if="admin && !managed" class="panel">
+        <AdminStatus /><HostInvitation /><EndParty /><HostControls /><DeviceManager /><PlayerStage
+          v-if="isPlayer"
+        />
+      </section>
+      <div v-if="admin" class="host-workspace" :class="{ legacy: !managed }">
+        <nav v-if="managed" class="host-tabs" aria-label="Gerenciar festa">
+          <button
+            v-for="item in tabs"
+            :key="item.id"
+            :aria-current="tab === item.id ? 'page' : undefined"
+            @click="tab = item.id"
+          >
+            <AppIcon :name="item.icon" /><span>{{ item.label }}</span>
+          </button>
+        </nav>
+        <section v-if="tab === 'devices'"><DeviceManager /></section>
+        <section v-else-if="tab === 'settings'" class="panel">
+          <div class="section-heading">
+            <h2>Configurações do player</h2>
+            <AdminStatus />
           </div>
-          <div v-if="admin" class="panel">
-            <div class="section-heading">
-              <h2>Controles</h2>
-              <AdminStatus />
-            </div>
-            <p v-if="!state?.playerId" class="notice">
-              Escolha <strong>Tocar neste dispositivo</strong> no aparelho conectado ao som.
-            </p>
-            <HostInvitation /><EndParty />
-            <HostControls />
-            <p v-if="state?.catalogWarning" class="notice">{{ state.catalogWarning }}</p>
-          </div>
-          <DeviceManager v-if="admin" />
-          <PartyPeople />
-          <YoutubePlaylists v-if="admin" />
+          <HostControls />
           <PlayerStage v-if="isPlayer" />
-          <p v-else class="hint">O som será reproduzido apenas no dispositivo escolhido.</p>
+          <p v-if="state?.catalogWarning" class="notice">{{ state.catalogWarning }}</p>
         </section>
-        <section v-if="admin" class="panel">
+        <section v-else-if="tab === 'party'" class="panel">
+          <h2>Convite e participantes</h2>
+          <SessionLink /><HostInvitation /><PartyPeople /><EndParty />
+        </section>
+        <section v-else class="panel">
           <div class="section-heading">
             <h2>Fila da festa</h2>
             <span>{{ state?.queue.length || 0 }} faixas</span>
           </div>
+          <QueueCarousel />
           <QueueList manage />
           <details v-if="state?.queue.length">
             <summary>Reordenar arrastando</summary>
@@ -92,6 +109,7 @@ watch(admin, (value, previous) => {
               </div></VueDraggable
             >
           </details>
+          <YoutubePlaylists />
         </section>
       </div>
     </main>
@@ -99,3 +117,60 @@ watch(admin, (value, previous) => {
     <AdminDialog v-model="unlock" />
   </div>
 </template>
+
+<style scoped>
+.host-workspace.legacy {
+  grid-template-columns: minmax(0, 1fr);
+}
+.host-workspace {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.host-tabs {
+  display: grid;
+  gap: 8px;
+  position: sticky;
+  top: 16px;
+}
+.host-tabs button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  text-align: left;
+}
+.host-tabs button[aria-current] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+@media (max-width: 760px) {
+  .host-page {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+  .host-workspace.legacy {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .host-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .host-tabs {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 55;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+  }
+  .host-tabs button {
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 8px 2px;
+  }
+}
+</style>

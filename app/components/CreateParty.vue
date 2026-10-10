@@ -2,15 +2,13 @@
 import type { PartyInfo, MyParty } from '#shared/parties'
 const props = defineProps<{ creating?: boolean }>()
 const name = ref(''),
-  pin = ref(''),
-  confirmation = ref(''),
+  ownerName = ref(''),
   failure = ref(''),
   busy = ref(false)
 const joinOpen = useState('qroke:join-open', () => false)
 const nameInput = ref<HTMLInputElement | null>(null)
 const nameReady = computed(() => name.value.trim().length >= 2)
-const pinReady = computed(() => /^[0-9]{6}$/.test(pin.value))
-const confirmationReady = computed(() => pinReady.value && confirmation.value === pin.value)
+const ownerReady = computed(() => ownerName.value.trim().length >= 2)
 const ready = ref(false),
   parties = ref<MyParty[]>([]),
   now = ref(Date.now()),
@@ -47,10 +45,6 @@ const active = computed(() =>
 async function create() {
   if (busy.value) return
   failure.value = ''
-  if (pin.value !== confirmation.value) {
-    failure.value = 'Os PINs precisam ser iguais.'
-    return
-  }
   if (!ready.value) {
     await load()
     if (!ready.value) return
@@ -60,7 +54,7 @@ async function create() {
     idempotencyKey ||= crypto.randomUUID()
     const result = await $fetch<{ url: string }>('/api/parties', {
       method: 'POST',
-      body: { name: name.value, pin: pin.value, idempotencyKey },
+      body: { name: name.value, ownerName: ownerName.value, idempotencyKey },
       timeout: 15000,
     })
     await navigateTo(result.url, { external: true })
@@ -94,7 +88,7 @@ onBeforeUnmount(() => {
   <main class="party-home">
     <header>
       <BrandLogo />
-      <div class="home-preferences"><MotionToggle compact /><ThemeToggle /></div>
+      <div class="home-preferences"><ThemeToggle /></div>
     </header>
     <div class="home-grid" :class="{ 'home-grid--creating': creating }">
       <MotionReveal v-if="!creating" as="section" class="home-intro" immediate>
@@ -105,6 +99,7 @@ onBeforeUnmount(() => {
           convide pelo QR Code e deixe a galera pedir músicas e votar nas próximas. Funciona no
           navegador do celular, computador ou TV.
         </p>
+        <NuxtLink class="home-tv-link" to="/vincular">Vincular sessão do navegador</NuxtLink>
         <div class="home-actions">
           <ActionButton class="home-join" variant="secondary" icon="qr" @click="joinOpen = true">
             Entrar na festa
@@ -197,11 +192,6 @@ onBeforeUnmount(() => {
         <NuxtLink class="create-back" to="/">← Conheça o QRokê</NuxtLink>
         <h1 id="create-title">Dê um nome à sua festa.</h1>
         <p>Prepare o convite e chame a galera. A festa fica disponível por até 24 horas.</p>
-        <PartySetupProgress
-          :name-ready="nameReady"
-          :pin-ready="pinReady"
-          :confirmation-ready="confirmationReady"
-        />
         <form @submit.prevent="create">
           <label for="party-name">Nome da festa</label>
           <input
@@ -214,36 +204,26 @@ onBeforeUnmount(() => {
             placeholder="Ex.: Sextou na casa da Ana"
             autocomplete="off"
           />
-          <label for="party-pin">PIN do administrador</label>
+          <label for="owner-name">Seu nome</label>
           <input
-            id="party-pin"
-            v-model="pin"
-            type="password"
-            inputmode="numeric"
-            pattern="[0-9]{6}"
-            minlength="6"
-            maxlength="6"
+            id="owner-name"
+            v-model="ownerName"
             required
-            autocomplete="new-password"
-            placeholder="Crie um PIN de 6 dígitos"
+            minlength="2"
+            maxlength="20"
+            autocomplete="nickname"
+            placeholder="Como você quer ser chamado?"
           />
-          <label for="party-pin-confirm">Confirmar PIN</label>
-          <input
-            id="party-pin-confirm"
-            v-model="confirmation"
-            type="password"
-            inputmode="numeric"
-            pattern="[0-9]{6}"
-            minlength="6"
-            maxlength="6"
-            required
-            autocomplete="new-password"
-            placeholder="Repita o PIN"
-          />
-          <small>Guarde o PIN para administrar a festa.</small>
+          <small>Você já entra como dono. Convide DJs pelo painel de dispositivos.</small>
           <p v-if="failure" class="notice" role="alert">{{ failure }}</p>
           <LegalNotice action="criar uma festa" />
-          <ActionButton class="create-party-button" type="submit" icon="play" :busy="busy">
+          <ActionButton
+            class="create-party-button"
+            type="submit"
+            icon="play"
+            :busy="busy"
+            :disabled="!nameReady || !ownerReady"
+          >
             {{ busy ? 'Criando sua festa…' : 'Começar a festa' }}
           </ActionButton>
         </form>

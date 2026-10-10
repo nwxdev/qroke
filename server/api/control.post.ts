@@ -9,6 +9,7 @@ const command = z.discriminatedUnion('action', [
     seconds: z.number().int().min(0).max(30),
     music: z.boolean(),
   }),
+  z.object({ action: z.literal('set-dj'), deviceId: z.string().uuid(), enabled: z.boolean() }),
   z.object({ action: z.literal('assign'), deviceId: z.string().uuid() }),
   z.object({ action: z.literal('pause'), paused: z.boolean() }),
   z.object({ action: z.literal('skip'), queueId: z.string().uuid() }),
@@ -34,6 +35,7 @@ export default defineEventHandler(async (event) => {
   await requireAdmin(event)
   const cmd = await readValidatedBody(event, command.parse)
   await requireAdmin(event)
+  if (cmd.action === 'set-dj') await requirePartyOwner(event)
   if (cmd.action === 'assign' && !(await party(event).deviceOnline(cmd.deviceId)))
     throw createError({ statusCode: 409, statusMessage: 'Dispositivo desconectado.' })
   let stale = false
@@ -42,6 +44,14 @@ export default defineEventHandler(async (event) => {
     if (cmd.action === 'assign' && !(await party(event).deviceOnline(cmd.deviceId)))
       throw createError({ statusCode: 409, statusMessage: 'Dispositivo desconectado.' })
     switch (cmd.action) {
+      case 'set-dj':
+        await requirePartyOwner(event)
+        try {
+          await party(event).setDeviceDj(cmd.deviceId, cmd.enabled)
+        } catch (error) {
+          throw createError({ statusCode: 409, statusMessage: (error as Error).message })
+        }
+        break
       case 'assign':
         assignPlayer(s, cmd.deviceId)
         startNext(s)

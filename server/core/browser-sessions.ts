@@ -8,6 +8,8 @@ export type Membership = {
   organizationId: string
   partyId: string
   scope: string
+  linkedFrom?: string
+  dj?: boolean
   role: 'owner' | 'guest'
   version: number
   expiresAt: Date
@@ -29,6 +31,13 @@ export class BrowserSessions {
     return this.db
       .collection<Membership>('memberships')
       .findOne({ _id: this.id(browser, scope), expiresAt: { $gt: new Date() } })
+  }
+  async principal(member: Membership) {
+    return member.linkedFrom
+      ? this.db
+          .collection<Membership>('memberships')
+          .findOne({ _id: member.linkedFrom, scope: member.scope, expiresAt: { $gt: new Date() } })
+      : member
   }
   async grant(browser: string, input: Omit<Membership, '_id' | 'browserHash' | 'credentials'>) {
     const id = this.id(browser, input.scope)
@@ -73,19 +82,16 @@ export class BrowserSessions {
     cipher.setAuthTag(data.subarray(-16))
     return Buffer.concat([cipher.update(data.subarray(12, -16)), cipher.final()]).toString()
   }
+  encode(row: Membership, kind: Credential, value: string) {
+    const iv = randomBytes(12),
+      cipher = createCipheriv('aes-256-gcm', this.key, iv)
+    cipher.setAAD(Buffer.from(row._id + ':' + kind))
+    return Buffer.concat([iv, cipher.update(value), cipher.final(), cipher.getAuthTag()]).toString(
+      'base64',
+    )
+  }
   async set(row: Membership, kind: Credential, value?: string) {
-    let encoded: string | undefined
-    if (value) {
-      const iv = randomBytes(12),
-        cipher = createCipheriv('aes-256-gcm', this.key, iv)
-      cipher.setAAD(Buffer.from(row._id + ':' + kind))
-      encoded = Buffer.concat([
-        iv,
-        cipher.update(value),
-        cipher.final(),
-        cipher.getAuthTag(),
-      ]).toString('base64')
-    }
+    const encoded = value ? this.encode(row, kind, value) : undefined
     const changed = await this.db
       .collection<Membership>('memberships')
       .updateOne(

@@ -397,7 +397,14 @@ async function changeSink() {
     warning.value = errorText(error)
   }
 }
-watch([() => current.value?.queueId, isPlayer], () => void mountTrack(), { flush: 'pre' })
+watch(
+  [() => current.value?.queueId, isPlayer],
+  () => {
+    if (isPlayer.value) armSound()
+    void mountTrack()
+  },
+  { flush: 'pre' },
+)
 watch(eligible, () => void sync(), { flush: 'post' })
 function releaseAudio(element: HTMLAudioElement | null) {
   if (!element) return
@@ -412,6 +419,7 @@ onMounted(() => {
   try {
     sink.value = sessionStorage.getItem(storageKey('qroke:audio-output')) || ''
   } catch {}
+  if (isPlayer.value) armSound()
   void mountTrack()
   pageVisible.value = !document.hidden
   document.addEventListener('visibilitychange', pageVisibility)

@@ -94,7 +94,7 @@ try {
     }),
   )
   await expect(player.locator('iframe')).toBeVisible()
-  await player.locator('.header-persistent .screen-sound-button').click()
+  await expect(player.locator('.screen-sound-button')).toHaveCount(0)
   await expect.poll(async () => player.evaluate(() => window.fake.playing)).toBe(true)
   const slider = host.getByRole('slider', { name: /Volume do PLAYER/ })
   await slider.fill('37')
@@ -114,7 +114,7 @@ try {
   // Expandir para desktop fecha o menu e preserva o mesmo player em reprodução.
   await player.setViewportSize({ width: 1440, height: 1000 })
   await expect(player.getByRole('dialog', { name: 'Menu da festa' })).toBeHidden()
-  await expect(player.locator('.player-header .screen-sound-button')).toContainText('Som ativo')
+  await expect(player.locator('.screen-sound-button')).toHaveCount(0)
   expect(
     await player.evaluate(
       () =>
@@ -203,7 +203,7 @@ try {
   await host.getByRole('button', { name: 'Remover aparelho TV da sala', exact: true }).click()
   await expect.poll(async () => (await state()).playerId).toBe(null)
   await expect(player.locator('iframe')).toHaveCount(0)
-  await expect(player.locator('.header-persistent .screen-sound-button')).toBeVisible()
+  await expect(player.locator('.screen-sound-button')).toHaveCount(0)
   await expect(player.locator('dialog[open]')).toHaveCount(0)
   expect((await state()).queue).toHaveLength(1)
   expect((await state()).current.id).toBe(third.id)

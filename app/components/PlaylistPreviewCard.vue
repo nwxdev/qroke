@@ -4,6 +4,18 @@ const props = defineProps<{ preview: PlaylistPreview; busy: boolean; imported: b
 defineEmits<{ add: [videoId?: string]; more: [] }>()
 const { state, queue } = useParty()
 const { feedback } = usePartyMotion()
+const search = ref('')
+const normalize = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+const tracks = computed(() => {
+  const query = normalize(search.value.trim())
+  return props.preview.tracks.filter(
+    (track) => !query || normalize(track.title + ' ' + track.artist).includes(query),
+  )
+})
 function position(id: string) {
   if (state.value?.current?.source === 'youtube' && state.value.current.id === id)
     return 'Tocando agora'
@@ -24,8 +36,21 @@ const allQueued = computed(
         · {{ preview.skipped }} indisponíveis ou repetidas</span
       >.
     </p>
-    <ol v-if="preview.tracks.length" class="playlist-tracks" aria-label="Faixas da playlist">
-      <li v-for="track in preview.tracks" :key="track.id">
+    <label class="playlist-filter"
+      >Buscar nesta playlist
+      <input v-model="search" type="search" placeholder="Música ou artista" />
+    </label>
+    <p v-if="search" class="hint">{{ tracks.length }} resultados neste lote carregado.</p>
+    <ol v-if="tracks.length" class="playlist-tracks" aria-label="Faixas da playlist">
+      <li v-for="track in tracks" :key="track.id">
+        <img
+          v-if="track.thumbnail"
+          :src="track.thumbnail"
+          alt=""
+          loading="lazy"
+          width="56"
+          height="56"
+        />
         <div>
           <strong>{{ track.title }}</strong
           ><small>{{ track.artist }}</small
@@ -46,7 +71,11 @@ const allQueued = computed(
       </li>
     </ol>
     <p v-else class="notice">
-      Nenhuma faixa reproduzível neste lote. Versões bloqueadas ou indisponíveis são ignoradas.
+      {{
+        search
+          ? 'Nenhuma música corresponde à busca neste lote.'
+          : 'Nenhuma faixa reproduzível neste lote.'
+      }}
     </p>
     <div class="playlist-actions">
       <button
@@ -75,6 +104,19 @@ const allQueued = computed(
   </MotionReveal>
 </template>
 <style scoped>
+.playlist-filter {
+  display: grid;
+  gap: 8px;
+}
+.playlist-filter input {
+  width: 100%;
+  min-width: 0;
+}
+.playlist-tracks img {
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
 .playlist-preview {
   margin-top: 14px;
   padding: 14px;

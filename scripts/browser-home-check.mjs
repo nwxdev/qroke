@@ -18,7 +18,7 @@ try {
   await page.goto(fixture.base)
   const join = page.getByRole('button', { name: 'Entrar na festa', exact: true })
   const create = page.getByRole('link', { name: 'CRIAR FESTA', exact: true })
-  const progress = page.getByRole('progressbar', { name: 'Preparação da festa' })
+
   await expect(create).toBeVisible()
   await expect(page.locator('form, input[type=password]')).toHaveCount(0)
   await expect(create).toHaveAttribute('href', '/criar-festa')
@@ -78,7 +78,7 @@ try {
     expect(during.width).toBeCloseTo(before.width, 1)
     await page.mouse.up()
     await expect(page).toHaveURL(fixture.base + '/criar-festa')
-    await expect(progress).toHaveAttribute('aria-valuenow', '0')
+    await expect(page.locator('input[type=password]')).toHaveCount(0)
     await expect(page.getByLabel('Nome da festa', { exact: true })).toBeFocused()
     await page.getByRole('link', { name: 'Conheça o QRokê' }).click()
     await expect(create).toBeVisible()
@@ -93,37 +93,12 @@ try {
   await page.keyboard.press('Enter')
   await expect(page.getByLabel('Nome da festa', { exact: true })).toBeFocused()
   await page.getByLabel('Nome da festa', { exact: true }).fill('Noite da galera')
-  await expect(progress).toHaveAttribute('aria-valuenow', '1')
-  await page.getByLabel('PIN do administrador', { exact: true }).fill('123456')
-  await page.getByLabel('Confirmar PIN').fill('654321')
-  await expect(progress).toHaveAttribute('aria-valuenow', '2')
-  await page.getByRole('button', { name: 'Começar a festa', exact: true }).click()
-  await expect(page.getByRole('alert')).toHaveText('Os PINs precisam ser iguais.')
-  await page.getByLabel('Confirmar PIN').fill('123456')
-  await expect(progress).toHaveAttribute('aria-valuenow', '3')
-  await page.getByLabel('PIN do administrador', { exact: true }).fill('12345')
-  await expect(progress).toHaveAttribute('aria-valuenow', '1')
-  const submit = page.getByRole('button', { name: 'Começar a festa', exact: true })
-  await expect(submit.locator('.action-flash')).toHaveCount(0, { timeout: 2000 })
-  await page.getByRole('button', { name: 'Desativar animações', exact: true }).click()
-  await submit.click()
-  expect(
-    await submit.locator('.action-icon').evaluate((el) => getComputedStyle(el).animationName),
-  ).toBe('none')
-  expect(await submit.locator('.action-flash').evaluate((el) => getComputedStyle(el).opacity)).toBe(
-    '0',
-  )
+  await page.getByLabel('Seu nome', { exact: true }).fill('Ana')
+  await expect(page.getByRole('button', { name: 'Começar a festa', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: /ativar animações/i })).toHaveCount(0)
   await page.reload()
-  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off')
-  await page.getByRole('button', { name: 'Ativar animações', exact: true }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'on')
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await submit.click()
-  expect(
-    await submit.locator('.action-icon').evaluate((el) => getComputedStyle(el).animationName),
-  ).toBe('none')
-  expect(await submit.locator('.action-flash').evaluate((el) => getComputedStyle(el).opacity)).toBe(
-    '0',
-  )
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: 'test-results/create-party-mobile.png', fullPage: true })
   await page.getByRole('link', { name: 'Conheça o QRokê' }).click()

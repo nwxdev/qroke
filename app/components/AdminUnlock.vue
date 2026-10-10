@@ -53,7 +53,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
         :readonly="tv"
         required
         :disabled="pending || occupied"
-        placeholder="••••"
+        placeholder="••••••"
         class="pin-input"
       />
       <div v-if="tv" class="pin-grid">

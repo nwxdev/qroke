@@ -24,6 +24,9 @@ async function exitStage() {
   stageDismissed.value = true
   if (document.fullscreenElement) await document.exitFullscreen().catch(() => {})
 }
+function activateStage() {
+  window.dispatchEvent(new Event('qroke:activate-media'))
+}
 function activatePresentation() {
   if (karaoke.value || route.query.tv === '1') void enterFullscreen()
 }
@@ -85,7 +88,7 @@ useSpatialNav(root, back, () => {})
     ref="root"
     class="tv-screen"
     :style="{
-      '--player-footer-space': soundActive ? '20px' : 'calc(80px + env(safe-area-inset-bottom))',
+      '--player-footer-space': '20px',
     }"
     :class="{
       'karaoke-expanded': expanded,
@@ -103,23 +106,17 @@ useSpatialNav(root, back, () => {})
     />
     <header class="tv-header player-header">
       <BrandLogo class="player-brand" />
-      <HeaderMenu>
-        <PlayerSoundButton />
-        <template v-if="!soundActive" #persistent>
-          <PlayerSoundButton />
-        </template>
-      </HeaderMenu>
+      <HeaderMenu />
     </header>
     <div
       v-if="karaoke || route.query.tv === '1'"
       class="stage-actions"
       :class="{ 'in-cinema': cinema }"
     >
-      <button ref="stageButton" type="button" @click="fullscreen ? exitStage() : enterFullscreen()">
+      <button ref="stageButton" type="button" @click="fullscreen ? exitStage() : activateStage()">
         {{ fullscreen ? 'Sair da tela cheia' : 'Tela cheia' }}
       </button>
       <button v-if="cinema" type="button" @click="exitStage">Sair do palco</button>
-      <PlayerSoundButton v-if="cinema && !soundActive" />
       <small v-if="fullscreenHint && !fullscreen" role="status">{{ fullscreenHint }}</small>
     </div>
     <PartyNotice />
@@ -170,7 +167,12 @@ useSpatialNav(root, back, () => {})
             <span class="eyebrow">ENTRE NA FESTA</span>
             <h2>Escolha a próxima música</h2>
           </div>
-          <QrCode presentation :large="musicMode" :class="{ 'karaoke-qr': karaoke }" />
+          <QrCode
+            presentation
+            :fullscreen-caption="karaoke && cinema && fullscreen"
+            :large="musicMode"
+            :class="{ 'karaoke-qr': karaoke }"
+          />
         </section>
       </aside>
     </div>
