@@ -19,6 +19,8 @@ try {
   const errors = []
   await context.addInitScript(() => {
     window.toneStarts = 0
+    // Hold provider readiness while inspecting layouts; selection arms sound automatically.
+    window.holdVideoReady = true
     const original = AudioContext.prototype.createOscillator
     AudioContext.prototype.createOscillator = function (...args) {
       const node = original.apply(this, args),
@@ -35,7 +37,7 @@ try {
       contentType: 'application/javascript',
       body: `
  window.YT={PlayerState:{ENDED:0},Player:class{
- constructor(node,o){this.events=o.events;this.frame=document.createElement('iframe');this.frame.title='YouTube simulado';node.replaceWith(this.frame);window.fake=this;setTimeout(()=>this.events.onReady({target:this}),0)}
+ constructor(node,o){this.events=o.events;this.frame=document.createElement('iframe');this.frame.title='YouTube simulado';node.replaceWith(this.frame);window.fake=this;window.releaseVideoReady=()=>this.events.onReady({target:this});if(!window.holdVideoReady)setTimeout(window.releaseVideoReady,0)}
  getIframe(){return this.frame} getCurrentTime(){return 0} getDuration(){return 30} seekTo(){} playVideo(){this.playing=true} pauseVideo(){this.playing=false} setVolume(v){this.volume=v} getVolume(){return this.volume||0} mute(){this.muted=true} unMute(){this.muted=false} isMuted(){return !!this.muted} destroy(){this.playing=false;this.frame.remove()}
  }};window.onYouTubeIframeAPIReady?.()
  `,
@@ -84,7 +86,7 @@ try {
   await expect(page.locator('.player-karaoke-group')).toBeVisible()
   await expect(page.locator('.karaoke-queue-heading')).toContainText('prioridade agora')
   await expect(page.locator('.player-karaoke-group .player-playlist-card')).toHaveCount(1)
-  await expect(page.locator('.karaoke-countdown')).toContainText('Aguardando o PLAYER')
+  await expect(page.locator('.karaoke-countdown')).toContainText('Preparando o vídeo…')
   await page.getByRole('button', { name: 'Tela cheia', exact: true }).click()
   await expect(page.locator('.tv-screen')).toHaveClass(/karaoke-cinema/)
   const countdown = page.locator('.karaoke-countdown')
@@ -155,6 +157,10 @@ try {
   )
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await viewport({ width: 1440, height: 900 })
+  await page.evaluate(() => {
+    window.holdVideoReady = false
+    window.releaseVideoReady()
+  })
   await page.getByRole('button', { name: 'Tela cheia', exact: true }).click()
   await expect.poll(async () => !!(await state()).karaokeStartsAt).toBe(true)
   await expect.poll(async () => page.evaluate(() => window.toneStarts)).toBeGreaterThan(0)
