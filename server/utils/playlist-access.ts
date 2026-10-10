@@ -4,7 +4,10 @@ export async function playlistAccess(event: H3Event) {
   const guest = await party(event).guest(partyCredential(event, 'qroke_guest'))
   if (guest) return { owner: 'guest:' + guest.id, guest }
   await requireAdmin(event)
-  return { owner: partyCredential(event, 'qroke_admin')!, guest: undefined }
+  return {
+    owner: event.context.qrokeMembership?._id || partyCredential(event, 'qroke_admin')!,
+    guest: undefined,
+  }
 }
 export async function recheckPlaylistAccess(event: H3Event, owner: string, account?: string) {
   if (

@@ -1,4 +1,5 @@
 export default defineNuxtConfig({
+  devtools: { enabled: false },
   compatibilityDate: '2026-09-01',
   modules: ['nuxt-quasar-ui'],
   css: ['~/assets/main.css', '~/assets/motion.css'],
@@ -68,7 +69,7 @@ export default defineNuxtConfig({
       script: [
         {
           innerHTML:
-            "try{document.documentElement.dataset.theme=localStorage.getItem('qroke:theme:'+location.pathname)||'dark';document.documentElement.dataset.motion=localStorage.getItem('qroke:motion')==='off'?'off':'on'}catch(e){}",
+            "try{document.documentElement.dataset.theme=localStorage.getItem('qroke:theme:'+location.pathname)||'dark';document.documentElement.dataset.motion='on'}catch(e){}",
         },
       ],
     },

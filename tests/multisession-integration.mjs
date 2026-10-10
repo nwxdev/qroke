@@ -30,7 +30,12 @@ test(
       outsider = client(first.base)
     assert.equal((await host.request('/api/parties')).status, 200)
     assert.match(host.cookies(), /qroke_browser=/)
-    const body = { name: 'Festa de sexta', pin: '123456', idempotencyKey: randomUUID() }
+    const body = {
+      name: 'Festa de sexta',
+      pin: '123456',
+      ownerName: 'Dono A',
+      idempotencyKey: randomUUID(),
+    }
     const [created, concurrent] = await Promise.all([
       host.request('/api/parties', body),
       host.request('/api/parties', body),
@@ -50,6 +55,7 @@ test(
     const other = await host.request('/api/parties', {
       ...body,
       pin: '654321',
+      ownerName: 'Dono B',
       idempotencyKey: randomUUID(),
     })
     assert.equal(other.status, 201, JSON.stringify(other.data))
@@ -74,8 +80,8 @@ test(
     assert.equal((await guest.request(pa + '/guest', { name: 'Ana da festa A' })).status, 200)
     assert.equal((await guest.request(pb + '/state')).status, 401)
     assert.equal((await guest.request(pb + '/access', { token: token(ia) })).status, 401)
-    assert.equal((await guest.request(pa + '/access', { pin: '654321' })).status, 401)
-    assert.equal((await guest.request('/api/access', { partyId: a.id, pin: '4321' })).status, 401)
+    assert.equal((await guest.request(pa + '/access', { pin: '654321' })).status, 403)
+    assert.equal((await guest.request('/api/access', { partyId: a.id, pin: '4321' })).status, 403)
     const guestFirst = client(first.base, guest.cookies())
     assert.equal((await guestFirst.request(pa + '/session')).data.guest.name, 'Ana da festa A')
     assert.equal(

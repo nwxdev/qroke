@@ -1405,7 +1405,7 @@ summary {
   width: 100%;
   margin: 0 0 8px;
 }
-.tv-screen.karaoke-active .karaoke-qr p {
+.tv-screen.karaoke-active .karaoke-qr p:not(.fullscreen-qr-caption) {
   display: none;
 }
 .tv-screen.karaoke-active .karaoke-qr a {

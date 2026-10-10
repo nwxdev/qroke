@@ -25,20 +25,15 @@ try {
     await page.setViewportSize({ width, height })
     await expect(trigger).toBeVisible()
     await expect(page.locator('.header-menu > .header-navigation')).toBeHidden()
-    await expect(page.locator('.header-persistent .screen-sound-button')).toBeVisible()
-    const soundBefore = await page.locator('.header-persistent .screen-sound-button').boundingBox()
+    await expect(page.locator('.header-persistent .screen-sound-button')).toHaveCount(0)
     const logo = await page.locator('.player-brand').boundingBox()
     const controls = await page.locator('.header-menu').boundingBox()
     expect(logo.x + logo.width).toBeLessThanOrEqual(controls.x)
     await trigger.click()
     await expect(trigger).toHaveAttribute('aria-expanded', 'true')
     await expect(menu).toBeVisible()
-    await expect(page.locator('.header-persistent .screen-sound-button')).toBeVisible()
-    expect(await page.locator('.header-persistent .screen-sound-button').boundingBox()).toEqual(
-      soundBefore,
-    )
-    await expect(menu.locator('.menu-actions .screen-sound-button')).toBeVisible()
-    expect(soundBefore.width).toBeGreaterThanOrEqual(width - 33)
+    await expect(page.locator('.header-persistent .screen-sound-button')).toHaveCount(0)
+    await expect(menu.locator('.menu-actions .screen-sound-button')).toHaveCount(0)
     expect(await menu.boundingBox()).toEqual({ x: 0, y: 0, width, height })
     await expect(menu.getByRole('link', { name: 'Player', exact: true })).toHaveAttribute(
       'aria-current',
@@ -79,10 +74,7 @@ try {
     await expect(menu).toBeHidden()
     await expect(trigger).toHaveAttribute('aria-expanded', 'false')
     await expect(trigger).toBeFocused()
-    await expect(page.locator('.header-persistent .screen-sound-button')).toBeVisible()
-    expect(await page.locator('.header-persistent .screen-sound-button').boundingBox()).toEqual(
-      soundBefore,
-    )
+    await expect(page.locator('.header-persistent .screen-sound-button')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('')
   }
   // Desktop e tablets com espaço usam botões em linha; os limites consideram
@@ -93,7 +85,7 @@ try {
       await page.getByRole('button', { name: 'Fechar PIN', exact: true }).click()
     for (const width of [320, 390, 768, 820, 910, 912, 1024, 1280, 1920]) {
       await page.setViewportSize({ width, height: 900 })
-      const horizontal = path === '/busca' ? width >= 1024 : width >= 1280
+      const horizontal = path === '/host' ? width >= 1280 : width >= 1024
       const nav = page.locator('header .header-navigation')
       await expect(trigger)[horizontal ? 'toBeHidden' : 'toBeVisible']()
       await expect(nav)[horizontal ? 'toBeVisible' : 'toBeHidden']()
@@ -136,7 +128,7 @@ try {
   await expect(menu).toBeHidden()
   await expect(page.locator('header [aria-current="page"]')).toBeFocused()
   expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('')
-  await expect(page.locator('.header-persistent .screen-sound-button')).toBeVisible()
+  await expect(page.locator('.header-persistent .screen-sound-button')).toHaveCount(0)
   await page.setViewportSize({ width: 390, height: 844 })
   await trigger.click()
   await menu.getByRole('link', { name: 'Player', exact: true }).click()

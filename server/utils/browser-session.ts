@@ -46,9 +46,11 @@ export async function loadMembership(event: H3Event) {
   const database = party(event)
   const member = await browserSessions(event).get(browser, database.scope)
   if (!member) return
-  if (member.role === 'guest') {
+  const principal = await browserSessions(event).principal(member)
+  if (!principal) return
+  if (principal.role === 'guest') {
     const invite = await database.inviteVersion()
-    if (!invite || invite.version !== member.version || invite.expiresAt <= Date.now()) return
+    if (!invite || invite.version !== principal.version || invite.expiresAt <= Date.now()) return
   }
   event.context.qrokeMembership = member
   event.context.qrokeAccess = {

@@ -149,3 +149,25 @@ describe('prioridade dos pedidos de karaokê', () => {
     expect(reorderQueue(queue, ['k2', 'k1', 'm']).map((item) => item.id)).toEqual(['k2', 'k1', 'm'])
   })
 })
+
+describe('playlist e pedidos durante a reprodução', () => {
+  it('toca o novo participante imediatamente depois da faixa atual e retoma a playlist', () => {
+    const playlist = { id: 'list', title: 'Minha playlist' }
+    const served = [
+      item('a1', 'Ana', 1, { playlist, round: 0 }),
+      item('a2', 'Ana', 2, { playlist, round: 1 }),
+    ]
+    let queue = orderQueue(
+      [
+        item('a3', 'Ana', 3, { playlist }),
+        item('a4', 'Ana', 4, { playlist }),
+        item('b1', 'Bia', 5),
+      ],
+      served,
+    )
+    expect(queue.map((t) => t.id)).toEqual(['b1', 'a3', 'a4'])
+    served.push(queue.shift()!)
+    queue = orderQueue(queue, served)
+    expect(queue.map((t) => t.id)).toEqual(['a3', 'a4'])
+  })
+})

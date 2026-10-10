@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUID, randomInt } from 'node:crypto'
 import { z } from 'zod'
 import { rateLimit } from '../core/connections'
 import { hashToken } from '../core/mongo-database'
@@ -8,7 +8,11 @@ export default defineEventHandler(async (event) => {
     event,
     z.object({
       name: z.string().trim().min(2, 'Informe o nome da festa.').max(80),
-      pin: z.string().regex(/^\d{6}$/, 'Use um PIN de 6 dígitos.'),
+      pin: z
+        .string()
+        .regex(/^\d{6}$/, 'Use um PIN de 6 dígitos.')
+        .optional(),
+      ownerName: z.string().trim().min(2).max(20).optional(),
       idempotencyKey: z.string().uuid(),
     }).parse,
   )
@@ -35,7 +39,7 @@ export default defineEventHandler(async (event) => {
     try {
       await target.create({
         name: input.name,
-        pinHash: await hashPin(input.pin),
+        pinHash: await hashPin(input.pin || String(randomInt(100000, 1000000))),
         createdAt: new Date(now),
         expiresAt: new Date(now + PARTY_LIFETIME),
         purgeAt: new Date(now + 2 * PARTY_LIFETIME),
@@ -54,9 +58,11 @@ export default defineEventHandler(async (event) => {
   event.context.qrokeParty = target
   const info = await target.info()
   await grantMembership(event, 'owner', 0, info.expiresAt!)
+  const member = event.context.qrokeMembership!
+  await target.ensureMemberGuest(member, input.ownerName || 'Anfitrião', (token) =>
+    browserSessions(event).encode(member, 'qroke_guest', token),
+  )
   await ensurePartyInvite(event)
-  const lease = await target.claimAdmin(partyCredential(event, 'qroke_admin'), adminLeaseSeconds())
-  if (lease.granted) await setPartyCredential(event, 'qroke_admin', lease.token)
   setResponseStatus(event, existing ? 200 : 201)
   return { party: info, url: '/f/' + target.partyId + '/host' }
 })

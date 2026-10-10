@@ -27,8 +27,10 @@ try {
   )
   await context.request.post(fixture.base + '/api/auth', { data: { action: 'login', pin: '4321' } })
   await page.goto(fixture.base + '/player')
-  await expect(page.locator('.header-persistent .screen-sound-button')).toBeEnabled()
-  await page.locator('.header-persistent .screen-sound-button').click()
+  await expect
+    .poll(() => page.evaluate(() => sessionStorage.getItem('qroke:device')))
+    .not.toBe(null)
+  await expect(page.locator('.screen-sound-button')).toHaveCount(0)
   const device = await page.evaluate(() => JSON.parse(sessionStorage.getItem('qroke:device')))
   await context.request.post(fixture.base + '/api/control', {
     data: { action: 'assign', deviceId: device.id },
@@ -112,8 +114,8 @@ try {
   const guest = await context.newPage()
   await guest.goto(fixture.base + '/busca')
   await guest.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
-  await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).fill('Faixa 1')
-  await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).press('Enter')
+  await guest.getByRole('combobox', { name: 'Buscar música', exact: true }).fill('Faixa 1')
+  await guest.getByRole('combobox', { name: 'Buscar música', exact: true }).press('Enter')
   const add = guest.getByLabel('Adicionar Faixa 1 à fila')
   const finishedRequests = async () =>
     (await state()).history.filter((t) => t.title === 'Faixa 1' && t.outcome === 'ended')

@@ -31,8 +31,8 @@ try {
   await guest.getByRole('button', { name: 'Entrar na festa' }).click()
   await expect(guest.getByRole('heading', { name: 'Buscar música', exact: true })).toBeVisible()
   await guest.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
-  await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).fill('Faixa')
-  await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).press('Enter')
+  await guest.getByRole('combobox', { name: 'Buscar música', exact: true }).fill('Faixa')
+  await guest.getByRole('combobox', { name: 'Buscar música', exact: true }).press('Enter')
   await expect(guest.getByLabel('Adicionar Faixa 1 à fila')).toBeVisible()
   for (let i = 1; i <= 5; i++) {
     await guest.getByLabel('Adicionar Faixa ' + i + ' à fila').click()
@@ -139,12 +139,11 @@ try {
   const tv = await tvContext.newPage()
   watch(tv)
   await tv.goto(server.base + '/player')
-  await tv.locator('.header-persistent .screen-sound-button').focus()
-  await tv.keyboard.press('Enter')
+  await expect(tv.locator('.screen-sound-button')).toHaveCount(0)
   await expect(tv.getByRole('dialog')).toHaveCount(0)
   // Todos os elementos da tela de exibição continuam navegáveis por setas.
   async function reachableButtons() {
-    await expect(tv.locator('.header-persistent .screen-sound-button')).toBeEnabled()
+    await expect(tv.locator('.screen-sound-button')).toHaveCount(0)
     await expect(tv.locator('.qr-plate svg')).toBeVisible()
     await expect(tv.getByRole('button', { name: 'Verificar acesso', exact: true })).toBeEnabled()
     const scope = (await tv.getByRole('dialog').isVisible())
@@ -237,7 +236,7 @@ try {
   await guest.reload()
   await expect(guest.getByRole('heading', { name: 'Buscar música', exact: true })).toBeVisible()
   await guest.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
-  await guest.getByRole('textbox', { name: 'Buscar música', exact: true }).fill('Faixa 7')
+  await guest.getByRole('combobox', { name: 'Buscar música', exact: true }).fill('Faixa 7')
   await guest.getByRole('button', { name: 'Buscar', exact: true }).click()
   await guest.getByLabel('Adicionar Faixa 7 à fila').click()
   await expect(host.locator('.queue-list').getByText('Faixa 7', { exact: true })).toBeVisible({

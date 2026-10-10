@@ -10,6 +10,7 @@ type RawTrack = {
   thumbnails?: { url: string }[]
 }
 export interface CatalogProvider {
+  suggestions?(query: string): Promise<string[]>
   searchSongs(query: string): Promise<RawTrack[]>
   searchVideos(query: string): Promise<RawTrack[]>
   getUpNexts(id: string): Promise<RawTrack[]>
@@ -47,6 +48,10 @@ export function musicProvider(region = 'BR'): CatalogProvider {
       throw e
     }))
   return {
+    async suggestions(q) {
+      await ready()
+      return deadline(api.getSearchSuggestions(q), 2500)
+    },
     async searchSongs(q) {
       await ready()
       return deadline(api.searchSongs(q))

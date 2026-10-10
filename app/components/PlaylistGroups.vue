@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import type { QueueItem } from '../../shared/types'
 const { queue, state } = useParty()
+const searches = reactive<Record<string, string>>({})
+const normalize = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
 const groups = computed(() => {
   const result = new Map<
     string,
@@ -18,7 +24,15 @@ const groups = computed(() => {
       result.set(key, { title: item.playlist.title, name: item.guestName, items: [] })
     result.get(key)!.items.push(entry)
   }
-  return [...result].map(([key, group]) => ({ key, ...group }))
+  return [...result].map(([key, group]) => ({
+    key,
+    ...group,
+    visible: group.items.filter(
+      ({ item }) =>
+        !searches[key]?.trim() ||
+        normalize(item.title + ' ' + item.artist).includes(normalize(searches[key]!.trim())),
+    ),
+  }))
 })
 </script>
 <template>
@@ -30,9 +44,30 @@ const groups = computed(() => {
           ><small>{{ group.name }} · {{ group.items.length }} faixa(s) na festa</small></span
         >
       </summary>
+      <label class="group-search"
+        >Buscar na playlist
+        <input
+          v-model="searches[group.key]"
+          type="search"
+          placeholder="Música ou artista"
+          :aria-label="'Buscar em ' + group.title"
+        />
+      </label>
+      <p v-if="!group.visible.length" class="hint">Nenhuma música encontrada nesta playlist.</p>
       <ol>
-        <li v-for="entry in group.items" :key="entry.item.queueId">
-          <span>{{ entry.position }}</span> {{ entry.item.title }}
+        <li v-for="entry in group.visible" :key="entry.item.queueId">
+          <img
+            v-if="entry.item.thumbnail"
+            :src="entry.item.thumbnail"
+            alt=""
+            loading="lazy"
+            width="40"
+            height="40"
+          />
+          <div>
+            <span>{{ entry.position }}</span> {{ entry.item.title
+            }}<small>{{ entry.item.artist }}</small>
+          </div>
         </li>
       </ol>
     </details>
@@ -81,7 +116,28 @@ const groups = computed(() => {
   max-height: 180px;
   overflow: auto;
 }
+.group-search {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.group-search input {
+  min-width: 0;
+  width: 100%;
+}
+.playlist-groups li img {
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.playlist-groups li div {
+  min-width: 0;
+}
 .playlist-groups li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
   overflow-wrap: anywhere;
   padding: 5px 0;

@@ -55,6 +55,9 @@ export interface DeviceInfo {
   appVersion: string
 }
 export interface Device {
+  connectedAt?: number
+  guestName?: string
+  role?: 'owner' | 'dj' | 'guest'
   info?: DeviceInfo
   id: string
   label: string

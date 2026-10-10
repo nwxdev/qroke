@@ -19,6 +19,9 @@ export function useParty() {
   const scopedKey = (key: string) => (scope ? key + ':' + scope : key)
   const clockOffset = useState(scopedKey('server-clock-offset'), () => 0)
   const state = useState<PublicState | null>(scopedKey('party'), () => null)
+  const role = useState<'owner' | 'dj' | 'guest'>(scopedKey('role'), () => 'guest')
+  const managed = useState(scopedKey('managed-party'), () => false)
+  const owner = computed(() => role.value === 'owner')
   const sessionReady = useState(scopedKey('session-ready'), () => false)
   const guest = useState<Guest | null>(scopedKey('guest'), () => null),
     admin = useState(scopedKey('admin'), () => false)
@@ -55,12 +58,16 @@ export function useParty() {
       guest: Guest | null
       queueReactions: Record<string, 1 | -1>
       votedQueueIds: string[]
+      managed: boolean
+      role: 'owner' | 'dj' | 'guest'
       admin: boolean
       adminExpiresAt: number
       adminLeaseSeconds: number
     }>('/api/session', {
       timeout: 4000,
     })
+    managed.value = !!result.managed
+    role.value = result.role || 'guest'
     guest.value = result.guest
     sessionReady.value = true
     votedQueueIds.value = result.votedQueueIds || []
@@ -214,6 +221,9 @@ export function useParty() {
     })
   }
   return {
+    managed,
+    role,
+    owner,
     clockOffset,
     sessionReady,
     state,
@@ -330,6 +340,11 @@ export function usePartyConnection() {
     }
     await party.refresh()
     await party.session().catch(() => {})
+    if (id.value) {
+      try {
+        localStorage.setItem('qroke:last-party', id.value)
+      } catch {}
+    }
     deviceInfo = await browserDeviceInfo()
     await register().catch((e) => {
       party.failure.value = errorText(e)

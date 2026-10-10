@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const emit = defineEmits<{ activate: [] }>()
+const { isPlayer } = useParty()
 const { armed, active, connected, device, soundStatus, soundLabel, soundHint } = usePlayerSound()
 const statusId = useId()
 function activate() {
@@ -8,7 +9,7 @@ function activate() {
 }
 </script>
 <template>
-  <div class="sound-control">
+  <div v-if="isPlayer" class="sound-control">
     <button
       class="screen-sound-button"
       :class="{ 'is-armed': armed && connected, 'is-active': active }"

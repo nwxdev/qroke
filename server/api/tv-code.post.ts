@@ -1,7 +1,7 @@
 import { rateLimit } from '../core/connections'
 import { TvCodes, TV_CODE_SECONDS } from '../core/tv-codes'
 export default defineEventHandler(async (event) => {
-  requireOwner(event)
+  await requireAdmin(event)
   await requireAdmin(event)
   const config = useRuntimeConfig(),
     database = party(event)

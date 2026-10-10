@@ -52,19 +52,12 @@ try {
   const playerLink = page.locator('.player-header [aria-current="page"]')
   await expect(toggle).toBeHidden()
   await expect(playerLink).toBeVisible()
-  const activation = page.locator('.header-persistent .screen-sound-button')
-  await expect(activation).toBeVisible()
-  await expect(activation).toContainText('Ativar som')
+  await expect(page.locator('.screen-sound-button')).toHaveCount(0)
   expect((await page.locator('.player-header').boundingBox()).height).toBeLessThanOrEqual(80)
   await expect(page.locator('.tv-control-shelf, .admin-dialog')).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: /Liberar controles|Controles|Sair do admin/ }),
   ).toHaveCount(0)
-  await activation.click()
-  await expect(page.locator('.header-persistent .sound-status')).toContainText(
-    'Aguardando o anfitrião',
-  )
-  await expect(activation).toContainText('Som autorizado')
   expect((await (await context.request.get(fixture.base + '/api/state')).json()).playerId).toBe(
     null,
   )
@@ -102,10 +95,7 @@ try {
   await db.writeState(JSON.stringify(state))
   await expect(page.locator('iframe')).toBeVisible()
   await expect(page.locator('.header-persistent')).toHaveCount(0)
-  const menuSound = page.locator('.menu-actions .screen-sound-button')
-  await expect(page.locator('.menu-actions .sound-status')).toHaveText('Som ativado nesta tela.')
-  await expect(menuSound).toContainText('Som ativo')
-  await expect(menuSound).toHaveClass(/is-active/)
+  await expect(page.locator('.screen-sound-button')).toHaveCount(0)
   await page.keyboard.press('Escape')
   await page.evaluate(() => {
     window.originalFrame = document.querySelector('iframe')
@@ -128,6 +118,8 @@ try {
   ).toBe(first.queueId)
   expect((await (await context.request.get(fixture.base + '/api/state')).json()).paused).toBe(false)
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  if (await page.getByRole('button', { name: 'Sair do palco', exact: true }).isVisible())
+    await page.getByRole('button', { name: 'Sair do palco', exact: true }).click()
   for (const width of [360, 320]) {
     await page.setViewportSize({ width, height: 800 })
     await expect(page.locator('.karaoke-qr .qr-plate svg')).toBeVisible()
@@ -252,8 +244,7 @@ try {
   expect(musicTheme.x).toBe(initialTheme.x)
   expect(musicTheme.y).toBe(initialTheme.y)
   await expect(page.locator('.header-persistent')).toHaveCount(0)
-  await expect(menuSound).toContainText('Som ativo')
-  await menuSound.click()
+  await expect(page.locator('.screen-sound-button')).toHaveCount(0)
   await expect(page.getByRole('dialog', { name: 'Menu da festa' })).toBeHidden()
   await page.keyboard.press('Escape')
   await expect(

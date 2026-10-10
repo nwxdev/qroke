@@ -144,7 +144,9 @@ try {
   await mkdir('test-results', { recursive: true })
   const prefix = physical ? 'firetv-silk' : 'tv-browser'
   await page.screenshot({ path: 'test-results/' + prefix + '-countdown.png' })
-  await page.locator('.stage-actions .screen-sound-button').click()
+  if (await page.evaluate(() => !!document.fullscreenElement))
+    await page.getByRole('button', { name: 'Sair da tela cheia', exact: true }).click()
+  await page.getByRole('button', { name: 'Tela cheia', exact: true }).click()
   const state = async () => (await host.request(api + '/state')).data
   await expect.poll(async () => !!(await state()).karaokeStartsAt, { timeout: 30000 }).toBe(true)
   const start = await state()
@@ -178,6 +180,8 @@ try {
       return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2))
     }),
   ).toBe(true)
+  await expect(page.locator('.fullscreen-qr-caption')).toBeVisible()
+  await expect(page.locator('.fullscreen-qr-caption')).toContainText('Escaneie e escolha a música.')
   await page.screenshot({ path: 'test-results/' + prefix + '-playing.png' })
   report.dimensions = dimensions
   report.checks.push(
@@ -186,6 +190,7 @@ try {
   await page.getByRole('button', { name: 'Sair do palco', exact: true }).click()
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false)
   await expect(page.locator('.player-queue')).toBeVisible()
+  await expect(page.locator('.fullscreen-qr-caption')).toHaveCount(0)
   expect(errors).toEqual([])
   report.checks.push('Saída do palco recupera os controles e a fila')
   await writeFile('test-results/' + prefix + '-report.json', JSON.stringify(report, null, 2))

@@ -163,12 +163,13 @@ test('Nitro real: convidados, fila, PLAYER, permissões e persistência', async 
       const headers = { 'x-qroke-device-key': device.token }
       for (let i = 0; i < 2; i++) {
         const s = (await host.request('/api/state')).data
-        await host.request(
+        const ended = await host.request(
           '/api/player',
           { action: 'ended', queueId: s.current.queueId },
           'POST',
           headers,
         )
+        assert.equal(ended.status, 200, JSON.stringify(ended.data))
       }
       for (let i = 0; i < 30; i++) {
         const s = (await host.request('/api/state')).data

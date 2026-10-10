@@ -24,13 +24,15 @@ export function orderQueue(items: QueueItem[], served: QueueItem[] = []): QueueI
   )
 }
 export function reorderQueue(items: QueueItem[], ids: string[]): QueueItem[] {
+  const known = new Set(items.map((item) => item.queueId))
   if (
     ids.length !== items.length ||
     new Set(ids).size !== items.length ||
-    ids.some((id) => !items.some((i) => i.queueId === id))
+    ids.some((id) => !known.has(id))
   )
     throw new Error('A fila mudou. Atualize e tente novamente.')
-  const ordered = ids.map((id) => items.find((i) => i.queueId === id)!)
+  const byId = new Map(items.map((item) => [item.queueId, item]))
+  const ordered = ids.map((id) => byId.get(id)!)
   let auto = false
   for (const item of ordered) {
     if (item.origin === 'auto') auto = true
@@ -70,7 +72,8 @@ export function normalizeQuery(query: string) {
   return query.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR')
 }
 export function karaokeQueries(query: string) {
-  return ['karaoke ' + normalizeQuery(query), 'karaokê ' + normalizeQuery(query)]
+  const normalized = normalizeQuery(query).replace(/^karaok[eê]\s+/, '')
+  return ['karaoke ' + normalized, 'karaokê ' + normalized]
 }
 export function recommendation(
   candidates: Track[],

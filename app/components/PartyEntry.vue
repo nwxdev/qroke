@@ -70,11 +70,17 @@ onMounted(async () => {
     <a href="/" aria-label="QRokê, início"><BrandLogo /></a>
     <span v-if="details" class="eyebrow entry-party-name">{{ details.name }}</span>
     <h1>Entre na festa</h1>
-    <p>Abra o convite ou entre com seu PIN.</p>
+    <p>
+      {{
+        details?.createdAt
+          ? 'Abra o convite. O dono define os DJs no painel de dispositivos.'
+          : 'Abra o convite ou entre com seu PIN.'
+      }}
+    </p>
     <button type="button" class="entry-join" @click="joinOpen = true">
       <AppIcon name="qr" /> Entrar com link ou QR Code
     </button>
-    <form @submit.prevent="enter">
+    <form v-if="!details?.createdAt" @submit.prevent="enter">
       <label for="host-pin">Acesso do anfitrião</label>
       <input
         id="host-pin"

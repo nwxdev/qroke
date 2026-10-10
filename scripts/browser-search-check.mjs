@@ -53,7 +53,7 @@ try {
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto(fixture.base + '/f/' + partyId + '/busca')
   const search = page.locator('.music-search')
-  const input = search.getByRole('textbox', { name: 'Buscar música', exact: true })
+  const input = search.getByRole('combobox', { name: 'Buscar música', exact: true })
   const submit = search.getByRole('button', { name: 'Buscar', exact: true })
   const results = search.locator('.results li')
   const alert = search.getByRole('alert')

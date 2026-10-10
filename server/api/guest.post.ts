@@ -17,6 +17,8 @@ export default defineEventHandler(async (event) => {
       ...cookieOptions(),
       maxAge: 60 * 60 * 24 * 30,
     })
+    const device = await party(event).device(getHeader(event, 'x-qroke-device-key'))
+    if (device) await party(event).linkDeviceGuest(device.id, guest)
     await touchPresence(party(event), 'guest', guest.id)
     return guest
   } catch (error) {

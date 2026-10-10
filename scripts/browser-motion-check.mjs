@@ -32,8 +32,8 @@ try {
   await page.goto(fixture.base + '/busca')
   await expect(page.locator('.guest-identity')).toContainText('Bia')
   await page.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Buscar música' }).fill('Faixa')
-  await page.getByRole('textbox', { name: 'Buscar música' }).press('Enter')
+  await page.getByRole('combobox', { name: 'Buscar música' }).fill('Faixa')
+  await page.getByRole('combobox', { name: 'Buscar música' }).press('Enter')
   await expect(page.locator('.results li')).toHaveCount(7)
   await page
     .getByRole('button', { name: 'Adicionar ' + tracks[3].title + ' à fila', exact: true })
@@ -97,26 +97,12 @@ try {
   await expect(page.locator('.motion-feedback[data-kind="undo"]')).toContainText('Reação retirada')
   await page.emulateMedia({ reducedMotion: 'no-preference' })
 
-  await page.getByRole('button', { name: 'Desativar animações', exact: true }).click()
-  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off')
+  await expect(page.getByRole('button', { name: /ativar animações/i })).toHaveCount(0)
+  await page.evaluate(() => localStorage.setItem('qroke:motion', 'off'))
   await page.reload()
   await expect(page.locator('.guest-identity')).toContainText('Bia')
-  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off')
-  await expect(page.getByRole('button', { name: 'Ativar animações', exact: true })).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'on')
   await react('Like para subir na fila: ' + tracks[2].title, 'like')
-  expect(
-    await page
-      .locator('.motion-cue-active')
-      .first()
-      .evaluate((el) => getComputedStyle(el).animationName),
-  ).toBe('none')
-  expect(
-    await page
-      .locator('.motion-burst')
-      .first()
-      .evaluate((el) => getComputedStyle(el).display),
-  ).toBe('none')
-  await page.getByRole('button', { name: 'Ativar animações', exact: true }).click()
 
   for (const width of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 900 })
@@ -129,7 +115,7 @@ try {
   await context.close()
   await video.saveAs('test-results/motion-demo.webm')
   console.log(
-    'Motion: add, like, dislike, undo, rejected request, themes, reduced motion, persisted preference, particle cleanup and 320–1440px OK',
+    'Motion: add, like, dislike, undo, rejected request, themes, reduced motion, always enabled with reduced-motion support, particle cleanup and 320–1440px OK',
   )
 } finally {
   await browser.close()

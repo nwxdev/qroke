@@ -1,6 +1,11 @@
 import type { Db } from 'mongodb'
 import type { PartyRow } from './mongo-database'
-export async function cleanupParties(db: Db, now = new Date(), batchSize = 25) {
+export async function cleanupParties(
+  db: Db,
+  now = new Date(),
+  batchSize = 25,
+  cleanupEphemeral?: (scope: string) => Promise<void>,
+) {
   const rows = await db
     .collection<PartyRow>('parties')
     .find({
@@ -11,6 +16,7 @@ export async function cleanupParties(db: Db, now = new Date(), batchSize = 25) {
     .limit(batchSize)
     .toArray()
   for (const row of rows) {
+    if (cleanupEphemeral) await cleanupEphemeral(row._id)
     // Retain the party marker until all children are deleted; retries are idempotent.
     for (const collection of [
       'guests',
