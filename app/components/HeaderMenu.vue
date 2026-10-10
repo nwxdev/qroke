@@ -262,6 +262,7 @@ onBeforeUnmount(() => {
   background: var(--bg);
 }
 .menu-top {
+  min-width: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -273,8 +274,11 @@ onBeforeUnmount(() => {
 .menu-brand {
   --brand-logo-width: 180px;
   max-width: calc(100% - 164px);
+  min-width: 0;
+  flex-shrink: 1;
 }
 .menu-body {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
