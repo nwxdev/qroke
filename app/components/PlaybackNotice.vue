@@ -1,11 +1,22 @@
 <script setup lang="ts">
 const partyRoute = usePartyRoute()
 const { state, admin, control, pending } = useParty()
-const route = useRoute()
+const dismissed = useState(partyRoute.storageKey('dismissed-playback-issue'), () => '')
+const issueKey = computed(() =>
+  state.value?.playbackIssue
+    ? state.value.playbackIssue.queueId + ':' + state.value.playbackIssue.at
+    : '',
+)
 const canManage = computed(() => admin.value && partyRoute.page.value === '/host')
 </script>
 <template>
-  <div v-if="state?.playbackIssue" class="notice playback-notice" role="status">
+  <DismissibleNotice
+    v-if="state?.playbackIssue && dismissed !== issueKey"
+    class="playback-notice"
+    :reset-key="issueKey"
+    close-label="Fechar erro de reprodução"
+    @close="dismissed = issueKey"
+  >
     <strong>{{ state.playbackIssue.title }}</strong>
     <p>
       {{ state.playbackIssue.message
@@ -37,11 +48,11 @@ const canManage = computed(() => admin.value && partyRoute.page.value === '/host
         >Ver no YouTube ↗</a
       >
     </div>
-  </div>
+  </DismissibleNotice>
 </template>
 <style scoped>
 .playback-notice {
-  display: block;
+  display: flex;
 }
 .playback-notice strong,
 .playback-notice p {

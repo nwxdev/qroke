@@ -88,6 +88,7 @@ try {
       ),
     ).toBe(true)
   }
+  await page.locator('.player-discovery > summary').click()
   await page.getByRole('button', { name: 'Biblioteca local', exact: true }).click()
   await page.getByRole('combobox', { name: 'Buscar música', exact: true }).fill('Faixa')
   await page.getByRole('button', { name: 'Buscar', exact: true }).click()
@@ -220,6 +221,8 @@ try {
   const pwa = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const install = await pwa.newPage()
   await install.goto(fixture.base + '/entrar')
+  await expect(install.getByRole('button', { name: 'Instalar QRokê' })).toBeHidden()
+  await install.getByRole('button', { name: 'Abrir menu', exact: true }).click()
   await expect(install.getByRole('button', { name: 'Instalar QRokê' })).toBeVisible()
   await install.evaluate(() => {
     const event = new Event('beforeinstallprompt', { cancelable: true })

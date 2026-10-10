@@ -16,9 +16,7 @@ watch(
 <template>
   <PartyThemeRuntime :key="'theme:' + (id || 'public')" />
   <PartyThemeEffects :key="'effects:' + (id || 'public')" />
-  <PwaInstall />
   <LazyJoinPartyDialog v-if="joinOpen" :key="'join:' + id" />
-  <LazyPartySessionBanner v-if="active && !cinema" :key="'banner:' + id" />
   <NuxtPage :transition="{ name: 'scene', mode: 'out-in' }" />
   <ClientOnly><AnalyticsConsent /></ClientOnly>
   <ClientOnly><LazyMotionFeedback v-if="active" :key="'motion:' + id" /></ClientOnly>

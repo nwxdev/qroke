@@ -50,7 +50,7 @@ try {
   const themeControl = page.locator('.player-header .theme-toggle')
   const initialTheme = await themeControl.boundingBox()
   const playerLink = page.locator('.player-header [aria-current="page"]')
-  await expect(toggle).toBeHidden()
+  await expect(toggle).toBeVisible()
   await expect(playerLink).toBeVisible()
   await expect(page.locator('.screen-sound-button')).toHaveCount(0)
   expect((await page.locator('.player-header').boundingBox()).height).toBeLessThanOrEqual(80)
@@ -214,14 +214,14 @@ try {
       const video = await page.locator('iframe').boundingBox()
       const invite = await page.locator('.player-invite').boundingBox()
       const qr = await page.locator('.qr-plate').boundingBox()
-      expect(invite.x - (video.x + video.width)).toBeGreaterThanOrEqual(28)
+      expect(invite.x - (video.x + video.width)).toBeGreaterThanOrEqual(16)
       expect(video.y + video.height).toBeLessThanOrEqual(height)
       expect(qr.y + qr.height).toBeLessThanOrEqual(height)
       expect(video.height).toBeGreaterThanOrEqual(height >= 720 ? 280 : 200)
     } else {
-      expect(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(
-        true,
-      )
+      expect(
+        await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1),
+      ).toBe(true)
       expect((await page.locator('.player-header').boundingBox()).height).toBeLessThanOrEqual(124)
     }
     await page.screenshot({
@@ -237,7 +237,7 @@ try {
   const size = await page.locator('iframe').boundingBox()
   expect(size.width).toBeGreaterThanOrEqual(200)
   expect(size.width).toBeLessThanOrEqual(1440)
-  await expect(toggle).toBeHidden()
+  await expect(toggle).toBeVisible()
   await expect(playerLink).toBeVisible()
   await expect(page.locator('.player-discovery')).toBeVisible()
   const musicTheme = await themeControl.boundingBox()

@@ -181,7 +181,7 @@ try {
     }),
   ).toBe(true)
   await expect(page.locator('.fullscreen-qr-caption')).toBeVisible()
-  await expect(page.locator('.fullscreen-qr-caption')).toContainText('Escaneie e escolha a música.')
+  await expect(page.locator('.fullscreen-qr-caption')).toContainText('Escolha a próxima música')
   await page.screenshot({ path: 'test-results/' + prefix + '-playing.png' })
   report.dimensions = dimensions
   report.checks.push(

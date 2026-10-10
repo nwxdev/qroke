@@ -217,7 +217,13 @@ onBeforeUnmount(() => {
             {{ busy ? 'Entrando…' : 'Entrar com link' }}
           </button>
         </form>
-        <p v-if="failure" id="join-party-error" class="notice" role="alert">{{ failure }}</p>
+        <DismissibleNotice
+          v-if="failure"
+          id="join-party-error"
+          class="notice"
+          :message="failure"
+          @close="failure = ''"
+        />
         <NuxtLink class="join-tv" to="/tv" @click="close"
           ><AppIcon name="tv" /> Entrar com a TV / Código</NuxtLink
         >

@@ -63,7 +63,7 @@ describe('transições do player', () => {
     expect(s.playbackIssue).toBe(null)
     expect(playerFailure(s, failed, 150)).toBe(false)
   })
-  it.each([5, 153, undefined])('erro de aparelho ou desconhecido %s não avança', (code) => {
+  it.each([5, 152, 153, undefined])('erro de aparelho ou desconhecido %s não avança', (code) => {
     const s = setup(),
       id = s.current.queueId
     playerFailure(s, id, code)

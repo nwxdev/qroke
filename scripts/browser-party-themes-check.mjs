@@ -173,8 +173,7 @@ try {
     ).status(),
   ).toBe(403)
   await page.goto(fixture.base + '/f/' + id + '/player')
-  await expect(page.locator('.sonic-banner')).toBeVisible()
-  await expect(page.locator('.sonic-ring-canvas')).toHaveClass(/ready/)
+  await expect(page.locator('.sonic-banner')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/sonic-player-mobile.png', fullPage: true })
   await page.goto(fixture.base + '/f/' + id + '/host')
   await page.setViewportSize({ width: 1440, height: 1000 })

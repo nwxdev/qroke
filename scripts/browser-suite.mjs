@@ -19,6 +19,7 @@ const scripts = [
   'browser-layout-check.mjs',
   'browser-theme-check.mjs',
   'browser-menu-check.mjs',
+  'browser-responsive-pwa-check.mjs',
   'browser-playlists-check.mjs',
   'browser-social-check.mjs',
   'browser-playback-check.mjs',

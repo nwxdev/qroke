@@ -1771,3 +1771,50 @@ body {
   border-radius: 0;
   background: transparent;
 }
+
+/* Shared tablet spacing; all event themes inherit these layout rules. */
+.utility-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+  margin-bottom: 24px;
+}
+.utility-header .party-brand {
+  min-width: 0;
+}
+.page-shell main,
+.home-grid > *,
+.host-workspace > *,
+.panel {
+  min-width: 0;
+}
+@media (min-width: 681px) and (max-width: 1100px) {
+  .page-shell {
+    padding-inline: clamp(20px, 4vw, 40px);
+  }
+  .panel {
+    padding: 24px;
+  }
+  .queue-rail {
+    --cards: 2.4;
+  }
+}
+@media (max-width: 900px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+}
+@media (max-width: 600px) {
+  .utility-header {
+    gap: 8px;
+  }
+  .entry-card {
+    width: calc(100% - 24px);
+    padding: 20px;
+    margin: 24px auto;
+  }
+}

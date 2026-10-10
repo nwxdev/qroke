@@ -23,6 +23,14 @@ const { state, device, control, pending, playHere } = useParty()
           <AppIcon name="next" /><span>Pular</span>
         </button>
       </div>
+      <button
+        v-if="state?.playbackIssue?.halted"
+        class="play-here"
+        :disabled="pending"
+        @click="control({ action: 'retry' })"
+      >
+        <AppIcon name="refresh" /> Tentar reprodução novamente
+      </button>
       <button class="play-here" :disabled="pending || !device" @click="playHere">
         <AppIcon name="tv" /> Tocar neste dispositivo
       </button>

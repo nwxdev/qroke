@@ -40,3 +40,19 @@ A preparação permanece fixa na tela. Durante a contagem, o iframe pausado não
 - [Políticas do player incorporado do YouTube](https://developers.google.com/youtube/terms/developer-policies-guide)
 - [Document Picture-in-Picture no Chrome](https://developer.chrome.com/docs/web-platform/document-picture-in-picture)
 - [Screen Wake Lock](https://developer.chrome.com/docs/capabilities/web-apis/wake-lock)
+
+## Layout, erros e identificação do YouTube
+
+A tela do player cabe em `100dvh`, sem banner acima do vídeo. Em tablets na vertical, o vídeo fica acima da fila e do convite; em telas horizontais, eles ficam lado a lado. A busca é expansível e o botão de tela cheia fica junto aos controles do cabeçalho. No palco de karaokê, a frase “Escolha a próxima música” aparece discretamente acima do QR somente em fullscreen. As mesmas regras usam os tokens dos temas original e Sonic, claros e escuros.
+
+O iframe recebe `referrerpolicy="strict-origin-when-cross-origin"` **antes** de definir/carregar sua URL. O `origin` da API também é informado. Isso envia apenas a origem ao YouTube desde o primeiro pedido, sem expor o caminho da festa ou seus tokens. As demais páginas continuam com `Referrer-Policy: no-referrer`. A identificação é exigida pela [documentação do YouTube](https://developers.google.com/youtube/terms/required-minimum-functionality#embedded-player-api-client-identity).
+
+O código 152 não tem uma definição pública na [referência da API IFrame](https://developers.google.com/youtube/iframe_api_reference#onError). Ele recebe uma mensagem neutra e pausa preservando a fila. Não é classificado como bloqueio definitivo do vídeo. Fechar o aviso só o oculta neste navegador; o anfitrião/DJ mantém a ação “Tentar reprodução novamente” nos controles. Um erro novo volta a ser mostrado. Restrições do próprio vídeo, conta, região ou aparelho ainda dependem do YouTube.
+
+## Instalação e abertura do PWA
+
+A instalação fica no menu de todas as telas. `beforeinstallprompt` habilita o convite nativo; em navegadores sem essa API, o menu explica o caminho manual. Dentro do PWA, a interface informa que o aplicativo já está aberto. No navegador, `getInstalledRelatedApps` e o evento `appinstalled` permitem trocar a ação para “Abrir QRokê”; um sinal antigo em localStorage não é considerado prova de instalação.
+
+O manifesto declara o próprio aplicativo e `launch_handler: navigate-existing`. O link de abertura preserva a rota da festa e permite a captura de navegação pelo navegador. Não existe uma API universal que force abrir o PWA, especialmente em Safari/iOS e navegadores internos de outros apps. Se a detecção ou a captura não estiver disponível, o usuário recebe instruções para abrir pelo ícone ou pelo comando do navegador. Referências: [detecção de aplicativos instalados](https://developer.chrome.com/docs/capabilities/get-installed-related-apps) e [captura de navegação](https://developer.chrome.com/docs/capabilities/pwa-navigation-management).
+
+O teste `browser-responsive-pwa-check.mjs` cobre detecção suportada/indisponível, aplicativo já aberto, nomes longos, dimensões de 320–1440px nos quatro visuais, Referer do primeiro pedido ao embed e fechamento/recuperação do erro 152. Ele simula o provedor e os sinais de instalação; não equivale a validar a instalação em todos os aparelhos físicos. Um smoke adicional em Chromium 153, com a API real e o vídeo oficial `M7lc1UVf-VE`, confirmou reprodução, contagem, fullscreen, QR e retorno à fila em 1280 × 720. O vídeo específico de Shrek depende do link para uma reprodução exata do caso relatado.

@@ -196,8 +196,8 @@ try {
           const menu = await page.locator('.header-menu').boundingBox()
           expect(logo.x + logo.width).toBeLessThanOrEqual(menu.x)
           const qr = await page.locator('.qr-plate').boundingBox()
-          const signature = await page.locator('.invite-brand').boundingBox()
-          expect(signature.y).toBeGreaterThanOrEqual(qr.y + qr.height)
+          await expect(page.locator('.invite-brand')).toBeHidden()
+          expect(qr.y + qr.height).toBeLessThanOrEqual(900)
         }
         if (width === 390 || width === 1280)
           await page.screenshot({

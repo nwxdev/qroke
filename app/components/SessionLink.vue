@@ -47,7 +47,7 @@ async function copy() {
       </button>
       <small>Válido até {{ new Date(expiresAt).toLocaleTimeString('pt-BR') }}</small>
     </div>
-    <p v-if="failure" role="alert">{{ failure }}</p>
+    <DismissibleNotice v-if="failure" :message="failure" @close="failure = ''" />
   </details>
 </template>
 <style scoped>

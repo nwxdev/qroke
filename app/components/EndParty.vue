@@ -28,7 +28,7 @@ onBeforeUnmount(() => dialog.value?.close())
         <p>
           A música será interrompida e todos perderão o acesso. Esta festa não poderá ser reaberta.
         </p>
-        <p v-if="failure" role="alert">{{ failure }}</p>
+        <DismissibleNotice v-if="failure" :message="failure" @close="failure = ''" />
         <div>
           <button :disabled="busy" @click="dialog?.close()">Continuar festa</button
           ><button :disabled="busy" @click="closeParty">

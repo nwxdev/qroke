@@ -168,7 +168,13 @@ onBeforeUnmount(() => {
       :class="{ inactive: status === 'error' || status === 'paused' }"
       aria-label="Prévia da câmera"
     />
-    <p role="status">{{ message }}</p>
+    <DismissibleNotice
+      v-if="status === 'error'"
+      :message="message"
+      role="status"
+      close-label="Fechar aviso da câmera"
+    />
+    <p v-else role="status">{{ message }}</p>
     <label v-if="devices.length > 1" class="camera-choice">
       Câmera
       <select v-model="selected" :disabled="status === 'requesting'" @change="start">

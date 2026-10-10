@@ -156,6 +156,7 @@ const compact = computed(() => props.compact || page.value === '/host')
   }
   .sonic-banner h2 {
     font-size: 31px;
+    max-width: 155px;
     margin: 16px 0 10px;
   }
   .sonic-banner p {
@@ -177,6 +178,7 @@ const compact = computed(() => props.compact || page.value === '/host')
   }
   .sonic-banner--compact h2 {
     font-size: 28px;
+    max-width: 145px;
   }
   .sonic-banner--compact .sonic-character {
     width: 65%;

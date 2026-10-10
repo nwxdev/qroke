@@ -199,7 +199,7 @@ try {
   )
   await tv.screenshot({ path: 'test-results/tv.png', fullPage: true })
   await tv.keyboard.press('Backspace')
-  await expect(tv.locator('.player-header [aria-current="page"]')).toBeFocused()
+  await expect(tv.locator('.player-header .menu-toggle')).toBeFocused()
   const original = await tv.evaluate(() => document.documentElement.dataset.theme)
   await tv.getByRole('button', { name: 'Usar tema claro' }).click()
   await tv.reload()

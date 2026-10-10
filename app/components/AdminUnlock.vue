@@ -40,7 +40,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', key))
     <p v-if="occupied" class="notice" role="status">
       Outro anfitrião está no controle por {{ remainingLabel }}. Aguarde ou peça para ele sair.
     </p>
-    <p v-if="failure" class="notice error" role="alert">{{ failure }}</p>
+    <DismissibleNotice
+      v-if="failure"
+      class="notice error"
+      :message="failure"
+      @close="failure = ''"
+    />
     <form @submit.prevent="submit">
       <label class="sr-only" for="host-pin">PIN do anfitrião</label
       ><input

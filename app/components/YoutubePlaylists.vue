@@ -157,6 +157,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   controller?.abort()
 })
+function closeErrors() {
+  failure.value = ''
+  googleFailure.value = ''
+}
 </script>
 <template>
   <MotionReveal
@@ -196,9 +200,13 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <small>Playlists públicas ou não listadas.</small>
-      <p v-if="status && !status.publicConfigured" class="notice">
+      <DismissibleNotice
+        v-if="status && !status.publicConfigured"
+        role="status"
+        close-label="Fechar aviso de playlists"
+      >
         Playlists por link estão indisponíveis no momento.
-      </p>
+      </DismissibleNotice>
     </form>
     <div v-else class="playlist-account">
       <template v-if="status?.connected">
@@ -279,7 +287,12 @@ onBeforeUnmount(() => {
           Enquanto isso, use Colar link para playlists públicas ou não listadas.
         </p>
       </template>
-      <p v-else-if="status" class="notice">Google indisponível. Use o link da playlist.</p>
+      <DismissibleNotice
+        v-else-if="status"
+        role="status"
+        close-label="Fechar aviso do Google"
+        message="Google indisponível. Use o link da playlist."
+      />
     </div>
     <label v-if="allowKaraoke" class="playlist-karaoke"
       ><input v-model="karaoke" type="checkbox" :disabled="busy" /> Estas faixas são de
@@ -288,9 +301,11 @@ onBeforeUnmount(() => {
 
     <KaraokePartners v-if="karaoke" v-model="singers" :disabled="busy" />
     <p v-if="busy" role="status" class="hint">Carregando playlist…</p>
-    <p v-if="failure || googleFailure" class="notice" role="alert">
-      {{ failure || googleFailure }}
-    </p>
+    <DismissibleNotice
+      v-if="failure || googleFailure"
+      :message="failure || googleFailure"
+      @close="closeErrors"
+    />
     <p v-if="notice" class="playlist-success" role="status">
       <AppIcon name="check" /> {{ notice }}
     </p>

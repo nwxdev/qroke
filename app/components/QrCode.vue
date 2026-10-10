@@ -132,21 +132,19 @@ onBeforeUnmount(() => {
 <template>
   <div class="qr-card" :class="{ large, presentation }">
     <template v-if="svg">
-      <p v-if="fullscreenCaption" class="fullscreen-qr-caption">
-        Seu próximo refrão começa aqui.<span>Escaneie e escolha a música.</span>
-      </p>
+      <p v-if="fullscreenCaption" class="fullscreen-qr-caption">Escolha a próxima música</p>
       <div class="qr-plate" role="img" :aria-label="'QR para ' + url" v-html="svg" />
       <BrandLogo class="invite-brand" />
       <p v-if="!presentation">Escaneie o convite. Escolha sua música. Cante.</p>
       <a :href="url" class="invite-link">{{ url }}</a>
     </template>
-    <p v-else-if="ready" class="notice" role="status">
+    <DismissibleNotice v-else-if="ready" role="status">
       O endereço desta festa ainda não está disponível para o celular. Peça ao anfitrião para
       configurar o acesso pela rede.
-    </p>
+    </DismissibleNotice>
     <p v-else role="status">Preparando convite…</p>
     <div class="qr-network">
-      <p v-if="warning" class="notice" role="status">{{ warning }}</p>
+      <DismissibleNotice v-if="warning" :message="warning" close-label="Fechar aviso do QR Code" />
       <p v-else-if="message && large && !presentation" class="hint" role="status">{{ message }}</p>
       <div class="qr-actions">
         <button
@@ -177,9 +175,9 @@ onBeforeUnmount(() => {
 </template>
 <style scoped>
 .fullscreen-qr-caption {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   padding: 0;
-  font-size: clamp(10px, 0.9vw, 13px);
+  font-size: clamp(9px, 0.8vw, 12px);
   line-height: 1.45;
   text-align: center;
   color: #fff;

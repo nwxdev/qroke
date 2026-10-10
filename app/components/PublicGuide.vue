@@ -5,8 +5,8 @@ withDefaults(defineProps<{ guide: SiteGuide; showCta?: boolean }>(), { showCta: 
 <template>
   <div class="public-guide">
     <header>
-      <NuxtLink to="/" aria-label="QRokê, início"><BrandLogo /></NuxtLink>
-      <div class="guide-preferences"><ThemeToggle /><FullscreenToggle /></div>
+      <PartyBrand public-page />
+      <HeaderMenu public-page />
     </header>
     <main>
       <MotionReveal as="section" class="guide-intro">

@@ -87,7 +87,7 @@ try {
       await page.setViewportSize({ width, height: 900 })
       const horizontal = path === '/host' ? width >= 1280 : width >= 1024
       const nav = page.locator('header .header-navigation')
-      await expect(trigger)[horizontal ? 'toBeHidden' : 'toBeVisible']()
+      await expect(trigger).toBeVisible()
       await expect(nav)[horizontal ? 'toBeVisible' : 'toBeHidden']()
       if (!horizontal) continue
       await expect(nav.getByRole('link')).toHaveCount(3)
@@ -126,7 +126,7 @@ try {
   await expect(menu).toBeVisible()
   await page.setViewportSize({ width: 1280, height: 900 })
   await expect(menu).toBeHidden()
-  await expect(page.locator('header [aria-current="page"]')).toBeFocused()
+  await expect(trigger).toBeFocused()
   expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('')
   await expect(page.locator('.header-persistent .screen-sound-button')).toHaveCount(0)
   await page.setViewportSize({ width: 390, height: 844 })
@@ -164,7 +164,7 @@ try {
   await pin.getByRole('button', { name: 'Liberar controles', exact: true }).click()
   await expect(pin).toBeHidden()
   await page.setViewportSize({ width: 1280, height: 900 })
-  await expect(trigger).toBeHidden()
+  await expect(trigger).toBeVisible()
   await expect(
     page.locator('header').getByRole('button', { name: 'Sair do admin', exact: true }),
   ).toBeVisible()

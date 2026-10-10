@@ -25,6 +25,10 @@ async function join() {
 async function connect() {
   await nuxt.$connectGoogle(join)
 }
+function closeErrors() {
+  failure.value = ''
+  googleFailure.value = ''
+}
 </script>
 <template>
   <MotionReveal as="section" class="join-card panel" glow>
@@ -61,9 +65,11 @@ async function connect() {
       </button>
     </form>
     <small>Google é opcional. Você pode buscar músicas sem conectar.</small>
-    <p v-if="failure || googleFailure" class="notice" role="alert">
-      {{ failure || googleFailure }}
-    </p>
+    <DismissibleNotice
+      v-if="failure || googleFailure"
+      :message="failure || googleFailure"
+      @close="closeErrors"
+    />
   </MotionReveal>
 </template>
 <style scoped>
