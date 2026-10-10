@@ -7,6 +7,7 @@
       ><template v-if="$slots.default" #default><slot /></template
     ></HeaderMenu>
   </header>
+  <SonicThemeBanner />
 </template>
 <style scoped>
 .brand-header {

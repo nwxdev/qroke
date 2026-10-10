@@ -102,6 +102,7 @@ try {
   await page.reload()
   await expect(page.locator('.guest-identity')).toContainText('Bia')
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'on')
+  expect(await page.evaluate(() => localStorage.getItem('qroke:motion'))).toBe('on')
   await react('Like para subir na fila: ' + tracks[2].title, 'like')
 
   for (const width of [1440, 768, 390, 320]) {

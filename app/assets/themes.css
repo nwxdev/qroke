@@ -41,7 +41,12 @@
   --info: #175ec2;
   --warning: #805619;
 }
+:root[data-party-theme]:not([data-party-theme='classic']) {
+  --brand-filter-dark: brightness(0) invert(1);
+  --brand-filter-light: brightness(0);
+}
 :root[data-party-theme='sonic-day'] {
+  --sonic-scenery: url('/themes/sonic/city-dark-1672-v1.webp');
   --player-bg: #061326;
   --player-accent: #63b4ff;
   --player-coral: #ffd166;
@@ -74,14 +79,15 @@
   --radius-control: 14px;
   --shadow: 0 20px 60px #00112b55;
   --party-background:
-    radial-gradient(ellipse at 95% 0%, #175cb633, transparent 48%),
-    radial-gradient(ellipse at 0% 65%, #ffd1660b, transparent 42%);
+    linear-gradient(90deg, #06132622, #06132688 32%, #06132688 68%, #06132622), var(--sonic-scenery);
   --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --motion-spring: cubic-bezier(0.16, 1.2, 0.3, 1);
   --motion-glow: color-mix(in srgb, var(--highlight) 22%, transparent);
   --motion-distance: 22px;
 }
 :root[data-party-theme='sonic-day'][data-theme='light'] {
+  --sonic-scenery: url('/themes/sonic/city-light-1672-v1.webp');
+  --shadow: 0 14px 38px #245ac51a;
   --bg: #edf5ff;
   --surface: #fff;
   --surface-2: #e0edfc;
@@ -98,8 +104,7 @@
   --info: #155ac3;
   --warning: #875a00;
   --party-background:
-    radial-gradient(ellipse at 95% 0%, #63b4ff22, transparent 48%),
-    radial-gradient(ellipse at 0% 65%, #ffd16622, transparent 42%);
+    linear-gradient(90deg, #fffdf522, #fffdf5aa 32%, #fffdf5aa 68%, #fffdf522), var(--sonic-scenery);
 }
 body,
 body.body--dark {
@@ -107,6 +112,9 @@ body.body--dark {
   color: var(--text);
   background-image: var(--party-background);
   background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 .text-on-primary {
   color: var(--on-accent) !important;
@@ -302,5 +310,56 @@ body.body--dark {
   }
   [data-party-theme='sonic-day'] :is(.action-button, .theme-option, .track-card) {
     transition: none;
+  }
+}
+
+/* Solid reading surfaces sit over the festival illustration. */
+[data-party-theme='sonic-day'] .search-section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: clamp(16px, 3vw, 28px);
+  box-shadow: var(--shadow);
+}
+[data-party-theme='sonic-day'] .brand-header {
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  padding-inline: 10px;
+  border-radius: 0 0 16px 16px;
+}
+[data-party-theme='sonic-day'] .page-shell > footer {
+  background: var(--surface);
+  border-radius: 14px 14px 0 0;
+  padding: 18px 22px;
+}
+[data-party-theme='sonic-day'] .tv-screen:not(.karaoke-cinema) {
+  background-image: var(--party-background);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+[data-party-theme='sonic-day'] .tv-placeholder {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+[data-party-theme='sonic-day'] .party-touch-ring {
+  border: 5px solid #ffca4e;
+  border-top-color: #fff1a6;
+  border-bottom-color: #b67704;
+  box-shadow:
+    2px 2px 0 #aa6503,
+    0 0 18px #ffcf4c66;
+}
+:root[data-party-cinema='true'] body {
+  background-image: none;
+}
+@media (max-width: 700px) {
+  :root[data-party-theme='sonic-day'] {
+    --sonic-scenery: url('/themes/sonic/city-dark-960-v1.webp');
+  }
+  :root[data-party-theme='sonic-day'][data-theme='light'] {
+    --sonic-scenery: url('/themes/sonic/city-light-960-v1.webp');
+  }
+  [data-party-theme='sonic-day'] .search-section {
+    padding: 16px;
   }
 }

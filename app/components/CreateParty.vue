@@ -104,6 +104,7 @@ onBeforeUnmount(() => {
       <BrandLogo />
       <div class="home-preferences"><ThemeToggle /><FullscreenToggle /></div>
     </header>
+    <SonicThemeBanner v-if="creating" compact />
     <div class="home-grid" :class="{ 'home-grid--creating': creating }">
       <MotionReveal v-if="!creating" as="section" class="home-intro" immediate>
         <span class="home-kicker"><AppIcon name="sparkles" /> QRokê · SUA GALERA. SEU PALCO.</span>

@@ -5,8 +5,10 @@ export function useMotionPreference() {
   function sync() {
     if (!import.meta.client) return
     reduced.value = !!media?.matches
+    enabled.value = true
     try {
-      enabled.value = true
+      // Retire the old opt-out so likes and other reactions start animated.
+      if (localStorage.getItem('qroke:motion') !== 'on') localStorage.setItem('qroke:motion', 'on')
     } catch {}
     document.documentElement.dataset.motion = enabled.value ? 'on' : 'off'
   }
