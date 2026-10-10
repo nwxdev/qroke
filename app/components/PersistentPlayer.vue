@@ -92,12 +92,14 @@ async function toggleMini() {
     const copyTheme = () => {
       doc.documentElement.dataset.theme = document.documentElement.dataset.theme || 'dark'
       doc.documentElement.dataset.motion = document.documentElement.dataset.motion || 'on'
+      doc.documentElement.dataset.partyTheme =
+        document.documentElement.dataset.partyTheme || 'classic'
     }
     copyTheme()
     themeObserver = new MutationObserver(copyTheme)
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['data-theme', 'data-motion'],
+      attributeFilter: ['data-theme', 'data-motion', 'data-party-theme'],
     })
     opened.addEventListener('pagehide', restorePlayer, { once: true })
     await relocate(opened)
@@ -148,7 +150,7 @@ function updatePlacement() {
           left: box.left + 'px',
           top: box.top + 'px',
           width: box.width + 'px',
-          height: Math.max(264, box.height) + 'px',
+          height: Math.max(256, box.height) + 'px',
         }
       : {}
   const space = isPlayer.value && docked.value ? (root.value?.offsetHeight || 270) + 20 : 0
@@ -236,8 +238,14 @@ onBeforeUnmount(() => {
           Abrir player ↗
         </button>
       </div>
-      <p v-if="miniError" class="mini-error" role="status">{{ miniError }}</p>
     </section>
+    <DismissibleNotice
+      v-if="miniError && isPlayer"
+      class="mini-error"
+      close-label="Fechar aviso do mini player"
+      :message="miniError"
+      @close="miniError = ''"
+    />
   </Teleport>
 </template>
 <style scoped>
@@ -252,7 +260,13 @@ onBeforeUnmount(() => {
   border-radius: 0 !important;
 }
 .mini-error {
-  padding: 8px;
+  position: fixed;
+  z-index: 140;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  right: 12px;
+  width: min(400px, calc(100vw - 24px));
+  background: var(--surface);
+  padding: 16px;
   font-size: 12px;
 }
 .persistent-player {
@@ -265,7 +279,7 @@ onBeforeUnmount(() => {
   border-radius: 14px;
   overflow: hidden;
   min-width: 200px;
-  min-height: 264px;
+  min-height: 256px;
 }
 .persistent-player :deep(.media-player),
 .persistent-player :deep(.media-viewport) {
@@ -295,11 +309,11 @@ onBeforeUnmount(() => {
 }
 .persistent-controls {
   flex-shrink: 0;
-  min-height: 56px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 4px 8px;
 }
 .persistent-controls > div {
   min-width: 0;
@@ -316,7 +330,7 @@ onBeforeUnmount(() => {
 .persistent-controls button {
   flex-shrink: 0;
   font-size: 12px;
-  padding: 6px 10px;
+  padding: 4px 8px;
 }
 .is-docked {
   z-index: 120;

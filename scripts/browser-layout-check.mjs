@@ -81,8 +81,8 @@ try {
   expect(
     await page.evaluate(
       () =>
-        document.querySelector('.qr-invite').getBoundingClientRect().right <
-        document.querySelector('.qr-queue').getBoundingClientRect().left,
+        document.querySelector('.qr-invite').getBoundingClientRect().bottom <=
+        document.querySelector('.qr-queue').getBoundingClientRect().top,
     ),
   ).toBe(true)
   await page.screenshot({ path: 'test-results/qr-split-desktop.png', fullPage: true })
@@ -92,12 +92,12 @@ try {
     await expect
       .poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
       .toBe(true)
-    if (width <= 760)
+    if (width <= 900)
       expect(
         await page.evaluate(
           () =>
-            document.querySelector('.qr-invite').getBoundingClientRect().bottom <
-            document.querySelector('.qr-queue').getBoundingClientRect().top,
+            document.querySelector('.qr-queue').getBoundingClientRect().right <=
+            document.querySelector('.qr-invite').getBoundingClientRect().left,
         ),
       ).toBe(true)
   }

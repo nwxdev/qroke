@@ -67,8 +67,9 @@ onMounted(async () => {
 </script>
 <template>
   <main class="entry-card">
-    <a href="/" aria-label="QRokê, início"><BrandLogo /></a>
-    <span v-if="details" class="eyebrow entry-party-name">{{ details.name }}</span>
+    <header class="utility-header">
+      <PartyBrand public-page :name="details?.name" /><HeaderMenu public-page />
+    </header>
     <h1>Entre na festa</h1>
     <p>
       {{
@@ -95,7 +96,7 @@ onMounted(async () => {
         {{ pending ? 'Entrando…' : 'Entrar como anfitrião' }}
       </button>
     </form>
-    <p v-if="failure" role="alert">{{ failure }}</p>
+    <DismissibleNotice v-if="failure" :message="failure" @close="failure = ''" />
     <LegalLinks new-tab />
     <a class="entry-home" href="/">Criar uma festa ou ver suas festas</a>
   </main>

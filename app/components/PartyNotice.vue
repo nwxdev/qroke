@@ -10,7 +10,7 @@ const { connected, state } = useParty()
       >Configurar onde tocar →</PartyLink
     >
   </div>
-  <div
+  <DismissibleNotice
     v-else-if="connected && state?.playerId && !state.devices.some((d) => d.id === state?.playerId)"
     class="notice"
     role="status"
@@ -20,5 +20,5 @@ const { connected, state } = useParty()
       >controles do anfitrião</PartyLink
     >
     <span v-else>controles do anfitrião</span>.
-  </div>
+  </DismissibleNotice>
 </template>

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+const props = withDefaults(defineProps<{ publicPage?: boolean; playerControls?: boolean }>(), {
+  publicPage: false,
+  playerControls: false,
+})
 const partyRoute = usePartyRoute()
 const { connected, isPlayer } = useParty()
 const route = useRoute()
@@ -17,26 +21,34 @@ async function joinParty() {
   joinOpen.value = true
 }
 let previousOverflow = ''
-const links = [
-  {
-    to: '/busca',
-    icon: 'search' as const,
-    label: 'Buscar músicas',
-    hint: 'Encontre a próxima música ou playlist.',
-  },
-  {
-    to: '/player',
-    icon: 'tv' as const,
-    label: 'Player',
-    hint: 'Música, vídeo, karaokê e convite QR.',
-  },
-  {
-    to: '/host',
-    icon: 'person' as const,
-    label: 'Anfitrião',
-    hint: 'Gerencie a fila, os dispositivos e o player.',
-  },
-]
+const links = computed(() =>
+  props.publicPage
+    ? [
+        { to: '/', icon: 'qr' as const, label: 'Início' },
+        { to: '/criar-festa', icon: 'plus' as const, label: 'Criar festa' },
+        { to: '/como-funciona', icon: 'microphone' as const, label: 'Como funciona' },
+      ]
+    : [
+        {
+          to: '/busca',
+          icon: 'search' as const,
+          label: 'Buscar músicas',
+          hint: 'Encontre a próxima música ou playlist.',
+        },
+        {
+          to: '/player',
+          icon: 'tv' as const,
+          label: 'Player',
+          hint: 'Música, vídeo, karaokê e convite QR.',
+        },
+        {
+          to: '/host',
+          icon: 'person' as const,
+          label: 'Anfitrião',
+          hint: 'Gerencie a fila, os dispositivos e o player.',
+        },
+      ],
+)
 function open() {
   if (!dialog.value || isOpen.value) return
   previousOverflow = document.documentElement.style.overflow
@@ -104,7 +116,7 @@ onMounted(() => {
   const header = trigger.value?.closest('header')
   if (header) {
     resizeObserver = new ResizeObserver(() => {
-      if (isOpen.value && !trigger.value?.getClientRects().length) close()
+      if (isOpen.value && header.getBoundingClientRect().width >= 1080) close()
     })
     resizeObserver.observe(header)
   }
@@ -119,10 +131,10 @@ onBeforeUnmount(() => {
     <Teleport :to="menuContent || 'body'" :disabled="!isOpen">
       <div ref="navigation" class="header-navigation">
         <nav aria-label="Páginas da festa" @click="select">
-          <PartyLink
+          <NuxtLink
             v-for="link in links"
             :key="link.to"
-            :to="link.to"
+            :to="publicPage ? link.to : partyRoute.href(link.to)"
             class="menu-link"
             :aria-label="link.label"
             :aria-current="partyRoute.page.value === link.to ? 'page' : undefined"
@@ -132,7 +144,7 @@ onBeforeUnmount(() => {
               ><strong>{{ link.label }}</strong></span
             >
             <AppIcon name="arrow-right" class="menu-arrow" />
-          </PartyLink>
+          </NuxtLink>
         </nav>
         <button type="button" class="menu-link join-party-menu" @click="joinParty">
           <AppIcon name="qr" /><span><strong>Entrar na festa</strong></span>
@@ -148,7 +160,7 @@ onBeforeUnmount(() => {
         </section>
       </div>
     </Teleport>
-    <ThemeToggle /><FullscreenToggle />
+    <ThemeToggle /><FullscreenToggle v-if="!playerControls" /><slot name="controls" />
     <button
       ref="trigger"
       type="button"
@@ -173,7 +185,7 @@ onBeforeUnmount(() => {
         @keydown="key"
       >
         <div class="menu-top">
-          <BrandLogo class="menu-brand" />
+          <PartyBrand class="menu-brand" :public-page="publicPage" />
           <div class="menu-top-controls">
             <ThemeToggle /><FullscreenToggle />
             <button
@@ -191,9 +203,16 @@ onBeforeUnmount(() => {
           <div ref="menuContent" class="menu-content">
             <h2>Menu</h2>
           </div>
-          <SessionLink /><LegalLinks new-tab class="menu-legal-links" />
+          <PartySessionBanner v-if="!publicPage" /><PwaInstall /><SessionLink
+            v-if="!publicPage"
+          /><LegalLinks new-tab class="menu-legal-links" />
 
-          <p class="menu-connection" :class="{ offline: !connected }" role="status">
+          <p
+            v-if="!publicPage"
+            class="menu-connection"
+            :class="{ offline: !connected }"
+            role="status"
+          >
             <i aria-hidden="true" />{{ connected ? 'A festa está online' : 'Reconectando…' }}
           </p>
         </div>
@@ -305,9 +324,9 @@ onBeforeUnmount(() => {
   text-align: left;
 }
 .header-menu > .header-navigation .join-party-menu {
-  width: auto;
-  margin-top: 0;
+  display: none;
 }
+
 .menu-link {
   display: flex;
   align-items: center;
@@ -421,16 +440,10 @@ onBeforeUnmount(() => {
   .header-menu:not(.has-actions) > .header-navigation {
     display: flex;
   }
-  .header-menu:not(.has-actions) > .menu-toggle {
-    display: none;
-  }
 }
 @container party-header (min-width: 67rem) {
   .header-menu.has-actions > .header-navigation {
     display: flex;
-  }
-  .header-menu.has-actions > .menu-toggle {
-    display: none;
   }
 }
 .header-menu > .header-navigation,

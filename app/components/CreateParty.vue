@@ -101,8 +101,8 @@ onBeforeUnmount(() => {
 <template>
   <main class="party-home">
     <header>
-      <BrandLogo />
-      <div class="home-preferences"><ThemeToggle /><FullscreenToggle /></div>
+      <PartyBrand public-page />
+      <HeaderMenu public-page />
     </header>
     <SonicThemeBanner v-if="creating" compact />
     <div class="home-grid" :class="{ 'home-grid--creating': creating }">
@@ -231,7 +231,12 @@ onBeforeUnmount(() => {
           />
           <PartyThemePicker v-model="selectedTheme" />
           <small>Você já entra como dono. Convide DJs pelo painel de dispositivos.</small>
-          <p v-if="failure" class="notice" role="alert">{{ failure }}</p>
+          <DismissibleNotice
+            v-if="failure"
+            class="notice"
+            :message="failure"
+            @close="failure = ''"
+          />
           <LegalNotice action="criar uma festa" />
           <ActionButton
             class="create-party-button"

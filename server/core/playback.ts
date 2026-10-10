@@ -67,6 +67,7 @@ export function playerFailure(state: PartyState, queueId: string, code?: number)
     100: 'O vídeo foi removido, é privado ou não está disponível no YouTube.',
     101: 'O YouTube bloqueou a reprodução desta versão em players incorporados.',
     150: 'O YouTube bloqueou a reprodução desta versão em players incorporados.',
+    152: 'O YouTube recusou iniciar este vídeo no player. Tente novamente; se continuar, confira o vídeo no YouTube ou escolha outra versão.',
     153: 'O YouTube não recebeu a identificação do site. Abra o QRokê no Chrome ou confira os bloqueadores de privacidade.',
   }
   const message =

@@ -81,7 +81,7 @@ watch(admin, (value, previous) => {
           </div>
           <HostControls />
           <PlayerStage v-if="isPlayer" />
-          <p v-if="state?.catalogWarning" class="notice">{{ state.catalogWarning }}</p>
+          <DismissibleNotice v-if="state?.catalogWarning" :message="state.catalogWarning" />
         </section>
         <section v-else-if="tab === 'party'" class="panel">
           <h2>Convite e participantes</h2>
@@ -144,6 +144,21 @@ watch(admin, (value, previous) => {
 .host-tabs button[aria-current] {
   background: var(--accent);
   color: var(--on-accent);
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .host-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .host-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    position: static;
+  }
+  .host-tabs button {
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: 13px;
+  }
 }
 @media (max-width: 760px) {
   .host-page {

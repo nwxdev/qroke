@@ -45,4 +45,24 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', sync))
   >
     <AppIcon :name="active ? 'fullscreen-exit' : 'fullscreen'" />
   </button>
+  <Teleport to="body">
+    <DismissibleNotice
+      v-if="failure"
+      class="fullscreen-error"
+      :message="failure"
+      close-label="Fechar aviso de tela cheia"
+      @close="failure = ''"
+    />
+  </Teleport>
 </template>
+<style scoped>
+.fullscreen-error {
+  position: fixed;
+  z-index: 150;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  right: 16px;
+  width: min(400px, calc(100vw - 32px));
+  background: var(--surface);
+  box-shadow: 0 12px 36px #0004;
+}
+</style>

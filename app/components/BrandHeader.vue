@@ -1,8 +1,6 @@
 <template>
   <header class="brand-header">
-    <PartyLink to="/busca" class="brand" aria-label="QRokê, início"
-      ><BrandLogo decorative
-    /></PartyLink>
+    <PartyBrand class="brand" />
     <HeaderMenu
       ><template v-if="$slots.default" #default><slot /></template
     ></HeaderMenu>
@@ -17,10 +15,5 @@
 }
 .brand-header .brand {
   min-width: 0;
-}
-@media (max-width: 380px) {
-  .brand-header :deep(.brand-logo) {
-    --brand-logo-width: 146px;
-  }
 }
 </style>

@@ -37,7 +37,7 @@ onMounted(() => field.value?.focus())
 </script>
 <template>
   <main class="tv-entry">
-    <BrandLogo />
+    <header class="utility-header"><PartyBrand public-page /><HeaderMenu public-page /></header>
     <section>
       <span class="eyebrow">A FESTA NA TELA GRANDE</span>
       <h1>Entrar com a TV / Código</h1>
@@ -63,7 +63,7 @@ onMounted(() => field.value?.focus())
       <p id="tv-code-help">
         Letras e números, sem acentos. O código expira em 5 minutos e funciona uma vez.
       </p>
-      <p v-if="failure" class="notice" role="alert">{{ failure }}</p>
+      <DismissibleNotice v-if="failure" class="notice" :message="failure" @close="failure = ''" />
       <NuxtLink to="/">Voltar ao início</NuxtLink>
     </section>
   </main>

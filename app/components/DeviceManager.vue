@@ -157,12 +157,12 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </div>
-    <p
+    <DismissibleNotice
       v-if="state?.playerId && !state?.devices.some((d) => d.id === state?.playerId)"
       class="notice"
     >
       O PLAYER está desconectado. Escolha outro dispositivo.
-    </p>
+    </DismissibleNotice>
     <p class="hint">
       Modelo e versões dependem do que o navegador informa. Renomeie para identificar o aparelho na
       festa. O acesso de DJ vale para a sessão da pessoa neste navegador.

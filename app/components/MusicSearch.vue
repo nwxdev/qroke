@@ -248,12 +248,17 @@ const alreadyQueued = (track: Track) => !!queuedLabel(track)
       <p v-if="karaoke && source === 'youtube'" class="hint">
         Microfone imaginário, voz de verdade. Escolha um vídeo com letra.
       </p>
-      <div v-if="searchError" role="alert" class="notice error">
+      <DismissibleNotice
+        v-if="searchError"
+        :message="searchError"
+        class="error"
+        close-label="Fechar erro de busca"
+      >
         <p>{{ searchError }}</p>
         <button type="button" :disabled="searching || query.trim().length < 2" @click="search">
           <AppIcon name="refresh" /> Tentar busca novamente
         </button>
-      </div>
+      </DismissibleNotice>
       <div v-if="searching" class="search-status" role="status">Buscando…</div>
       <div v-else-if="searched && !results.length && !searchError" class="empty-queue">
         <span>⌕</span>

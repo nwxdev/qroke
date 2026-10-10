@@ -59,7 +59,7 @@ async function generate() {
       >
       <p v-else>Código expirado. Gere outro para conectar.</p>
     </div>
-    <p v-if="failure" role="alert" class="notice">{{ failure }}</p>
+    <DismissibleNotice v-if="failure" class="notice" :message="failure" @close="failure = ''" />
   </section>
 </template>
 <style scoped>

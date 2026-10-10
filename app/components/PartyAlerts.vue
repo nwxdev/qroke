@@ -9,7 +9,15 @@ const warningKind = useState<'network' | 'activate' | 'load' | 'other'>(
 const menuOpen = useState('qroke:menu-open', () => false)
 const joinOpen = useState('qroke:join-open', () => false)
 const retrying = ref(false)
+const warningDismissed = ref(false)
+watch([warning, warningKind], () => {
+  warningDismissed.value = false
+})
 const offline = computed(() => !connected.value && !!state.value)
+const offlineDismissed = ref(false)
+watch(offline, () => {
+  offlineDismissed.value = false
+})
 const retryLabel = computed(() =>
   warningKind.value === 'activate' ? 'Ativar som' : 'Tentar novamente',
 )
@@ -34,7 +42,7 @@ function retryMedia() {
 <template>
   <Teleport to="body">
     <aside v-show="!menuOpen && !joinOpen" class="party-alerts" aria-label="Avisos da festa">
-      <div v-if="offline" class="alert-card connection-alert" role="alert">
+      <div v-if="offline && !offlineDismissed" class="alert-card connection-alert" role="alert">
         <AppIcon name="warning" />
         <div class="alert-content">
           <strong>Sem conexão com a festa</strong>
@@ -46,9 +54,16 @@ function retryMedia() {
             <AppIcon name="refresh" />{{ retrying ? 'Tentando reconectar…' : 'Tentar novamente' }}
           </button>
         </div>
+        <button
+          class="alert-close"
+          aria-label="Fechar aviso de conexão"
+          @click="offlineDismissed = true"
+        >
+          <AppIcon name="close" />
+        </button>
       </div>
       <div
-        v-if="warning && !(offline && warningKind === 'network')"
+        v-if="warning && !warningDismissed && !(offline && warningKind === 'network')"
         class="alert-card media-alert"
         role="alert"
       >
@@ -67,10 +82,9 @@ function retryMedia() {
           </button>
         </div>
         <button
-          v-if="warningKind !== 'network'"
           class="alert-close"
           aria-label="Fechar aviso de reprodução"
-          @click="warning = ''"
+          @click="warningDismissed = true"
         >
           <AppIcon name="close" />
         </button>

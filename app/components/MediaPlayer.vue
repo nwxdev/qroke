@@ -270,7 +270,21 @@ async function mountTrack() {
     }
     await loadYoutube(owner)
     if (seq !== generation || !frame.value) return
-    const node = owner.document.createElement('div')
+    const node = owner.document.createElement('iframe')
+    node.title = 'YouTube · ' + track.title
+    node.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'
+    node.allowFullscreen = true
+    node.referrerPolicy = 'strict-origin-when-cross-origin'
+    node.tabIndex = -1
+    const embed = new URL('https://www.youtube.com/embed/' + encodeURIComponent(track.id))
+    embed.search = new URLSearchParams({
+      enablejsapi: '1',
+      autoplay: '0',
+      playsinline: '1',
+      origin: location.origin,
+      controls: '1',
+    }).toString()
+    node.src = embed.href
     if (props.playerWindow) owner.document.body.replaceChildren(node)
     else frame.value.replaceChildren(node)
     const start = startPosition ?? state.value?.position ?? 0

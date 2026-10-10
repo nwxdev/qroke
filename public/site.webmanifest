@@ -24,5 +24,15 @@
     }
   ],
   "categories": ["music", "entertainment"],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "/site.webmanifest",
+      "id": "https://qroke.com.br/"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }

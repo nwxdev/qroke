@@ -20,7 +20,7 @@ async function accept() {
 </script>
 <template>
   <main class="link-page panel">
-    <NuxtLink to="/"><BrandLogo /></NuxtLink>
+    <header class="utility-header"><PartyBrand public-page /><HeaderMenu public-page /></header>
     <h1>Retome sua festa</h1>
     <p>
       No navegador onde a festa está aberta, abra “Vincular esta sessão ao aplicativo” no menu. Gere
@@ -41,7 +41,7 @@ async function accept() {
         {{ busy ? 'Vinculando…' : 'Retomar sessão' }}
       </button>
     </form>
-    <p v-if="failure" role="alert">{{ failure }}</p>
+    <DismissibleNotice v-if="failure" :message="failure" @close="failure = ''" />
   </main>
 </template>
 <style scoped>

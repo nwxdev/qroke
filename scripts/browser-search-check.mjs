@@ -83,6 +83,7 @@ try {
 
   // Backspace and arrows edit text without closing the mobile keyboard on the player page.
   await page.goto(fixture.base + '/f/' + partyId + '/player')
+  await page.locator('.player-discovery > summary').click()
   await input.fill('cpm22')
   await submit.click()
   await expect(results).toHaveCount(1)

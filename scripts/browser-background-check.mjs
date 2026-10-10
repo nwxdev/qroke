@@ -199,8 +199,12 @@ try {
   })
   await page.getByRole('button', { name: 'Mini player', exact: true }).click()
   await expect(
-    page.getByRole('status').filter({ hasText: 'Não foi possível abrir o mini player' }),
+    page.getByRole('alert').filter({ hasText: 'Não foi possível abrir o mini player' }),
   ).toBeVisible()
+  await page.getByRole('button', { name: 'Fechar aviso do mini player' }).click()
+  await expect(
+    page.getByText('Não foi possível abrir o mini player.', { exact: false }),
+  ).toHaveCount(0)
   expect(await page.evaluate(() => window.fake.playing)).toBe(true)
   await hidden(true)
   await page.evaluate(() => {
