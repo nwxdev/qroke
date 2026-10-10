@@ -8,16 +8,30 @@ export async function openParty(organizationId: string, partyId: string) {
   const db = client.db(config.mongodbDatabase)
   await (initialized ||= initializeDatabase(db)
     .then(async () => {
-      await new MongoPartyDatabase(client, db, config.organizationId, config.partyId).ensure()
+      await new MongoPartyDatabase(
+        client,
+        db,
+        config.organizationId,
+        config.partyId,
+        undefined,
+        String(config.radioDefault) !== 'false',
+      ).ensure()
     })
     .catch((e) => {
       initialized = undefined
       throw e
     }))
-  return new MongoPartyDatabase(client, db, organizationId, partyId, async (scope) => {
-    const redis = await dragonflyConnection(config.dragonflyUrl)
-    await redis.publish('qroke:events:' + config.mongodbDatabase + ':' + scope, 'changed')
-  })
+  return new MongoPartyDatabase(
+    client,
+    db,
+    organizationId,
+    partyId,
+    async (scope) => {
+      const redis = await dragonflyConnection(config.dragonflyUrl)
+      await redis.publish('qroke:events:' + config.mongodbDatabase + ':' + scope, 'changed')
+    },
+    String(config.radioDefault) !== 'false',
+  )
 }
 export function party(event: H3Event): MongoPartyDatabase {
   if (!event.context.qrokeParty)

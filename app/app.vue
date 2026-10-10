@@ -14,6 +14,8 @@ watch(
 )
 </script>
 <template>
+  <PartyThemeRuntime :key="'theme:' + (id || 'public')" />
+  <PartyThemeEffects :key="'effects:' + (id || 'public')" />
   <PwaInstall />
   <LazyJoinPartyDialog v-if="joinOpen" :key="'join:' + id" />
   <LazyPartySessionBanner v-if="active && !cinema" :key="'banner:' + id" />

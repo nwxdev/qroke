@@ -1,0 +1,306 @@
+/* Semantic runtime tokens. Brand variables are shared with Quasar; light/dark
+   remains a local preference while the party owns its visual identity. */
+:root {
+  --player-bg: #080909;
+  --player-text: #f3f1e9;
+  --player-muted: #b3b8bb;
+  --player-accent: #c4f332;
+  --player-coral: #ff784a;
+  --player-frame: #242629;
+  --player-frame-line: #414543;
+  --player-frame-edge: #191b1c;
+  --overlay: #0009;
+  --overlay-strong: #000b;
+  --font-body: 'DM Sans', sans-serif;
+  --font-heading: Manrope, sans-serif;
+  --font-reading: 'DM Sans', sans-serif;
+  --radius-card: 20px;
+  --radius-control: 12px;
+  --secondary: var(--coral);
+  --highlight: var(--accent);
+  --positive: #84dbab;
+  --negative: #ff8a80;
+  --info: #86bbff;
+  --warning: #ffd166;
+  --on-highlight: #231c00;
+  --party-background: none;
+  --party-heading-style: normal;
+  --q-primary: var(--accent);
+  --q-secondary: var(--secondary);
+  --q-accent: var(--highlight);
+  --q-positive: var(--positive);
+  --q-negative: var(--negative);
+  --q-info: var(--info);
+  --q-warning: var(--warning);
+  --q-dark: var(--surface);
+  --q-dark-page: var(--bg);
+}
+:root[data-theme='light'] {
+  --positive: #176b43;
+  --negative: #ad2929;
+  --info: #175ec2;
+  --warning: #805619;
+}
+:root[data-party-theme='sonic-day'] {
+  --player-bg: #061326;
+  --player-accent: #63b4ff;
+  --player-coral: #ffd166;
+  --player-frame: #142e50;
+  --player-frame-line: #345577;
+  --player-frame-edge: #0c203b;
+  --overlay: #001028aa;
+  --overlay-strong: #001028dd;
+  --bg: #061326;
+  --surface: #0c203b;
+  --surface-2: #142e50;
+  --line: #345577;
+  --text: #f4f8ff;
+  --muted: #b1c7e2;
+  --accent: #63b4ff;
+  --on-accent: #061b34;
+  --coral: #ff9b88;
+  --secondary: #ff9b88;
+  --highlight: #ffd166;
+  --brand-lime: var(--accent);
+  --brand-orange: var(--highlight);
+  --positive: #6ee2b1;
+  --negative: #ff9b88;
+  --info: #a6d3ff;
+  --warning: #ffd166;
+  --font-body: Manrope, sans-serif;
+  --font-heading: 'DM Sans', sans-serif;
+  --party-heading-style: italic;
+  --radius-card: 24px;
+  --radius-control: 14px;
+  --shadow: 0 20px 60px #00112b55;
+  --party-background:
+    radial-gradient(ellipse at 95% 0%, #175cb633, transparent 48%),
+    radial-gradient(ellipse at 0% 65%, #ffd1660b, transparent 42%);
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-spring: cubic-bezier(0.16, 1.2, 0.3, 1);
+  --motion-glow: color-mix(in srgb, var(--highlight) 22%, transparent);
+  --motion-distance: 22px;
+}
+:root[data-party-theme='sonic-day'][data-theme='light'] {
+  --bg: #edf5ff;
+  --surface: #fff;
+  --surface-2: #e0edfc;
+  --line: #b8cce4;
+  --text: #092246;
+  --muted: #405d7e;
+  --accent: #155ac3;
+  --on-accent: #fff;
+  --coral: #aa3828;
+  --secondary: #aa3828;
+  --highlight: #875a00;
+  --positive: #126b47;
+  --negative: #ad2929;
+  --info: #155ac3;
+  --warning: #875a00;
+  --party-background:
+    radial-gradient(ellipse at 95% 0%, #63b4ff22, transparent 48%),
+    radial-gradient(ellipse at 0% 65%, #ffd16622, transparent 42%);
+}
+body,
+body.body--dark {
+  background-color: var(--bg);
+  color: var(--text);
+  background-image: var(--party-background);
+  background-attachment: fixed;
+}
+.text-on-primary {
+  color: var(--on-accent) !important;
+}
+.q-field__native,
+.q-field__input,
+.q-field__label,
+.q-select__dropdown-icon {
+  color: var(--text);
+}
+.q-field--error .q-field__bottom {
+  color: var(--negative);
+}
+.q-field--highlighted .q-field__label {
+  color: var(--accent);
+}
+.q-field__bottom {
+  color: var(--muted);
+}
+.q-menu,
+.q-card,
+.q-dialog__inner > div {
+  color: var(--text);
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+.q-btn.bg-primary {
+  color: var(--on-accent) !important;
+}
+.q-field__control,
+.q-btn {
+  border-radius: var(--radius-control);
+}
+.q-toggle__label {
+  color: var(--text);
+}
+.q-field__native,
+.search-suggestions,
+.track-result,
+.queue-row,
+.playlist-tracks,
+.player-playlist-row {
+  font-family: var(--font-reading);
+  font-style: normal;
+}
+/* Event skin changes surfaces and rhythm; playback planes and QR pixels stay clean. */
+[data-party-theme='sonic-day'] :is(h1, .page-title h1, .home-intro h1) {
+  font-style: var(--party-heading-style);
+  letter-spacing: -0.045em;
+}
+[data-party-theme='sonic-day']
+  :is(
+    .panel,
+    .create-party-card,
+    .join-card,
+    .device-panel,
+    .party-preview,
+    .playlist-preview,
+    .managed-device,
+    .track-card
+  ) {
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+}
+[data-party-theme='sonic-day'] :is(.panel, .create-party-card, .join-card, .device-panel) {
+  border-top: 2px solid color-mix(in srgb, var(--accent) 60%, var(--line));
+}
+[data-party-theme='sonic-day'] :is(button, .primary-button, input) {
+  border-radius: var(--radius-control);
+}
+[data-party-theme='sonic-day'] .eyebrow {
+  color: var(--highlight);
+  letter-spacing: 0.12em;
+}
+[data-party-theme='sonic-day'] .host-tabs button[aria-current='page'] {
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 45%, transparent);
+}
+[data-party-theme='sonic-day'] .action-button--primary {
+  background: linear-gradient(
+    115deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 85%, var(--text))
+  );
+}
+[data-party-theme='sonic-day'] :is(.action-button, .theme-option, .track-card) {
+  transition:
+    box-shadow var(--motion-fast),
+    border-color var(--motion-fast),
+    background var(--motion-fast);
+}
+@media (hover: hover) {
+  [data-party-theme='sonic-day'] :is(.action-button, .theme-option, .track-card):hover {
+    box-shadow:
+      0 0 0 1px var(--accent),
+      0 8px 26px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+}
+.party-appearance {
+  padding-block: 12px 24px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.party-appearance h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.party-atmosphere {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: -1;
+  pointer-events: none;
+  contain: strict;
+}
+#__nuxt {
+  isolation: isolate;
+}
+.party-orbit {
+  position: absolute;
+  left: calc(8% + var(--i) * 18%);
+  top: calc(-6% + var(--i) * 22%);
+  width: clamp(72px, 10vw, 170px);
+  aspect-ratio: 1;
+  border: 3px solid color-mix(in srgb, var(--highlight) 20%, transparent);
+  border-radius: 50%;
+  transform: translate(var(--pointer-x, 0px), var(--pointer-y, 0px));
+  animation: party-orbit-float calc(7s + var(--i) * 2s) ease-in-out infinite alternate;
+}
+.party-speed-line {
+  position: absolute;
+  top: calc(var(--i) * 15%);
+  left: -25%;
+  width: 16vw;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 35%, transparent),
+    transparent
+  );
+  transform: rotate(-14deg);
+  animation: party-speed-pass calc(8s + var(--i) * 2s) linear infinite;
+  animation-delay: calc(var(--i) * -2s);
+}
+.party-touch-ring {
+  z-index: 90;
+  pointer-events: none;
+  position: fixed;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--highlight);
+  border-radius: 50%;
+  animation: party-ring-pulse 650ms ease-out both;
+}
+@keyframes party-orbit-float {
+  from {
+    transform: translate(var(--pointer-x, 0px), var(--pointer-y, 0px)) rotate(-12deg) scale(0.9);
+  }
+  to {
+    transform: translate(calc(var(--pointer-x, 0px) + 12px), calc(var(--pointer-y, 0px) - 18px))
+      rotate(12deg) scale(1);
+  }
+}
+@keyframes party-speed-pass {
+  from {
+    transform: translateX(0) rotate(-14deg);
+    opacity: 0;
+  }
+  15%,
+  70% {
+    opacity: 0.7;
+  }
+  to {
+    transform: translateX(140vw) rotate(-14deg);
+    opacity: 0;
+  }
+}
+@keyframes party-ring-pulse {
+  from {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0.7;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .party-atmosphere {
+    display: none;
+  }
+  [data-party-theme='sonic-day'] :is(.action-button, .theme-option, .track-card) {
+    transition: none;
+  }
+}

@@ -1,5 +1,5 @@
 import type { PartyState } from '../../shared/types'
-export const initialState = (): PartyState => ({
+export const initialState = (autoContinue = true): PartyState => ({
   schemaVersion: 2,
   revision: 0,
   karaokeDelaySeconds: 10,
@@ -15,7 +15,8 @@ export const initialState = (): PartyState => ({
   playerId: null,
   playerReadyAt: 0,
   mode: 'video',
-  autoContinue: false,
+  autoContinue,
+  theme: 'classic',
   paused: false,
   position: 0,
   duration: 0,

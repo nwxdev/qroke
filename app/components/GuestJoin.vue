@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { fieldProps, buttonProps, toggleProps } = useThemeTokens()
 withDefaults(defineProps<{ host?: boolean; autofocus?: boolean }>(), { autofocus: true })
 const { guest, pending, failure, act, api, sessionReady } = useParty()
 const name = ref('')
@@ -30,6 +31,7 @@ async function connect() {
     <h2>{{ host ? 'Nome do anfitrião' : 'Qual é seu nome?' }}</h2>
     <form @submit.prevent="join">
       <QInput
+        v-bind="fieldProps"
         v-model="name"
         outlined
         :label="host ? 'Nome do anfitrião' : 'Seu nome'"
@@ -41,6 +43,7 @@ async function connect() {
       <small v-if="name && nameError">{{ nameError }}</small>
       <LegalNotice action="continuar ou conectar o Google" />
       <QBtn
+        v-bind="buttonProps"
         type="submit"
         color="primary"
         no-caps

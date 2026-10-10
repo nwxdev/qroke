@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
         </section>
       </div>
     </Teleport>
-    <ThemeToggle />
+    <ThemeToggle /><FullscreenToggle />
     <button
       ref="trigger"
       type="button"
@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
         <div class="menu-top">
           <BrandLogo class="menu-brand" />
           <div class="menu-top-controls">
-            <ThemeToggle />
+            <ThemeToggle /><FullscreenToggle />
             <button
               type="button"
               class="icon-button menu-close"

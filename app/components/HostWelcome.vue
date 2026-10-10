@@ -37,6 +37,6 @@ onBeforeUnmount(() => dialog.value?.close())
   border: 0;
 }
 .host-welcome::backdrop {
-  background: #0009;
+  background: var(--overlay);
 }
 </style>

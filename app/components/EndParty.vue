@@ -54,7 +54,7 @@ onBeforeUnmount(() => dialog.value?.close())
   color: var(--text);
 }
 .end-party-dialog::backdrop {
-  background: #000b;
+  background: var(--overlay-strong);
 }
 .end-party-dialog p {
   margin-top: 16px;

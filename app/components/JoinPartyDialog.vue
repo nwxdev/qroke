@@ -235,7 +235,7 @@ onBeforeUnmount(() => {
   position: fixed;
   inset: 0;
   z-index: 108;
-  background: #0009;
+  background: var(--overlay);
 }
 .join-party-dialog {
   position: fixed;

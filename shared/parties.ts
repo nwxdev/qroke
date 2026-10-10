@@ -1,4 +1,5 @@
 export interface PartyInfo {
+  theme?: import('./themes').PartyTheme
   id: string
   name: string
   createdAt: number | null

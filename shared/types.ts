@@ -64,6 +64,7 @@ export interface Device {
   lastSeen: number
 }
 export interface PartyState {
+  theme?: import('./themes').PartyTheme
   schemaVersion?: number
   karaokeDelaySeconds?: number
   karaokeTransitionMusic?: boolean

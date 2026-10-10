@@ -1,10 +1,19 @@
 <script setup lang="ts">
+import type { PartyTheme } from '#shared/themes'
 import type { PartyInfo, MyParty } from '#shared/parties'
 const props = defineProps<{ creating?: boolean }>()
 const name = ref(''),
   ownerName = ref(''),
   failure = ref(''),
   busy = ref(false)
+const selectedTheme = ref<PartyTheme>('classic')
+const previewTheme = useState<PartyTheme | null>('qroke:theme-preview', () => null)
+watch(selectedTheme, (value) => {
+  if (props.creating) previewTheme.value = value
+})
+onBeforeUnmount(() => {
+  previewTheme.value = null
+})
 const joinOpen = useState('qroke:join-open', () => false)
 const nameInput = ref<HTMLInputElement | null>(null)
 const nameReady = computed(() => name.value.trim().length >= 2)
@@ -54,7 +63,12 @@ async function create() {
     idempotencyKey ||= crypto.randomUUID()
     const result = await $fetch<{ url: string }>('/api/parties', {
       method: 'POST',
-      body: { name: name.value, ownerName: ownerName.value, idempotencyKey },
+      body: {
+        name: name.value,
+        ownerName: ownerName.value,
+        theme: selectedTheme.value,
+        idempotencyKey,
+      },
       timeout: 15000,
     })
     await navigateTo(result.url, { external: true })
@@ -88,7 +102,7 @@ onBeforeUnmount(() => {
   <main class="party-home">
     <header>
       <BrandLogo />
-      <div class="home-preferences"><ThemeToggle /></div>
+      <div class="home-preferences"><ThemeToggle /><FullscreenToggle /></div>
     </header>
     <div class="home-grid" :class="{ 'home-grid--creating': creating }">
       <MotionReveal v-if="!creating" as="section" class="home-intro" immediate>
@@ -214,6 +228,7 @@ onBeforeUnmount(() => {
             autocomplete="nickname"
             placeholder="Como você quer ser chamado?"
           />
+          <PartyThemePicker v-model="selectedTheme" />
           <small>Você já entra como dono. Convide DJs pelo painel de dispositivos.</small>
           <p v-if="failure" class="notice" role="alert">{{ failure }}</p>
           <LegalNotice action="criar uma festa" />

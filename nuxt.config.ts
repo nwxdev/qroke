@@ -2,7 +2,7 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   compatibilityDate: '2026-09-01',
   modules: ['nuxt-quasar-ui'],
-  css: ['~/assets/main.css', '~/assets/motion.css'],
+  css: ['~/assets/main.css', '~/assets/motion.css', '~/assets/themes.css'],
   devServer: { host: '0.0.0.0', port: Number(process.env.QROKE_PORT || 3000) },
   nitro: { experimental: { websocket: true }, externals: { external: ['mongodb', 'redis'] } },
   runtimeConfig: {
@@ -11,6 +11,7 @@ export default defineNuxtConfig({
       'mongodb://127.0.0.1:37017/?replicaSet=rs0&directConnection=true',
     mongodbDatabase: process.env.QROKE_MONGODB_DATABASE || 'qroke',
     dragonflyUrl: process.env.QROKE_DRAGONFLY_URL || 'redis://127.0.0.1:36379',
+    radioDefault: true,
     organizationId: 'nwx',
     partyId: 'principal',
     accessRequired: process.env.QROKE_ACCESS_REQUIRED === 'true',
