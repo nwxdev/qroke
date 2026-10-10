@@ -272,6 +272,7 @@ onBeforeUnmount(() => {
 }
 .menu-brand {
   --brand-logo-width: 180px;
+  max-width: calc(100% - 164px);
 }
 .menu-body {
   display: flex;
