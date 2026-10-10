@@ -1,7 +1,7 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
-COPY package*.json ./
+COPY package*.json nuxt.config.ts ./
 RUN npm ci
 COPY . .
 ENV NUXT_TELEMETRY_DISABLED=1
